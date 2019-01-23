@@ -35,5 +35,3 @@ TODO: automate style checking on git push.
 Should be an evolving thing but to start will be designing everything as self contained libraries. Header files in the `include` directory, Source in the `src` directory. Everything will compile easier with a Makefile.
 
 **TODO** decide whether we want multiple executables (crawler, index, server, etc) or one executable that can do everything and is configurable from the command line.
-
-
