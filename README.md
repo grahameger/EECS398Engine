@@ -20,7 +20,6 @@ Search Engine Project for EECS 398 W19 at the University of Michigan
 `test` All test code files.
 
 
-
 ## Makefile
 
 Will start by just using a standard Makefile that works on Linux and Windows. If we need to do any real dirty platform specific stuff then we can use `autotools` but I don't see the need quite yet.
@@ -36,4 +35,5 @@ TODO: automate style checking on git push.
 Should be an evolving thing but to start will be designing everything as self contained libraries. Header files in the `include` directory, Source in the `src` directory. Everything will compile easier with a Makefile.
 
 **TODO** decide whether we want multiple executables (crawler, index, server, etc) or one executable that can do everything and is configurable from the command line.
+
 
