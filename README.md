@@ -3,8 +3,6 @@ Search Engine Project for EECS 398 W19 at the University of Michigan
 
 ## Folder Structure
 
-------
-
 `bin` All output executables, both for the app and for any tests and spikes.
 
 `build`All object files. Removed on `make clean`
