@@ -8,11 +8,3 @@
 
 #include "html.hpp"
 
-namespace search {
-    void parseHTML(const std::string &s) {
-        // scan 1
-        for (size_t i = 0; i < s.size(); i++) {
-
-        }
-    }
-}
