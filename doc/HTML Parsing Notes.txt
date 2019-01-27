@@ -1,0 +1,31 @@
+HTML Parsing Notes
+
+Info from: https://www.w3.org/TR/html5/syntax.html#parsing
+
+
+1. BOM (this could be some bulllllshit)
+2. Comments and spaces!
+3. DOCTYPE
+4. Comments and spaces!
+5. A document element <html>
+6. Comments and spaces!
+
+This is not at all what actual HTML looks like in the real world. Used by about 76%. Regular HTML is about 86.1% right now. XHTML even fewer.
+
+DOCTYPE
+	required
+	ASCII case insensitive
+	"<!DOCTYPE html>"
+
+
+Elements:
+	6 kinds
+		void (style stuff, images, etc), template, raw text (script and style), escapable raw text (textarea, title), foreign (svg), and normal (everything else).
+	Tags delimit starts and ends of elements
+	Some end tags are optional.
+
+Attributes:
+	Inside the start tag
+	some have quotes some don't lol (value=yes, value='yes' value="yes")
+	
+
