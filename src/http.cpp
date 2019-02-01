@@ -121,6 +121,7 @@ namespace search {
         if (!sendall(sockfd, requestStr.c_str(), requestStr.size())) {
             // TODO: log
         }
+        addFd(sockfd);
     }
 
     int HTTPClient::getConnToHost(const std::string &host, int port) {
