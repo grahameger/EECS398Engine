@@ -15,9 +15,14 @@
 #include <string>
 #include <sstream>
 #include <mutex>
+#include <sys/types.h>
+#include <vector>
+#include <unordered_set>
 
 #ifdef __linux__ 
 #include <sys/epoll.h>
+#else
+#include <sys/event.h>
 #endif
 
 namespace search {
@@ -69,6 +74,12 @@ namespace search {
         
         #ifdef __linux__ 
         int epollFd;
+        #else
+        int kq;
+        struct kevent chlist[1000];
+        struct kevent evlist[1000];
+        std::vector<int> sockets;
+        std::unordered_set<int>    readySockets; 
         #endif
 
         // given a socket return the clientInfo
