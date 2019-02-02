@@ -160,6 +160,12 @@ namespace search {
     HTTPClient::HTTPClient() {
         #ifdef __linux__ 
         epollFd = epoll_create1(0);
+        #else
+        kq = kqueue();
+        if (kq == -1) {
+            // TODO: log error
+        }
+        sockets.reserve(1000);
         #endif
     }
 
@@ -173,13 +179,16 @@ namespace search {
         if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0) {
             // TODO: log
         }
+        #else
+        m.lock();
+        sockets.push_back(fd);
+        EV_SET(&chlist[sockets.size() - 1], fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+        m.unlock();
         #endif
     }
 
-    // gets a ready file descriptor from "watchlist"
-    // TODO: currently linux only
+    #ifdef __linux__
     int HTTPClient::getFd() {
-        #ifdef __linux__ 
         struct epoll_event event;
         // TODO: change the timeout
         int rv = epoll_wait(epollFd, &event, 1, 1);
@@ -188,9 +197,35 @@ namespace search {
         }
         // TODO make there be more than one event
         return event.data.fd;
-        #endif
-        return 0;
     }
+    #else
+    int HTTPClient::getFd() {
+        m.lock();
+        if (readySockets.size() == 0) {
+            while (true) {
+                m.lock();
+                int nev = kevent(kq, chlist, sockets.size(), evlist, sockets.size(), nullptr);
+                m.unlock();
+            if (nev < 0) {
+                // no action
+            } else if (nev > 0) {
+                m.lock();
+                for (size_t i = 0; i < nev; i++)
+                {
+                   if (evlist[i].flags & EV_ERROR) {
+                       // TODO: log error
+                       continue;
+                   }
+                   readySockets.insert(evlist[i].ident);
+                }
+            }
+        }
+        auto rv = *readySockets.begin();
+        readySockets.erase(readySockets.begin());
+        m.unlock();
+        return rv;
+    }
+    #endif
 
     // removes a file descriptor from the "watchlist"
     // TODO: currently linux only
@@ -202,6 +237,7 @@ namespace search {
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &event) < 0) {
             // TODO: log and error handle
         }
+        #else
         #endif
     }
 }
