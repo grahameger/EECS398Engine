@@ -159,7 +159,7 @@ namespace search {
 
     HTTPClient::HTTPClient() {
         #ifdef __linux__ 
-        epollfd = epoll_create1(0);
+        epollFd = epoll_create1(0);
         #endif
     }
 
@@ -170,7 +170,7 @@ namespace search {
         struct epoll_event event;
         event.data.fd = fd;
         event.events = EPOLLIN | EPOLLET;
-        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) < 0) {
+        if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0) {
             // TODO: log
         }
         #endif
@@ -182,7 +182,7 @@ namespace search {
         #ifdef __linux__ 
         struct epoll_event event;
         // TODO: change the timeout
-        int rv = epoll_wait(epollfd, &event, 1, 1);
+        int rv = epoll_wait(epollFd, &event, 1, 1);
         if (rv == -1) {
             // TODO log error
         }
@@ -199,7 +199,7 @@ namespace search {
         struct epoll_event event;
         event.data.fd = fd;
         event.events = EPOLLIN | EPOLLET;
-        if (epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event) < 0) {
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &event) < 0) {
             // TODO: log and error handle
         }
         #endif
