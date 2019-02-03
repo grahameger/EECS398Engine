@@ -58,6 +58,12 @@
         "unordered_set": "cpp",
         "utility": "cpp",
         "vector": "cpp",
-        "__functional_base_03": "cpp"
+        "__functional_base_03": "cpp",
+        "__tree": "cpp",
+        "array": "cpp",
+        "condition_variable": "cpp",
+        "queue": "cpp",
+        "set": "cpp",
+        "thread": "cpp"
     }
 }

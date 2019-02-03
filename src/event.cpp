@@ -15,9 +15,17 @@ namespace search {
     }
 
     void EventQueue::process() {
-
+        while (true) {
+            
+        }
     }
 
+    int EventQueue::getSocket() {
+        return readySockets.pop();
+    }
 
+    void EventQueue::addSocket(int sockfd) {
+        waitingSockets.push(sockfd);
+    }
 }
 
