@@ -8,7 +8,7 @@ TARGET := bin/engine
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CFLAGS := -g3 -Wall -std=c++11
+CFLAGS := -g3 -Wall -std=c++11 -stdlib=libc++
 LIB := -pthread
 INC := -I include
 

@@ -45,18 +45,34 @@ namespace search {
         return ss.str();
     }
 
+    void HTTPRequest::print() {
+        std::stringstream ss;
+        ss << "{\n";
+        ss << "\t" << "method: " << method << '\n';
+        ss << "\t" << "host: " << host << '\n';
+        ss << "\t" << "path: " << path << '\n';
+        ss << "\t" << "query: " << query << '\n';
+        ss << "\t" << "fragment: " << fragment << '\n';
+        ss << "\t" << "headers: " << headers << '\n';
+        ss << "\t" << "protocol: " << protocol << '\n';
+        ss << "\t" << "port: " << port << '\n';
+        ss << "}\n";
+        std::cout << ss.str() << std::flush;
+    }
+
     // parse a well formed url and get the stuff within
     // URI = scheme:[//authority]path[?query][#fragment]
     // authority = [userinfo@]host[:port]
     // uses the RFC 3986 regex suggestion for URL parsing
     HTTPRequest * parseURL(const std::string &url) {
-        std::regex r (
-                "(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
+        std::regex r(
+                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended
         );
         std::smatch result;
         if (std::regex_match(url, result, r)) {
             HTTPRequest * rv = new HTTPRequest;
+            rv->protocol = result[2];
             rv->host =     result[4];
             rv->path =     result[5];
             rv->query =    result[7];
@@ -66,11 +82,20 @@ namespace search {
             return nullptr;
         }
     }
+
+    // do all the processing necessary for the HTTP stream.
+    void HTTPResponse::process(int fd) {
+        // for now we're just going to write the whole stream to the file
+        data.seekg(0, std::ios::end);
+        auto size = data.tellg();
+        data.seekg(0, std::ios::beg);
+        write(fd, data.str().c_str(), size);
+    }
     
     // send an entire buffer
     static bool sendall(int sockfd, const char * buf, size_t len) {
         while (len > 0) {
-            auto i = send(sockfd, buf, len, O_NONBLOCK);
+            auto i = send(sockfd, buf, len, O_NONBLOCK | MSG_NOSIGNAL);
             if (i < 1) {
                 return false; 
             }
@@ -134,6 +159,11 @@ namespace search {
         if (sockfd < 0) {
             // TODO: log
         }
+        // set socket to non blocking
+        int rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
+        if (rv == -1) {
+            // TODO: log error
+        }
 
         // lookup ip address
         server = gethostbyname(host.c_str());
@@ -165,27 +195,35 @@ namespace search {
         if (kq == -1) {
             // TODO: log error
         }
-        sockets.reserve(1000);
+        sockets.reserve(MAX_CONNECTIONS);
         #endif
+
+        // cross platform stuff
+        signal(SIGPIPE, SIG_IGN);
+        // worker threads
+        for (size_t i = 0; i < NUM_THREADS; i++) {
+            threads[i] = std::thread(&HTTPClient::processResponses, this);
+        }
     }
 
-    // adds file descriptor to "watchlist"
-    // TODO: currently linux only
+    #ifdef __linux__
     void HTTPClient::addFd(int fd) {
-        #ifdef __linux__ 
         struct epoll_event event;
         event.data.fd = fd;
         event.events = EPOLLIN | EPOLLET;
         if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0) {
             // TODO: log
         }
-        #else
+    }
+    #else
+    void HTTPClient::addFd(int fd) {
         m.lock();
         sockets.push_back(fd);
-        EV_SET(&chlist[sockets.size() - 1], fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0);
+        // 
+        EV_SET64(&chlist[sockets.size() - 1], fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0, 0, 0);
         m.unlock();
-        #endif
     }
+    #endif
 
     #ifdef __linux__
     int HTTPClient::getFd() {
@@ -202,21 +240,21 @@ namespace search {
     int HTTPClient::getFd() {
         m.lock();
         if (readySockets.size() == 0) {
-            while (true) {
-                m.lock();
-                int nev = kevent(kq, chlist, sockets.size(), evlist, sockets.size(), nullptr);
-                m.unlock();
-            if (nev < 0) {
-                // no action
+            m.unlock();
+            int nev = kevent64(kq, chlist, sockets.size(), evlist, sockets.size(), 0, nullptr);
+            if (nev == -1) {
+                // error
+                // TODO: log
+            } else if (nev == 0) {
+                // sleep for 10ms
+                usleep(SLEEP_US);
             } else if (nev > 0) {
                 m.lock();
-                for (size_t i = 0; i < nev; i++)
-                {
-                   if (evlist[i].flags & EV_ERROR) {
-                       // TODO: log error
-                       continue;
-                   }
-                   readySockets.insert(evlist[i].ident);
+                for (size_t i = 0; i < nev; i++) {
+                    if (evlist[i].flags & EV_ERROR) {
+                        // TODO: log error
+                    }
+                    readySockets.insert(evlist[i].ident);
                 }
             }
         }
@@ -227,17 +265,78 @@ namespace search {
     }
     #endif
 
-    // removes a file descriptor from the "watchlist"
-    // TODO: currently linux only
+    // removes a fd from the watch list
+    #ifdef __linux__
     void HTTPClient::removeFd(int fd) {
-        #ifdef __linux__
+        m.lock();
         struct epoll_event event;
         event.data.fd = fd;
         event.events = EPOLLIN | EPOLLET;
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &event) < 0) {
             // TODO: log and error handle
         }
-        #else
-        #endif
+        m.unlock();
+    }
+    #else
+
+    void HTTPClient::removeFd(int fd) {
+        m.lock();
+        // remove from vector, this is O(n)
+        sockets.erase(std::remove(sockets.begin(), sockets.end(), fd), sockets.end());
+        // this should be a noop?
+        // TODO: remove?
+        readySockets.erase(std::find(readySockets.begin(), readySockets.end(), fd));
+        // erase from clientInfo
+        clientInfo.erase(fd);
+        // removes from kqueue automatically when closing socket
+        close(fd);
+        m.unlock();
+    }
+    #endif
+
+    // 'main' function our worker threads run
+    // everything in here will be completely cross platform
+    // TODO still some funkiness. Working on the organizing thread stuff. 
+    void HTTPClient::processResponses() {
+        char buffer[BUFFER_SIZE];
+        while (true) {
+            int sockfd = getFd();
+            m.lock();
+            auto iter = clientInfo.find(sockfd);
+            if (iter != clientInfo.end()) {
+                ClientInfo& info = clientInfo.at(sockfd);
+                m.unlock();
+                // recieve on the socket while there's data
+                size_t bytes_read = 0;
+                do
+                {
+                    bzero(buffer, sizeof buffer);
+                    bytes_read = recv(sockfd, buffer, sizeof buffer, O_NONBLOCK);
+                    if (bytes_read == -1) {
+                        // socket closed or other issue
+                        // TODO: actual error handling, currently SIGPIPE is completely
+                        // ignored so we have to still deal with that.
+                        break;
+                    }
+                    if (bytes_read == 0) {
+                        // socket closed on the other end. Do some processing
+                        if (info.response != nullptr) {
+                            info.response->process(info.fd);
+                        }
+                        removeFd(sockfd);
+                    }
+                    // actually write it to the HTTPResponse struct.
+                    if (info.response == nullptr) {
+                        info.response = new HTTPResponse;
+                        info.response->data.write(buffer, bytes_read);
+                    } 
+                } while (bytes_read > 0);
+            }
+            else {
+                m.unlock();
+                // TODO: log
+                continue;
+            }
+        }
     }
 }

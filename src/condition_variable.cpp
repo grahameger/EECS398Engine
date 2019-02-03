@@ -1,5 +1,5 @@
 //
-//  condition_variable.hpp
+//  condition_variable.cpp
 //  pthread_wrapper
 //
 //  Created by Graham Eger on 1/23/19.
