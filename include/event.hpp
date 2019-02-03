@@ -21,7 +21,7 @@ namespace search {
         EventQueue();
         ~EventQueue();
         int getSocket();
-        void addSocket(int fd);
+        void addSocket(int sockfd);
     private:
         void process();
 

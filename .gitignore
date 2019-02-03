@@ -64,3 +64,4 @@ DerivedData/
 *.exe
 *.out
 *.app
+bin/engine
