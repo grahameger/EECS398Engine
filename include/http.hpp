@@ -2,7 +2,7 @@
 //  http.hpp
 //  engine
 //
-//  Created by Graham Eger on 1/26/19.
+//  Created by Graham Eger on 2/1/19.
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
@@ -15,14 +15,23 @@
 #include <string>
 #include <sstream>
 #include <mutex>
+#include <thread>
 #include <sys/types.h>
 #include <vector>
+#include <array>
 #include <unordered_set>
 
 #ifdef __linux__ 
 #include <sys/epoll.h>
 #else
+#include <sys/types.h>
+// http://www.manpagez.com/man/2/kevent/
 #include <sys/event.h>
+#include <sys/time.h>
+#endif
+
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
 #endif
 
 namespace search {
@@ -31,6 +40,7 @@ namespace search {
         // can optimize this later
         std::string filename();
         std::string requestString();
+        void print();
         std::string   method;       // only GET implemented
         std::string   host;
         std::string   path;
@@ -45,13 +55,19 @@ namespace search {
 
     struct HTTPResponse 
     {
-        char * data;
+        void process(int fd);
+        std::stringstream data;
         int code;
         std::string mimeType;
         std::string encoding;
     };
 
     struct ClientInfo {
+        ~ClientInfo() {
+            if (response) {
+                delete response;
+            }
+        }
         int fd; 
         int sockfd;
         HTTPResponse * response;
@@ -62,8 +78,17 @@ namespace search {
         HTTPClient();
         void SubmitURL(const std::string &url);
     private:
+        static const size_t MAX_CONNECTIONS = 1000;
+        static const size_t RECV_SIZE = 2048;
+        static const size_t BUFFER_SIZE = RECV_SIZE;
+        static const size_t NUM_THREADS = 4;
+        static const uint32_t SLEEP_US = 10000;
+
         // returns connected TCP socket to host
         int getConnToHost(const std::string &host, int port);
+
+        // 'main' function our worker threads run
+        void processResponses();
 
         // adds file descriptor to "watchlist"
         void addFd(int fd);
@@ -75,9 +100,10 @@ namespace search {
         #ifdef __linux__ 
         int epollFd;
         #else
+        size_t conn_index(int fd);
         int kq;
-        struct kevent chlist[1000];
-        struct kevent evlist[1000];
+        struct kevent64_s chlist[MAX_CONNECTIONS];
+        struct kevent64_s evlist[MAX_CONNECTIONS];
         std::vector<int> sockets;
         std::unordered_set<int>    readySockets; 
         #endif
@@ -85,7 +111,7 @@ namespace search {
         // given a socket return the clientInfo
         std::unordered_map<int, ClientInfo> clientInfo;
         std::mutex m;
-
+        std::thread threads[NUM_THREADS];
 
     };
 }
