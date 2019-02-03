@@ -21,19 +21,34 @@ namespace search {
     {
     public:
         void push(const T &d) {
-            std::lock_guard<std::mutex> lock(m);
+            std::unique_lock<std::mutex> lock(m);
             q.push(d);
+            lock.release();
+            cv.notify_one();
         }
+
+        void push(const std::vector<T> &d) {
+            std::unique_lock<std::mutex> lock(m);
+            for (auto i : d) {
+                q.push(i);
+            }
+            lock.release();
+            cv.notify_all();
+        }
+
         // returns true if sucessfully popped
         // modifies &d with the value of the popped item
-        bool pop(T &d) {
-            std::lock_guard<std::mutex> lock(m);
-            if (!q.empty()) {
-                d = q.front();
-                q.pop();
-                return true;
+        T pop() {
+            std::unique_lock<std::mutex> lock(m);
+            // we own the lock
+            while (q.empty()) {
+                cv.wait(m);
             }
-            return false;
+            // we own the lock
+            T temp = q.front();
+            q.pop();
+            return temp;
+            // mutex gets released on destruction
         }
         size_t size() {
             std::lock_guard<std::mutex> lock(m);
