@@ -42,7 +42,7 @@ namespace search {
             std::unique_lock<std::mutex> lock(m);
             // we own the lock
             while (q.empty()) {
-                cv.wait(m);
+                cv.wait(lock);
             }
             // we own the lock
             T temp = q.front();
@@ -50,6 +50,21 @@ namespace search {
             return temp;
             // mutex gets released on destruction
         }
+
+        // get all of the stuff on the queue
+        // used for EventQueue
+        void pop_all(std::vector<T> &vec) {
+            std::unique_lock<std::mutex> lock(m);
+            // we own the lock
+            while (q.empty()) {
+                cv.wait(lock);
+            }
+            // we own the lock
+            vec = std::vector<T>(q.begin(), q.end());
+            q.clear();
+            return;
+        }
+
         size_t size() {
             std::lock_guard<std::mutex> lock(m);
             return q.size();
