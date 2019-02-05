@@ -14,6 +14,15 @@
 #include <iostream>
 #include <thread>
 
+#ifdef __linux__ 
+#include <sys/epoll.h>
+#else
+#include <sys/types.h>
+// http://www.manpagez.com/man/2/kevent/
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
+
 namespace search {
     class EventQueue
     {
@@ -23,11 +32,21 @@ namespace search {
         int getSocket();
         void addSocket(int sockfd);
     private:
+        static const size_t MAX_CONNECTIONS = 1000;
+
         void process();
 
         ThreadQueue<int> readySockets;
         ThreadQueue<int> waitingSockets;
         std::thread t;
+
+        #ifdef __linux__ 
+        int epollFd;
+        #else
+        int kq;
+        struct kevent64_s chlist[MAX_CONNECTIONS];
+        struct kevent64_s evlist[MAX_CONNECTIONS];
+        #endif
     };
 }
 
