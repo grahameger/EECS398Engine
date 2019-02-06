@@ -13,6 +13,8 @@
 #include "thread_queue.hpp"
 #include <iostream>
 #include <thread>
+#include <vector>
+
 
 #ifdef __linux__ 
 #include <sys/epoll.h>
