@@ -28,6 +28,8 @@
 #include <sys/stat.h>
 #include <unistd.h> 
 
+#include "event.hpp"
+
 
 #ifdef __linux__ 
 #include <sys/epoll.h>
@@ -99,28 +101,11 @@ namespace search {
         // 'main' function our worker threads run
         void processResponses();
 
-        // adds file descriptor to "watchlist"
-        void addFd(int fd);
-        // gets a ready file descriptor from "watchlist"
-        int getFd();
-        // removes a file descriptor from the "watchlist"
-        void removeFd(int fd);
-        
-        #ifdef __linux__ 
-        int epollFd;
-        #else
-        size_t conn_index(int fd);
-        int kq;
-        struct kevent64_s chlist[MAX_CONNECTIONS];
-        struct kevent64_s evlist[MAX_CONNECTIONS];
-        std::vector<int> sockets;
-        std::unordered_set<int>    readySockets; 
-        #endif
-
         // given a socket return the clientInfo
         std::unordered_map<int, ClientInfo> clientInfo;
         std::mutex m;
         std::thread threads[NUM_THREADS];
+        search::EventQueue io;
 
     };
 }

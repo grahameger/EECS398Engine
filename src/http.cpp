@@ -141,7 +141,7 @@ namespace search {
         if (!sendall(sockfd, requestStr.c_str(), requestStr.size())) {
             // TODO: log
         }
-        addFd(sockfd);
+        io.addSocket(sockfd);
     }
 
     int HTTPClient::getConnToHost(const std::string &host, int port) {
@@ -183,16 +183,6 @@ namespace search {
     }
 
     HTTPClient::HTTPClient() {
-        #ifdef __linux__ 
-        epollFd = epoll_create1(0);
-        #else
-        kq = kqueue();
-        if (kq == -1) {
-            // TODO: log error
-        }
-        sockets.reserve(MAX_CONNECTIONS);
-        #endif
-
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
         // worker threads
@@ -207,101 +197,13 @@ namespace search {
         }
     }
 
-    #ifdef __linux__
-    void HTTPClient::addFd(int fd) {
-        struct epoll_event event;
-        event.data.fd = fd;
-        event.events = EPOLLIN | EPOLLET;
-        if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0) {
-            // TODO: log
-        }
-    }
-    #else
-    void HTTPClient::addFd(int fd) {
-        m.lock();
-        sockets.push_back(fd);
-        // 
-        EV_SET64(&chlist[sockets.size() - 1], fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0, 0, 0);
-        m.unlock();
-    }
-    #endif
-
-    #ifdef __linux__
-    int HTTPClient::getFd() {
-        struct epoll_event event;
-        // TODO: change the timeout
-        int rv = epoll_wait(epollFd, &event, 1, 1);
-        if (rv == -1) {
-            // TODO log error
-        }
-        // TODO make there be more than one event
-        return event.data.fd;
-    }
-    #else
-    int HTTPClient::getFd() {
-        m.lock();
-        if (readySockets.size() == 0) {
-            m.unlock();
-            int nev = kevent64(kq, chlist, sockets.size(), evlist, sockets.size(), 0, nullptr);
-            if (nev == -1) {
-                // error
-                // TODO: log
-            } else if (nev == 0) {
-                // sleep for 10ms
-                usleep(SLEEP_US);
-            } else if (nev > 0) {
-                m.lock();
-                for (size_t i = 0; i < nev; i++) {
-                    if (evlist[i].flags & EV_ERROR) {
-                        // TODO: log error
-                    }
-                    readySockets.insert(evlist[i].ident);
-                }
-            }
-        }
-        auto rv = *readySockets.begin();
-        readySockets.erase(readySockets.begin());
-        m.unlock();
-        return rv;
-    }
-    #endif
-
-    // removes a fd from the watch list
-    #ifdef __linux__
-    void HTTPClient::removeFd(int fd) {
-        m.lock();
-        struct epoll_event event;
-        event.data.fd = fd;
-        event.events = EPOLLIN | EPOLLET;
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &event) < 0) {
-            // TODO: log and error handle
-        }
-        m.unlock();
-    }
-    #else
-
-    void HTTPClient::removeFd(int fd) {
-        m.lock();
-        // remove from vector, this is O(n)
-        sockets.erase(std::remove(sockets.begin(), sockets.end(), fd), sockets.end());
-        // this should be a noop?
-        // TODO: remove?
-        readySockets.erase(std::find(readySockets.begin(), readySockets.end(), fd));
-        // erase from clientInfo
-        clientInfo.erase(fd);
-        // removes from kqueue automatically when closing socket
-        close(fd);
-        m.unlock();
-    }
-    #endif
-
     // 'main' function our worker threads run
     // everything in here will be completely cross platform
     // TODO still some funkiness. Working on the organizing thread stuff. 
     void HTTPClient::processResponses() {
         char buffer[BUFFER_SIZE];
         while (true) {
-            int sockfd = getFd();
+            int sockfd = io.getSocket();
             m.lock();
             auto iter = clientInfo.find(sockfd);
             if (iter != clientInfo.end()) {
