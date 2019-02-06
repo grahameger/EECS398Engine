@@ -13,7 +13,7 @@
 namespace search {
     EventQueue::EventQueue() {
         t = std::thread(&EventQueue::process, this);
-        #ifdef __linux__ 
+        #ifdef __linux__
         epollFd = epoll_create1(0);
         #else
         kq = kqueue();
