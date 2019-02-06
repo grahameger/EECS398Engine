@@ -12,8 +12,8 @@
 
 namespace search {
     EventQueue::EventQueue() {
-        #ifdef __linux__ 
-        // The argument is ignored on Linux after 2.6.8
+        t = std::thread(&EventQueue::process, this);
+        #ifdef __linux__
         epollFd = epoll_create1(0);
         #else
         kq = kqueue();
