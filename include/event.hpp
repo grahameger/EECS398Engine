@@ -24,15 +24,13 @@ namespace search {
     {
     public:
         EventQueue();
-        ~EventQueue();
         int getSocket();
         std::vector<int> getSockets();
         void addSocket(int sockfd);
+        void removeSocket(int sockfd);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
         static const int MAX_EVENTS = 64;
-        void process();
-        std::thread t;
         int epollFd;
     };
 }
