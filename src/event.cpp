@@ -39,7 +39,7 @@ namespace search {
         std::vector<int> socks;
         epoll_event events[MAX_EVENTS];
         // taking MAX_EVENTS and blocking. No timeout.
-        int numFds = epoll_wait(epollFd, events, MAXEVENTS, -1);
+        int numFds = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         // only allocate once and what we need
         socks.reserve(numFds);
         for (size_t i = 0; i < numFds; i++) {
