@@ -14,12 +14,20 @@
 #include <unordered_map>
 #include <string>
 #include <sstream>
+#include <fcntl.h>
 #include <mutex>
 #include <thread>
 #include <sys/types.h>
 #include <vector>
 #include <array>
 #include <unordered_set>
+#include <sys/socket.h> 
+#include <signal.h>
+#include <netinet/in.h> 
+#include <netdb.h> 
+#include <sys/stat.h>
+#include <unistd.h> 
+
 
 #ifdef __linux__ 
 #include <sys/epoll.h>
@@ -76,6 +84,7 @@ namespace search {
     class HTTPClient {
     public:
         HTTPClient();
+        ~HTTPClient();
         void SubmitURL(const std::string &url);
     private:
         static const size_t MAX_CONNECTIONS = 1000;

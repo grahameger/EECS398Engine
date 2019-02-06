@@ -11,15 +11,10 @@
 #include <string>
 #include <sstream>
 #include <regex>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdio.h> 
 #include <stdlib.h> 
-#include <unistd.h> 
 #include <string.h> 
-#include <sys/socket.h> 
-#include <netinet/in.h> 
-#include <netdb.h> 
+
 
 
 namespace search {
@@ -206,6 +201,12 @@ namespace search {
         }
     }
 
+    HTTPClient::~HTTPClient() {
+        for (size_t i = 0; i < NUM_THREADS; i++) {
+            threads[i].join();
+        }
+    }
+
     #ifdef __linux__
     void HTTPClient::addFd(int fd) {
         struct epoll_event event;
@@ -307,7 +308,7 @@ namespace search {
                 ClientInfo& info = clientInfo.at(sockfd);
                 m.unlock();
                 // recieve on the socket while there's data
-                size_t bytes_read = 0;
+                ssize_t bytes_read = 0;
                 do
                 {
                     bzero(buffer, sizeof buffer);
