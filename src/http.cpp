@@ -226,7 +226,7 @@ namespace search {
                         if (info.response != nullptr) {
                             info.response->process(info.fd);
                         }
-                        removeFd(sockfd);
+                        io.removeSocket(sockfd);
                     }
                     // actually write it to the HTTPResponse struct.
                     if (info.response == nullptr) {
