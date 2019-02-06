@@ -14,17 +14,10 @@
 #include <utility>
 #include <vector>
 #include <thread>
-
-
-#ifdef __linux__ 
-#include <sys/epoll.h>
 // https://medium.com/@copyconstruct/the-method-to-epolls-madness-d9d2d6378642
-#else
-#include <sys/types.h>
-// http://www.manpagez.com/man/2/kevent/
-#include <sys/event.h>
-#include <sys/time.h>
-#endif
+#include <sys/epoll.h>
+
+
 
 namespace search {
     class EventQueue
@@ -38,17 +31,9 @@ namespace search {
     private:
         static const size_t MAX_CONNECTIONS = 1000;
         static const int MAX_EVENTS = 64;
-
         void process();
-
-
-        #ifdef __linux__ 
+        std::thread t;
         int epollFd;
-        #else
-        int kq;
-        struct kevent64_s chlist[MAX_CONNECTIONS];
-        struct kevent64_s evlist[MAX_CONNECTIONS];
-        #endif
     };
 }
 
