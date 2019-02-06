@@ -10,12 +10,13 @@
 #ifndef event_hpp_398
 #define event_hpp_398
 
-#include "thread_queue.hpp"
 #include <iostream>
-#include <thread>
+#include <utility>
+#include <vector>
 
 #ifdef __linux__ 
 #include <sys/epoll.h>
+// https://medium.com/@copyconstruct/the-method-to-epolls-madness-d9d2d6378642
 #else
 #include <sys/types.h>
 // http://www.manpagez.com/man/2/kevent/
@@ -30,15 +31,14 @@ namespace search {
         EventQueue();
         ~EventQueue();
         int getSocket();
+        std::vector<int> getSockets();
         void addSocket(int sockfd);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
+        static const int MAX_EVENTS = 64;
 
         void process();
 
-        ThreadQueue<int> readySockets;
-        ThreadQueue<int> waitingSockets;
-        std::thread t;
 
         #ifdef __linux__ 
         int epollFd;
