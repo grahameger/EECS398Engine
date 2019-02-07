@@ -14,12 +14,15 @@
 #include <unordered_map>
 #include <string>
 #include <sstream>
-#include <fcntl.h>
 #include <mutex>
 #include <thread>
-#include <sys/types.h>
+#include <utility>
 #include <vector>
 #include <array>
+#include <fstream>
+
+#include <fcntl.h>
+#include <sys/types.h>
 #include <unordered_set>
 #include <sys/socket.h> 
 #include <signal.h>
@@ -27,22 +30,11 @@
 #include <netdb.h> 
 #include <sys/stat.h>
 #include <unistd.h> 
+#include <sys/epoll.h>
 
 #include "event.hpp"
 
 
-#ifdef __linux__ 
-#include <sys/epoll.h>
-#else
-#include <sys/types.h>
-// http://www.manpagez.com/man/2/kevent/
-#include <sys/event.h>
-#include <sys/time.h>
-#endif
-
-#ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0
-#endif
 
 namespace search {
     struct HTTPRequest
@@ -65,8 +57,12 @@ namespace search {
 
     struct HTTPResponse 
     {
-        void process(int fd);
+        HTTPResponse() : header_length(-1), content_length(-1) {}
+        void process(HTTPRequest * request);
+        void writeToFile(HTTPRequest * request);
         std::stringstream data;
+        ssize_t header_length;
+        ssize_t content_length;
         int code;
         std::string mimeType;
         std::string encoding;
@@ -77,9 +73,11 @@ namespace search {
             if (response) {
                 delete response;
             }
+            if (request) {
+                delete request;
+            }
         }
-        int fd; 
-        int sockfd;
+        HTTPRequest  * request;
         HTTPResponse * response;
     };
 
@@ -100,6 +98,7 @@ namespace search {
 
         // 'main' function our worker threads run
         void processResponses();
+        void parseResponse(int sockfd, ClientInfo &info);
 
         // given a socket return the clientInfo
         std::unordered_map<int, ClientInfo> clientInfo;

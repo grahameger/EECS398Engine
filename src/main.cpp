@@ -13,5 +13,5 @@ int main(int argc, char *argv[]) {
 	int two = q.pop();
 	assert(one == 1 && two == 2);
 	search::HTTPClient client;
-	client.SubmitURL("http://example.com/index.html");
+	client.SubmitURL("http://localhost/index.html");
 }

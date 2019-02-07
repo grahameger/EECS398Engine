@@ -16,6 +16,8 @@
 #include <thread>
 // https://medium.com/@copyconstruct/the-method-to-epolls-madness-d9d2d6378642
 #include <sys/epoll.h>
+#include <errno.h>
+#include <string.h>
 
 
 
