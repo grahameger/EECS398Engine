@@ -16,7 +16,6 @@
 #include <string.h> 
 
 
-
 namespace search {
     static const std::string getMethod = "GET";
     static const std::string endl = "\r\n";
@@ -78,13 +77,15 @@ namespace search {
         }
     }
 
+    void HTTPResponse::writeToFile(HTTPRequest * request) {
+        std::ofstream f(request->filename());
+        auto s = data.str();
+        f.write(s.c_str() + header_length, s.size());
+    }
+
     // do all the processing necessary for the HTTP stream.
-    void HTTPResponse::process(int fd) {
-        // for now we're just going to write the whole stream to the file
-        data.seekg(0, std::ios::end);
-        auto size = data.tellg();
-        data.seekg(0, std::ios::beg);
-        write(fd, data.str().c_str(), size);
+    void HTTPResponse::process(HTTPRequest * request) {
+
     }
     
     // send an entire buffer
@@ -114,26 +115,13 @@ namespace search {
             // invalid, TODO log bad request
             return;
         }
-        // create a file that only we can write to
-        int fd = open(
-                request->filename().c_str(),
-                O_RDWR | O_CREAT,
-                S_IRUSR | S_IRGRP | S_IROTH
-        );
 
         // open a socket to the host
         int sockfd = getConnToHost(request->host, request->port);
 
         // add request state to client data structure.
         m.lock();
-        clientInfo.insert({
-            sockfd, 
-            {
-                fd,
-                sockfd,
-                nullptr
-            }
-        });
+        clientInfo[sockfd] = {request, nullptr};
         m.unlock();
 
         // send request non-blocking
@@ -198,8 +186,6 @@ namespace search {
     }
 
     // 'main' function our worker threads run
-    // everything in here will be completely cross platform
-    // TODO still some funkiness. Working on the organizing thread stuff. 
     void HTTPClient::processResponses() {
         char buffer[BUFFER_SIZE];
         while (true) {
@@ -224,22 +210,49 @@ namespace search {
                     if (bytes_read == 0) {
                         // socket closed on the other end. Do some processing
                         if (info.response != nullptr) {
-                            info.response->process(info.fd);
+                            info.response->process(info.request);
                         }
-                        io.removeSocket(sockfd);
+                        parseResponse(sockfd, info);
                     }
                     // actually write it to the HTTPResponse struct.
                     if (info.response == nullptr) {
                         info.response = new HTTPResponse;
                         info.response->data.write(buffer, bytes_read);
-                    } 
+                        std::cout << "Wrote data!!!!!\n";
+                    }
                 } while (bytes_read > 0);
+                parseResponse(sockfd, info);
             }
             else {
                 m.unlock();
                 // TODO: log
                 continue;
             }
+        }
+    }
+
+    void HTTPClient::parseResponse(int sockfd, ClientInfo &info) {
+        // it's been written to the HTTPResponse
+        if (info.response->header_length == -1 || info.response->content_length == -1) {
+            size_t pos = info.response->data.str().find("\r\n\r\n");
+            if (pos != std::string::npos) {
+                info.response->header_length = pos + 4;
+                size_t leftovers = info.response->data.str().size() - info.response->header_length;
+                std::string word = "";
+                while (word != "Content-Length") {
+                    info.response->data >> word;
+                }
+                info.response->data >> word;
+                info.response->content_length = std::atoi(word.c_str()) - leftovers; 
+            }
+        }
+        if (info.response->header_length + info.response->content_length 
+                == info.response->data.str().size()) {
+            // we're done downloading this file we can process it
+            info.response->process(info.request);
+            close(sockfd);
+        } else {
+            io.addSocket(sockfd);
         }
     }
 }

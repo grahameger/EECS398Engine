@@ -18,11 +18,15 @@ namespace search {
     int EventQueue::getSocket() {
         epoll_event event;
         // block no timeout
-        int rv = epoll_wait(epollFd, &event, 1, -1);
-        return event.data.fd;
+        int rv;
+        do
+        {
+            rv = epoll_wait(epollFd, &event, 1, -1);
+        } while (rv < 0 && errno == EINTR);
         if (rv == -1) {
-            // TODO log error
+             printf("Something went wrong with epoll_wait()! %s\n", strerror(errno));
         }
+        return event.data.fd;
     }
 
     std::vector<int> EventQueue::getSockets() {
