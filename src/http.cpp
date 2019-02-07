@@ -14,6 +14,8 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
+#include <errno.h>
+#include <string.h>
 
 
 namespace search {
@@ -205,9 +207,15 @@ namespace search {
                         if (errno == EWOULDBLOCK) {
                             io.addSocket(sockfd);
                             continue;
-                        } else {
-                            // TODO error handling
                         }
+                        else if (errno == ECONNRESET) {
+                            info.response->writeToFile(info.request);
+                            break;
+                        }
+                        else {
+                            printf("Error with recv(), %s\n", strerror(errno));
+                        }
+
                     }
                     // actually write it to the HTTPResponse struct.
                     if (info.response == nullptr) {
