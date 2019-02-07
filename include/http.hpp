@@ -73,7 +73,7 @@ namespace search {
             if (response) {
                 delete response;
             }
-            if (request) {
+            if (request) { 
                 delete request;
             }
         }

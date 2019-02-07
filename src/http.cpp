@@ -202,26 +202,24 @@ namespace search {
                     bzero(buffer, sizeof buffer);
                     bytes_read = recv(sockfd, buffer, sizeof buffer, O_NONBLOCK);
                     if (bytes_read == -1) {
-                        // socket closed or other issue
-                        // TODO: actual error handling, currently SIGPIPE is completely
-                        // ignored so we have to still deal with that.
-                        break;
-                    }
-                    if (bytes_read == 0) {
-                        // socket closed on the other end. Do some processing
-                        if (info.response != nullptr) {
-                            info.response->process(info.request);
+                        if (errno == EWOULDBLOCK) {
+                            io.addSocket(sockfd);
+                            continue;
+                        } else {
+                            // TODO error handling
                         }
-                        parseResponse(sockfd, info);
                     }
                     // actually write it to the HTTPResponse struct.
                     if (info.response == nullptr) {
                         info.response = new HTTPResponse;
-                        info.response->data.write(buffer, bytes_read);
-                        std::cout << "Wrote data!!!!!\n";
+                    }
+                    info.response->data.write(buffer, bytes_read);
+                    if (bytes_read == 0) {
+                        // socket closed on the other end. Write to file
+                        info.response->writeToFile(info.request);
+                        break;
                     }
                 } while (bytes_read > 0);
-                parseResponse(sockfd, info);
             }
             else {
                 m.unlock();
@@ -249,7 +247,8 @@ namespace search {
         if (info.response->header_length + info.response->content_length 
                 == info.response->data.str().size()) {
             // we're done downloading this file we can process it
-            info.response->process(info.request);
+            // info.response->process(info.request);
+            info.response->writeToFile(info.request);
             close(sockfd);
         } else {
             io.addSocket(sockfd);
