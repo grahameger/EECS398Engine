@@ -30,12 +30,14 @@ namespace search {
     static const std::string port443 = "443";
 
     std::string HTTPRequest::filename() {
-        return host + path + query;
+        auto s = host + path + query;
+        std::replace(s.begin(), s.end(), '/', '_');
+        return s;
     }
 
     std::string HTTPRequest::requestString() {
         std::stringstream ss;
-        ss << method << ' ' << path << httpVersion << endl;
+        ss << method << ' ' << path << ' ' << httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << connClose << endl;
         return ss.str();
@@ -82,7 +84,8 @@ namespace search {
     void HTTPResponse::writeToFile(HTTPRequest * request) {
         std::ofstream f(request->filename());
         auto s = data.str();
-        f.write(s.c_str() + header_length, s.size());
+        f.write(s.c_str(), s.size());
+        f.close();
     }
 
     // do all the processing necessary for the HTTP stream.

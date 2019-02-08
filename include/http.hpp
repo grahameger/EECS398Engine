@@ -20,6 +20,7 @@
 #include <vector>
 #include <array>
 #include <fstream>
+#include <algorithm>
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -69,14 +70,6 @@ namespace search {
     };
 
     struct ClientInfo {
-        ~ClientInfo() {
-            if (response) {
-                delete response;
-            }
-            if (request) { 
-                delete request;
-            }
-        }
         HTTPRequest  * request;
         HTTPResponse * response;
     };

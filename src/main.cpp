@@ -14,4 +14,6 @@ int main(int argc, char *argv[]) {
 	assert(one == 1 && two == 2);
 	search::HTTPClient client;
 	client.SubmitURL("http://localhost/index.html");
+	client.SubmitURL("http://example.com/index.html");
+	client.SubmitURL("http://neverssl.com/index.html");
 }
