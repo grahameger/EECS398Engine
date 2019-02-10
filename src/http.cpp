@@ -11,15 +11,11 @@
 #include <string>
 #include <sstream>
 #include <regex>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdio.h> 
 #include <stdlib.h> 
-#include <unistd.h> 
 #include <string.h> 
-#include <sys/socket.h> 
-#include <netinet/in.h> 
-#include <netdb.h> 
+#include <errno.h>
+#include <string.h>
 
 
 namespace search {
@@ -34,12 +30,14 @@ namespace search {
     static const std::string port443 = "443";
 
     std::string HTTPRequest::filename() {
-        return host + path + query;
+        auto s = host + path + query;
+        std::replace(s.begin(), s.end(), '/', '_');
+        return s;
     }
 
     std::string HTTPRequest::requestString() {
         std::stringstream ss;
-        ss << method << ' ' << path << httpVersion << endl;
+        ss << method << ' ' << path << ' ' << httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << connClose << endl;
         return ss.str();
@@ -83,13 +81,16 @@ namespace search {
         }
     }
 
+    void HTTPResponse::writeToFile(HTTPRequest * request) {
+        std::ofstream f(request->filename());
+        auto s = data.str();
+        f.write(s.c_str(), s.size());
+        f.close();
+    }
+
     // do all the processing necessary for the HTTP stream.
-    void HTTPResponse::process(int fd) {
-        // for now we're just going to write the whole stream to the file
-        data.seekg(0, std::ios::end);
-        auto size = data.tellg();
-        data.seekg(0, std::ios::beg);
-        write(fd, data.str().c_str(), size);
+    void HTTPResponse::process(HTTPRequest * request) {
+
     }
     
     // send an entire buffer
@@ -119,26 +120,13 @@ namespace search {
             // invalid, TODO log bad request
             return;
         }
-        // create a file that only we can write to
-        int fd = open(
-                request->filename().c_str(),
-                O_RDWR | O_CREAT,
-                S_IRUSR | S_IRGRP | S_IROTH
-        );
 
         // open a socket to the host
         int sockfd = getConnToHost(request->host, request->port);
 
         // add request state to client data structure.
         m.lock();
-        clientInfo.insert({
-            sockfd, 
-            {
-                fd,
-                sockfd,
-                nullptr
-            }
-        });
+        clientInfo[sockfd] = {request, nullptr};
         m.unlock();
 
         // send request non-blocking
@@ -146,7 +134,7 @@ namespace search {
         if (!sendall(sockfd, requestStr.c_str(), requestStr.size())) {
             // TODO: log
         }
-        addFd(sockfd);
+        io.addSocket(sockfd);
     }
 
     int HTTPClient::getConnToHost(const std::string &host, int port) {
@@ -188,16 +176,6 @@ namespace search {
     }
 
     HTTPClient::HTTPClient() {
-        #ifdef __linux__ 
-        epollFd = epoll_create1(0);
-        #else
-        kq = kqueue();
-        if (kq == -1) {
-            // TODO: log error
-        }
-        sockets.reserve(MAX_CONNECTIONS);
-        #endif
-
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
         // worker threads
@@ -206,130 +184,52 @@ namespace search {
         }
     }
 
-    #ifdef __linux__
-    void HTTPClient::addFd(int fd) {
-        struct epoll_event event;
-        event.data.fd = fd;
-        event.events = EPOLLIN | EPOLLET;
-        if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0) {
-            // TODO: log
+    HTTPClient::~HTTPClient() {
+        for (size_t i = 0; i < NUM_THREADS; i++) {
+            threads[i].join();
         }
     }
-    #else
-    void HTTPClient::addFd(int fd) {
-        m.lock();
-        sockets.push_back(fd);
-        // 
-        EV_SET64(&chlist[sockets.size() - 1], fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, 0, 0, 0);
-        m.unlock();
-    }
-    #endif
-
-    #ifdef __linux__
-    int HTTPClient::getFd() {
-        struct epoll_event event;
-        // TODO: change the timeout
-        int rv = epoll_wait(epollFd, &event, 1, 1);
-        if (rv == -1) {
-            // TODO log error
-        }
-        // TODO make there be more than one event
-        return event.data.fd;
-    }
-    #else
-    int HTTPClient::getFd() {
-        m.lock();
-        if (readySockets.size() == 0) {
-            m.unlock();
-            int nev = kevent64(kq, chlist, sockets.size(), evlist, sockets.size(), 0, nullptr);
-            if (nev == -1) {
-                // error
-                // TODO: log
-            } else if (nev == 0) {
-                // sleep for 10ms
-                usleep(SLEEP_US);
-            } else if (nev > 0) {
-                m.lock();
-                for (size_t i = 0; i < nev; i++) {
-                    if (evlist[i].flags & EV_ERROR) {
-                        // TODO: log error
-                    }
-                    readySockets.insert(evlist[i].ident);
-                }
-            }
-        }
-        auto rv = *readySockets.begin();
-        readySockets.erase(readySockets.begin());
-        m.unlock();
-        return rv;
-    }
-    #endif
-
-    // removes a fd from the watch list
-    #ifdef __linux__
-    void HTTPClient::removeFd(int fd) {
-        m.lock();
-        struct epoll_event event;
-        event.data.fd = fd;
-        event.events = EPOLLIN | EPOLLET;
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &event) < 0) {
-            // TODO: log and error handle
-        }
-        m.unlock();
-    }
-    #else
-
-    void HTTPClient::removeFd(int fd) {
-        m.lock();
-        // remove from vector, this is O(n)
-        sockets.erase(std::remove(sockets.begin(), sockets.end(), fd), sockets.end());
-        // this should be a noop?
-        // TODO: remove?
-        readySockets.erase(std::find(readySockets.begin(), readySockets.end(), fd));
-        // erase from clientInfo
-        clientInfo.erase(fd);
-        // removes from kqueue automatically when closing socket
-        close(fd);
-        m.unlock();
-    }
-    #endif
 
     // 'main' function our worker threads run
-    // everything in here will be completely cross platform
-    // TODO still some funkiness. Working on the organizing thread stuff. 
     void HTTPClient::processResponses() {
         char buffer[BUFFER_SIZE];
         while (true) {
-            int sockfd = getFd();
+            int sockfd = io.getSocket();
             m.lock();
             auto iter = clientInfo.find(sockfd);
             if (iter != clientInfo.end()) {
                 ClientInfo& info = clientInfo.at(sockfd);
                 m.unlock();
                 // recieve on the socket while there's data
-                size_t bytes_read = 0;
+                ssize_t bytes_read = 0;
                 do
                 {
                     bzero(buffer, sizeof buffer);
                     bytes_read = recv(sockfd, buffer, sizeof buffer, O_NONBLOCK);
                     if (bytes_read == -1) {
-                        // socket closed or other issue
-                        // TODO: actual error handling, currently SIGPIPE is completely
-                        // ignored so we have to still deal with that.
-                        break;
-                    }
-                    if (bytes_read == 0) {
-                        // socket closed on the other end. Do some processing
-                        if (info.response != nullptr) {
-                            info.response->process(info.fd);
+                        if (errno == EWOULDBLOCK) {
+                            io.addSocket(sockfd);
+                            continue;
                         }
-                        removeFd(sockfd);
+                        else if (errno == ECONNRESET) {
+                            info.response->writeToFile(info.request);
+                            break;
+                        }
+                        else {
+                            printf("Error with recv(), %s\n", strerror(errno));
+                        }
+
                     }
                     // actually write it to the HTTPResponse struct.
                     if (info.response == nullptr) {
                         info.response = new HTTPResponse;
-                        info.response->data.write(buffer, bytes_read);
-                    } 
+                    }
+                    info.response->data.write(buffer, bytes_read);
+                    if (bytes_read == 0) {
+                        // socket closed on the other end. Write to file
+                        info.response->writeToFile(info.request);
+                        break;
+                    }
                 } while (bytes_read > 0);
             }
             else {
@@ -337,6 +237,32 @@ namespace search {
                 // TODO: log
                 continue;
             }
+        }
+    }
+
+    void HTTPClient::parseResponse(int sockfd, ClientInfo &info) {
+        // it's been written to the HTTPResponse
+        if (info.response->header_length == -1 || info.response->content_length == -1) {
+            size_t pos = info.response->data.str().find("\r\n\r\n");
+            if (pos != std::string::npos) {
+                info.response->header_length = pos + 4;
+                size_t leftovers = info.response->data.str().size() - info.response->header_length;
+                std::string word = "";
+                while (word != "Content-Length") {
+                    info.response->data >> word;
+                }
+                info.response->data >> word;
+                info.response->content_length = std::atoi(word.c_str()) - leftovers; 
+            }
+        }
+        if (info.response->header_length + info.response->content_length 
+                == info.response->data.str().size()) {
+            // we're done downloading this file we can process it
+            // info.response->process(info.request);
+            info.response->writeToFile(info.request);
+            close(sockfd);
+        } else {
+            io.addSocket(sockfd);
         }
     }
 }
