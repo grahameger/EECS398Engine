@@ -10,10 +10,11 @@
 #define thread_queue_hpp_398
 
 #include <iostream>
-#include <queue>
+#include <deque>
 #include <mutex>
 #include <condition_variable>
 #include <array>
+#include <vector>
 
 namespace search {
     template <typename T>
@@ -22,17 +23,15 @@ namespace search {
     public:
         void push(const T &d) {
             std::unique_lock<std::mutex> lock(m);
-            q.push(d);
-            lock.release();
+            q.push_back(d);
             cv.notify_one();
         }
 
         void push(const std::vector<T> &d) {
             std::unique_lock<std::mutex> lock(m);
             for (auto i : d) {
-                q.push(i);
+                q.push_back(i);
             }
-            lock.release();
             cv.notify_all();
         }
 
@@ -46,7 +45,7 @@ namespace search {
             }
             // we own the lock
             T temp = q.front();
-            q.pop();
+            q.pop_front();
             return temp;
             // mutex gets released on destruction
         }
@@ -74,7 +73,7 @@ namespace search {
             return q.empty();
         }
     private:
-        std::queue<T> q;
+        std::deque<T> q;
         std::mutex m;
         std::condition_variable cv;
     };

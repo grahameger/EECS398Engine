@@ -10,24 +10,30 @@
 #ifndef event_hpp_398
 #define event_hpp_398
 
-#include "thread_queue.hpp"
 #include <iostream>
+#include <utility>
+#include <vector>
 #include <thread>
+// https://medium.com/@copyconstruct/the-method-to-epolls-madness-d9d2d6378642
+#include <sys/epoll.h>
+#include <errno.h>
+#include <string.h>
+
+
 
 namespace search {
     class EventQueue
     {
     public:
         EventQueue();
-        ~EventQueue();
         int getSocket();
+        std::vector<int> getSockets();
         void addSocket(int sockfd);
+        void removeSocket(int sockfd);
     private:
-        void process();
-
-        ThreadQueue<int> readySockets;
-        ThreadQueue<int> waitingSockets;
-        std::thread t;
+        static const size_t MAX_CONNECTIONS = 1000;
+        static const int MAX_EVENTS = 64;
+        int epollFd;
     };
 }
 

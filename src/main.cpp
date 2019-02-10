@@ -9,11 +9,11 @@ int main(int argc, char *argv[]) {
 	search::ThreadQueue<int> q;
 	q.push(1);
 	q.push(2);
-	int one;
-	int two;
-	while (!q.pop(one)) {}
-	while (!q.pop(two)) {}
+	int one = q.pop();
+	int two = q.pop();
 	assert(one == 1 && two == 2);
 	search::HTTPClient client;
+	client.SubmitURL("http://localhost/index.html");
 	client.SubmitURL("http://example.com/index.html");
+	client.SubmitURL("http://neverssl.com/index.html");
 }
