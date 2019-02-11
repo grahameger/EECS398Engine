@@ -126,6 +126,7 @@ namespace search {
 
         // add request state to client data structure.
         m.lock();
+        // TODO: SSL
         clientInfo[sockfd] = {request, nullptr};
         m.unlock();
 
@@ -178,6 +179,10 @@ namespace search {
     HTTPClient::HTTPClient() {
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
+
+        // SSL stuff
+        initSSLCtx();
+
         // worker threads
         for (size_t i = 0; i < NUM_THREADS; i++) {
             threads[i] = std::thread(&HTTPClient::processResponses, this);
@@ -188,6 +193,8 @@ namespace search {
         for (size_t i = 0; i < NUM_THREADS; i++) {
             threads[i].join();
         }
+        // SSL Stuff, shouldn't run until all the threads return.
+        destroySSL();
     }
 
     // 'main' function our worker threads run
@@ -201,9 +208,11 @@ namespace search {
                 ClientInfo& info = clientInfo.at(sockfd);
                 m.unlock();
                 // recieve on the socket while there's data
+                // TODO: SSL, separate out the recv loop into functions
                 ssize_t bytes_read = 0;
                 do
                 {
+                    // TODO
                     bzero(buffer, sizeof buffer);
                     bytes_read = recv(sockfd, buffer, sizeof buffer, O_NONBLOCK);
                     if (bytes_read == -1) {
@@ -264,5 +273,35 @@ namespace search {
         } else {
             io.addSocket(sockfd);
         }
+    }
+
+    void HTTPClient::initSSLCtx() {
+        SSL_library_init();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
+        // this is deprecated and is potentially unnecessary
+        // the OpenSSL wiki says to call it anyway.
+        OPENSSL_config(NULL);
+        /* Include <openssl/opensslconf.h> to get this define */
+        #if defined (OPENSSL_THREADS)
+        fprintf(stdout, "Warning: thread locking is not implemented\n");
+        #endif
+    }
+
+    void HTTPClient::destroySSL() {
+        ERR_free_strings();
+        EVP_cleanup();
+    }
+
+    SSL * HTTPClient::openSSLConnection(int sockfd) {
+
+
+
+        return nullptr;
+    }
+
+    void HTTPClient::closeSSLConnection(SSL * ssl) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
     }
 }

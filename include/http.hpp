@@ -33,6 +33,13 @@
 #include <unistd.h> 
 #include <sys/epoll.h>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/opensslconf.h>
+#if (SSLEAY_VERSION_NUMBER >= 0x0907000L)
+# include <openssl/conf.h>
+#endif
+
 #include "event.hpp"
 
 
@@ -72,6 +79,7 @@ namespace search {
     struct ClientInfo {
         HTTPRequest  * request;
         HTTPResponse * response;
+        SSL * ssl;
     };
 
     class HTTPClient {
@@ -99,6 +107,14 @@ namespace search {
         std::thread threads[NUM_THREADS];
         search::EventQueue io;
 
+        // openSSL functions and state
+        // init (called by constructor)
+        // teardown (called by destructor)
+        void initSSLCtx();
+        void destroySSL();
+        SSL * openSSLConnection(int sockfd);
+        void closeSSLConnection(SSL * ssl);
+        SSL_CTX * sslContext;
     };
 }
 
