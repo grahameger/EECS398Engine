@@ -62,7 +62,7 @@ namespace search {
     // URI = scheme:[//authority]path[?query][#fragment]
     // authority = [userinfo@]host[:port]
     // uses the RFC 3986 regex suggestion for URL parsing
-    HTTPRequest * parseURL(const std::string &url) {
+    static HTTPRequest * parseURL(const std::string &url) {
         std::regex r(
                 R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended
@@ -94,9 +94,9 @@ namespace search {
     }
     
     // send an entire buffer
-    static bool sendall(int sockfd, const char * buf, size_t len) {
+    static bool sendall(int sockfd, const char * buf, size_t len, int flags) {
         while (len > 0) {
-            auto i = send(sockfd, buf, len, O_NONBLOCK | MSG_NOSIGNAL);
+            auto i = send(sockfd, buf, len, flags);
             if (i < 1) {
                 return false; 
             }
@@ -132,34 +132,33 @@ namespace search {
 
         // send request non-blocking
         std::string requestStr = request->requestString();
-        if (!sendall(sockfd, requestStr.c_str(), requestStr.size())) {
+        if (!sendall(sockfd, requestStr.c_str(), requestStr.size(), O_NONBLOCK | MSG_NOSIGNAL)) {
             // TODO: log
         }
         io.addSocket(sockfd);
     }
 
-    int HTTPClient::getConnToHost(const std::string &host, int port) {
+    int HTTPClient::getConnToHost(const std::string &host, int port, bool blocking) {
         struct hostent *server;
         struct sockaddr_in serv_addr;
         int sockfd;
-
         // create socket
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) {
             // TODO: log
         }
-        // set socket to non blocking
-        int rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
-        if (rv == -1) {
-            // TODO: log error
+        if (!blocking) {
+            // set socket to non blocking
+            int rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
+            if (rv == -1) {
+                // TODO: log error
+            }
         }
-
         // lookup ip address
         server = gethostbyname(host.c_str());
         if (server == nullptr) {
             // TODO: log
         }
-
         // fill in struct
         memset(&serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
@@ -167,12 +166,10 @@ namespace search {
         memcpy(&serv_addr.sin_addr.s_addr,
                 server->h_addr,
                 server->h_length);
-
         // connect the socket
         if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) {
             // TODO: log
         }
-
         return sockfd;
     }
 
@@ -303,5 +300,98 @@ namespace search {
     void HTTPClient::closeSSLConnection(SSL * ssl) {
         SSL_shutdown(ssl);
         SSL_free(ssl);
+    }
+
+    // parse a well formed url and get the stuff within
+    // URI = scheme:[//authority]path[?query][#fragment]
+    // authority = [userinfo@]host[:port]
+    // uses the RFC 3986 regex suggestion for URL parsing
+    // Using GCC 8.2.0 on Linux the return value is moved
+    // not copied. Therefore it is faster than the heap
+    // based version. 
+    // Bad urls will copy the empty request but will not
+    // run a bunch of std::string constructors.
+    static HTTPRequest parseURLStack(const std::string &url) {
+        std::regex r(
+                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
+                std::regex::extended
+        );
+        std::smatch result;
+        if (std::regex_match(url, result, r)) {
+            HTTPRequest rv;
+            rv.protocol = result[2];
+            rv.host =     result[4];
+            rv.path =     result[5];
+            rv.query =    result[7];
+            rv.fragment = result[9];
+            return rv;
+        } else {
+            return emptyHTTPRequest;
+        }
+    }
+
+    void HTTPClient::SubmitURLSync(const std::string &url) {
+        HTTPRequest request = parseURLStack(url);
+        request.method = getMethod;
+        request.headers = connClose;
+        if (request.protocol == httpsStr) {
+            request.port = 443;
+        }
+        else if (request.protocol == httpStr) {
+            request.port = 80;
+        }
+        else {
+            // invalid, TODO log bad request
+            return;
+        }
+
+        // open a socket to the host
+        int sockfd = getConnToHost(request.host, request.port);
+
+        // send request non-blocking
+        const std::string requestStr = request.requestString();
+        if (!sendall(sockfd, requestStr.c_str(), requestStr.size(), MSG_NOSIGNAL)) {
+            // TODO: log
+        }
+
+        // open a file
+        const int oFlags = O_APPEND | O_CREAT | O_TRUNC | O_RDWR;
+        int outputFd = open(request.filename().c_str(), oFlags, S_IWRITE);
+
+        const int mmapFlags = PROT_READ | PROT_WRITE;
+        char * map = (char*)mmap(0, DEFAULT_FILE_SIZE, mmapFlags, MAP_SHARED, outputFd, 0);
+
+        size_t currentBufferSize = DEFAULT_FILE_SIZE;
+        // receive loop into that memory
+
+        ssize_t rv;
+        int bytes_received = 0;
+        while (true) {
+            // recv blocks and returns if:                            
+            rv = recv(sockfd, (void*)(map + bytes_received), DEFAULT_FILE_SIZE, MSG_WAITALL);
+            if (rv == 0) {
+                // EOF
+                bytes_received += rv;
+                break;
+            }
+            else if(rv < 0) {
+                // ERR
+                // TODO handle
+            }
+            else if (rv == DEFAULT_FILE_SIZE) {
+                // update bytes received
+                bytes_received += rv;
+                // unmap
+                munmap((void*)map, currentBufferSize);
+                // update current buffer size
+                currentBufferSize += DEFAULT_FILE_SIZE;
+                // reset the file descriptor to the beginning of the file
+                off_t currentPos = lseek(outputFd, (size_t)0, SEEK_CUR);
+                lseek(outputFd, currentPos, SEEK_SET);
+                // mmap
+                map = (char*)mmap(0, DEFAULT_FILE_SIZE, mmapFlags, MAP_SHARED, outputFd, 0);
+            }
+        }
+        // the whole file is downloaded into the file with the name and at map with size bytes_received
     }
 }

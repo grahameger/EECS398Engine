@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <unistd.h> 
 #include <sys/epoll.h>
+#include <sys/mman.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -60,8 +61,8 @@ namespace search {
         std::string   protocol;
         int           port;         // note 0 defaults to 80
     };
-
     HTTPRequest * parseURL(const std::string &url);
+    static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
     struct HTTPResponse 
     {
@@ -75,6 +76,7 @@ namespace search {
         std::string mimeType;
         std::string encoding;
     };
+    static const HTTPResponse emptyHTTPResponse = HTTPResponse();
 
     struct ClientInfo {
         HTTPRequest  * request;
@@ -87,15 +89,17 @@ namespace search {
         HTTPClient();
         ~HTTPClient();
         void SubmitURL(const std::string &url);
+        void SubmitURLSync(const std::string &url);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
         static const size_t RECV_SIZE = 2048;
         static const size_t BUFFER_SIZE = RECV_SIZE;
         static const size_t NUM_THREADS = 4;
         static const uint32_t SLEEP_US = 10000;
+        const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
 
         // returns connected TCP socket to host
-        int getConnToHost(const std::string &host, int port);
+        int getConnToHost(const std::string &host, int port, bool blocking = false);
 
         // 'main' function our worker threads run
         void processResponses();
