@@ -29,13 +29,13 @@ namespace search {
     static const std::string port80 = "80";
     static const std::string port443 = "443";
 
-    std::string HTTPRequest::filename() {
+    std::string HTTPRequest::filename() const {
         auto s = host + path + query;
         std::replace(s.begin(), s.end(), '/', '_');
         return s;
     }
 
-    std::string HTTPRequest::requestString() {
+    std::string HTTPRequest::requestString() const {
         std::stringstream ss;
         ss << method << ' ' << path << ' ' << httpVersion << endl;
         ss << hostString << ' ' << host << endl;
@@ -276,6 +276,8 @@ namespace search {
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
+        static const SSL_METHOD * meth = TLSv1_2_client_method();
+        sslContext = SSL_CTX_new(meth);
         // this is deprecated and is potentially unnecessary
         // the OpenSSL wiki says to call it anyway.
         OPENSSL_config(NULL);
@@ -330,8 +332,42 @@ namespace search {
         }
     }
 
+    SSL * sendSsl(int sockfd, const HTTPRequest &req, SSL_CTX * ctx) {
+        SSL * ssl = SSL_new(ctx);
+        if (!ssl) {
+            // TODO thread safe error logging
+            fprintf(stderr, "Error creating SSL.\n");
+            return nullptr;
+        }
+        int sslsock = SSL_get_fd(ssl);
+        SSL_set_fd(ssl, sslsock);
+        int rv = SSL_connect(ssl);
+        if (rv <= 0) {
+            fprintf(stderr, "Error creating SSL connection with %s", req.host.c_str());
+            fflush(stderr);
+            return nullptr;
+        }
+        auto reqStr = req.requestString();
+        rv = SSL_write(ssl, reqStr.c_str(), reqStr.size());
+        if (rv <= 0) {
+            int error = SSL_get_error(ssl, rv);
+            switch (error)
+            {
+                case SSL_ERROR_WANT_WRITE:
+                case SSL_ERROR_WANT_READ:
+                    break;
+                case SSL_ERROR_ZERO_RETURN:
+                case SSL_ERROR_SYSCALL:
+                case SSL_ERROR_SSL:
+                default:
+                    return nullptr;
+            }
+        }
+    }
+
     void HTTPClient::SubmitURLSync(const std::string &url) {
         HTTPRequest request = parseURLStack(url);
+        SSL * ssl = nullptr;
         request.method = getMethod;
         request.headers = connClose;
         if (request.protocol == httpsStr) {
@@ -344,16 +380,20 @@ namespace search {
             // invalid, TODO log bad request
             return;
         }
-
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port);
-
         // send request non-blocking
         const std::string requestStr = request.requestString();
-        if (!sendall(sockfd, requestStr.c_str(), requestStr.size(), MSG_NOSIGNAL)) {
+        if (request.port == 443) {
+            ssl = sendSsl(sockfd, request, sslContext);
+            if (!ssl) {
+                // TODO: log
+            }
+        } else {
+            if (!sendall(sockfd, requestStr.c_str(), requestStr.size(), MSG_NOSIGNAL)) {
             // TODO: log
+            }
         }
-
         // open a file
         const int oFlags = O_APPEND | O_CREAT | O_TRUNC | O_RDWR;
         int outputFd = open(request.filename().c_str(), oFlags, S_IWRITE);
@@ -366,13 +406,16 @@ namespace search {
 
         ssize_t rv;
         int bytes_received = 0;
-        while (true) {
-            // recv blocks and returns if:                            
-            rv = recv(sockfd, (void*)(map + bytes_received), DEFAULT_FILE_SIZE, MSG_WAITALL);
+        do {
+            // recv blocks and returns if:
+            if (ssl) {
+                rv = SSL_read(ssl, (void*)(map + bytes_received), currentBufferSize - bytes_received);
+            } else {
+                rv = recv(sockfd, (void*)(map + bytes_received), currentBufferSize - bytes_received, MSG_WAITALL);
+            }             
             if (rv == 0) {
                 // EOF
                 bytes_received += rv;
-                break;
             }
             else if(rv < 0) {
                 // ERR
@@ -391,7 +434,9 @@ namespace search {
                 // mmap
                 map = (char*)mmap(0, DEFAULT_FILE_SIZE, mmapFlags, MAP_SHARED, outputFd, 0);
             }
-        }
+        } while (rv != 0);
+        if (ssl) closeSSLConnection(ssl);
         // the whole file is downloaded into the file with the name and at map with size bytes_received
+        // TODO call the process stuff, std::string_view<char>, something like that 
     }
 }

@@ -49,8 +49,8 @@ namespace search {
     struct HTTPRequest
     {
         // can optimize this later
-        std::string filename();
-        std::string requestString();
+        std::string filename() const;
+        std::string requestString() const;
         void print();
         std::string   method;       // only GET implemented
         std::string   host;
