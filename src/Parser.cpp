@@ -54,10 +54,8 @@ void LinkFinder::findLinks(const char* html_file, char* result[], int* size) {
     for(int i = 0; i < numLinks; i++) {
         if(std::regex_search(linkArray[i], m, regx) ) {
             strcpy(linkArray[i], m[1].str().c_str());
+	    result[i] = linkArray[i];
         }
-    }
-    for(int i = 0; i < numLinks; i++) {
-        result[i] = linkArray[i];
     }
     return;
 }
