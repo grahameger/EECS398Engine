@@ -64,31 +64,10 @@ namespace search {
     HTTPRequest * parseURL(const std::string &url);
     static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
-    struct HTTPResponse 
-    {
-        HTTPResponse() : header_length(-1), content_length(-1) {}
-        void process(HTTPRequest * request);
-        void writeToFile(HTTPRequest * request);
-        std::stringstream data;
-        ssize_t header_length;
-        ssize_t content_length;
-        int code;
-        std::string mimeType;
-        std::string encoding;
-    };
-    static const HTTPResponse emptyHTTPResponse = HTTPResponse();
-
-    struct ClientInfo {
-        HTTPRequest  * request;
-        HTTPResponse * response;
-        SSL * ssl;
-    };
-
     class HTTPClient {
     public:
         HTTPClient();
         ~HTTPClient();
-        void SubmitURL(const std::string &url);
         void SubmitURLSync(const std::string &url);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
@@ -103,21 +82,16 @@ namespace search {
 
         // 'main' function our worker threads run
         void processResponses();
-        void parseResponse(int sockfd, ClientInfo &info);
+        void process(char* file, size_t len);
 
         // given a socket return the clientInfo
-        std::unordered_map<int, ClientInfo> clientInfo;
         std::mutex m;
-        std::thread threads[NUM_THREADS];
-        search::EventQueue io;
 
         // openSSL functions and state
         // init (called by constructor)
         // teardown (called by destructor)
         void initSSLCtx();
         void destroySSL();
-        SSL * openSSLConnection(int sockfd);
-        void closeSSLConnection(SSL * ssl);
         SSL_CTX * sslContext;
     };
 }
