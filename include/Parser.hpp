@@ -17,7 +17,6 @@ public:
     //         Modifies result[] by adding found links. returns size as # of links.
     //         If no links found, Size is 0.
     //MODIFIES: result[], Size
-    //*NOTE: Only finds links in 'a'/'A' tags where link is in "" or ''
     void findLinks(const char* html_file, char* result[], int* size);
     
 private:

@@ -14,7 +14,7 @@ LinkFinder::~LinkFinder() {
 }
 
 void LinkFinder::findLinks(const char* html_file, char* result[], int* size) {
-    int start_positions [1000];//assuming at most 100 links per page
+    int start_positions [1000];//assuming at most 1000 links per page
     int end_positions [1000];
     int start_index = 0;
     int end_index = 0;
@@ -49,7 +49,7 @@ void LinkFinder::findLinks(const char* html_file, char* result[], int* size) {
         linkArray[i] = substring;
     }
     //use regex on each substring to find link
-    //**NOTE:Finds links only if in "" or ''
+    //**NOTE:Finds links even if incorrect syntax. (e.g. ="link =link =link' ="link' ='link>
     regex regx("(?:href=[\"']([^ >\"'\n]+))|(?:href=([^ >\"'\n]+))", std::regex_constants::icase);
     std::cmatch m;
     for(int i = 0; i < numLinks; i++) {
