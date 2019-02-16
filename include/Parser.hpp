@@ -25,22 +25,29 @@ private:
     int numLinks = 0;
 };
 #endif /* Parser_hpp */
-/* -----------------------------------------------------------------------------
-TESTING + HOW TO USE
-int main(int argc, const char * argv[]) {
- char file[1000] = "<!DOCTYPE html> \n<html lang=\"en\">\n<head>\n<title>insta485</title>\n</head>\n<body>\n<div style=\"position: absolute; top: 0; left: 0; width: 200px; text-align:left;\">\n<a href='/'>Timeline</a>\n</div>\n<div style=\"position: absolute; top: 0; right: 0; width: 200px; text-align:right;\">\n<a href=\"/explore/\">explore</a> <a href=\"/u/awdeorio/\">awdeorio</a>\n</div>\n<a href=\"/u/awdeorio/\">\n<img src=\"/uploads/e1a7c5c32973862ee15173b0259e3efdb6a391af.jpg\" alt=\"image\">\n</a>\n<h2><a href=\"/u/awdeorio/\">awdeorio</a> <a href=\'/p/3/\'>a minute ago</a></h2>\n";
- 
- char* s = new char[5000];
- strcpy(s,file);
- char *linkArray[100]; assuming no more than 100 links/page
+// -----------------------------------------------------------------------------
+//TESTING + HOW TO USE
+/*#include "Parser.h"
+ #include <sys/types.h>
+ #include <sys/mman.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ #include <unistd.h>
+ using namespace std;
+ Filename is argument 1
+ int main(int argc, const char * argv[]) {
+ int fd = open(argv[1], O_RDONLY);
+ long long len = lseek(fd, 0, SEEK_END);
+ void *data = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+ char *linkArray[1000];
  int size = 0;
  LinkFinder L;
- L.findLinks(s, linkArray, &size);
+ L.findLinks((char*)data, linkArray, &size);
  for(int i = 0; i < size; i++) {
  std::cout << linkArray[i] << std::endl;
  }
  std::cout << "end ";
- delete[] s;
+ //delete[] s;
  
  return 0;
  }
