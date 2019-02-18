@@ -2,19 +2,18 @@
 #define ROBOTSTXT_H
 
 #include <string_view>
-#include "DirectoryRules.h"
 
-using std::string_view;
+class DirectoryRule;
+struct Rule;
 
 // TODO: Figure out how to deal with "*" wildcards in paths
 class RobotsTxt {
 public:
-   RobotsTxt(string_view robotsFilename);
-   bool IsAllowed(string_view path);
+   RobotsTxt(std::string_view robotsFilename);
+   bool IsAllowed(std::string_view path);
 
 private:
-   void Allow(string_view path);
-   void Disallow(string_view path);
+   AddRule(Rule rule);
 
    DirectoryRule root;
 };
