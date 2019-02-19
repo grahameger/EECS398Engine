@@ -64,6 +64,7 @@
         "condition_variable": "cpp",
         "queue": "cpp",
         "set": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "*.tcc": "cpp"
     }
 }

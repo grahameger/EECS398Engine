@@ -10,7 +10,5 @@
 #include "crawler.hpp"
 
 namespace search {
-    Crawler::Crawler() {
-        sem = threading::Semaphore(MAX_CRAWLER_THREADS);
-    }
+    
 }
