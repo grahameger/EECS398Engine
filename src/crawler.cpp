@@ -10,5 +10,9 @@
 #include "crawler.hpp"
 
 namespace search {
-    
+    Crawler::Crawler(const std::vector<std::string> &urls_in) {
+        for (auto &i : urls_in) {
+            urls.push(i);
+        }
+    }
 }
