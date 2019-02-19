@@ -28,11 +28,13 @@
 #include <sys/socket.h> 
 #include <signal.h>
 #include <netinet/in.h> 
+#include <arpa/inet.h>
 #include <netdb.h> 
 #include <sys/stat.h>
 #include <unistd.h> 
 #include <sys/epoll.h>
 #include <sys/mman.h>
+#include <buffer.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -46,6 +48,7 @@
 
 
 namespace search {
+
     struct HTTPRequest
     {
         // can optimize this later
@@ -71,7 +74,7 @@ namespace search {
         void SubmitURLSync(const std::string &url);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
-        static const size_t RECV_SIZE = 2048;
+        static const size_t RECV_SIZE = 8192;
         static const size_t BUFFER_SIZE = RECV_SIZE;
         static const size_t NUM_THREADS = 4;
         static const uint32_t SLEEP_US = 10000;
@@ -92,7 +95,28 @@ namespace search {
         // teardown (called by destructor)
         void initSSLCtx();
         void destroySSL();
-        SSL_CTX * sslContext;
+
+        static SSL_CTX * sslContext;
+
+        struct Socket {
+        public:
+            virtual int setFd(int fd_in);
+            virtual ssize_t send(const char * buf, size_t len);
+            virtual ssize_t recv(char * buf, size_t len, int flags);
+            virtual ssize_t close();
+        protected:
+            int sockfd;
+        };
+
+        struct SecureSocket : public Socket {
+        public:
+            virtual int setFd(int fd_in);
+            virtual ssize_t send(const char * buf, size_t len);
+            virtual ssize_t recv(char * buf, size_t len, int flags);
+            virtual ssize_t close();
+        private:
+            SSL * ssl;
+        };
     };
 }
 

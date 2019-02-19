@@ -167,23 +167,124 @@ namespace search {
         }
     }
 
-    SSL * sendSsl(int sockfd, const HTTPRequest &req, SSL_CTX * ctx) {
-        SSL * ssl = SSL_new(ctx);
+    void HTTPClient::SubmitURLSync(const std::string &url) {
+        HTTPRequest request = parseURLStack(url);
+        Socket * sock;
+        request.method = getMethod;
+        request.headers = connClose;
+        if (request.protocol == httpsStr) {
+            request.port = 443;
+            sock = new SecureSocket;
+        }
+        else if (request.protocol == httpStr) {
+            request.port = 80;
+            sock = new Socket; 
+        }
+        else {
+            // invalid, TODO log bad request
+            return;
+        }
+        // open a socket to the host
+        int sockfd = getConnToHost(request.host, request.port);
+        sock->setFd(sockfd);
+        // send request non-blocking
+        const std::string requestStr = request.requestString();
+        sock->send(requestStr.c_str(), requestStr.size());
+
+        // dynamic buffering
+        // every time recv returns we'll look for "Content-Length", length of the body
+        // when we get the length of the body then we can have a hard coded size to check for
+        // get the size of the header by searching for /r/n/r/n
+        ssize_t rv = 0;
+        ssize_t content_length = -1;
+        ssize_t current_buf_size = BUFFER_SIZE;
+        int bytes_received = 0;
+        char * full_response = (char*)malloc(BUFFER_SIZE);
+
+        while (true) {
+            sock->recv(full_response, BUFFER_SIZE, 0);
+            if (rv < 0) {
+                // error check
+            } else if (rv == 0) {
+                // handle EOF
+            } else {
+                // check content_length to see if we need to continue or can break
+            }
+            // check if the header has been downloaded
+            if (content_length == -1) {
+                char * header_pos = std::find(full_response, full_response + bytes_received, "\r\n\r\n");
+                if (header_pos) {
+                    size_t header_size = header_pos - full_response + 4;
+                    size_t leftover = bytes_received - header_size;
+                    // search for Content-Length
+                    static const std::string cLen = "Content-Length: ";
+                    const char * content_length_pos = std::find(full_response, full_response + header_size, cLen);
+                    if (content_length_pos) {
+                        // copy data to a new buffer the known size of our full response
+                        content_length = std::atoi(content_length_pos + cLen.size());
+                        size_t total_size = header_size + 4 + content_length;
+                        size_t remaining = total_size - bytes_received;
+                        char * tmp = (char*)malloc(total_size);
+                        memcpy(tmp, full_response, bytes_received);
+                        free(full_response);
+                        full_response = tmp;
+                        char * buf_front = full_response + bytes_received;
+                        rv = sock->recv(full_response, remaining, MSG_WAITALL);
+                        if (rv < 0 || bytes_received < content_length) {
+                            // error reading from socket
+                        } else {
+                            // done, break
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        // full response is completely downloaded now we can process
+        process(full_response, bytes_received);
+
+        // either going to write to a file or add another request to the queue
+    }
+
+    void process(char * file, size_t len) {
+        // where
+    }
+
+    int HTTPClient::Socket::setFd(int fd_in) {
+        sockfd = fd_in;
+        return sockfd;
+    }
+    int HTTPClient::SecureSocket::setFd(int fd_in) {
+        sockfd = fd_in;
+        ssl = ::SSL_new(sslContext);
         if (!ssl) {
-            // TODO thread safe error logging
-            fprintf(stderr, "Error creating SSL.\n");
-            return nullptr;
+            // log error
         }
-        int sslsock = SSL_get_fd(ssl);
-        SSL_set_fd(ssl, sslsock);
-        int rv = SSL_connect(ssl);
+        int sslsock = ::SSL_get_fd(ssl);
+        int rv = ::SSL_connect(ssl);
         if (rv <= 0) {
-            fprintf(stderr, "Error creating SSL connection with %s", req.host.c_str());
+            // TODO better error handling
+            fprintf(stderr, "Error creating SSL connection");
             fflush(stderr);
-            return nullptr;
+            return rv;
         }
-        auto reqStr = req.requestString();
-        rv = SSL_write(ssl, reqStr.c_str(), reqStr.size());
+    }
+
+    ssize_t HTTPClient::Socket::send(const char * buf, size_t len) {
+        while (len > 0) {
+            auto i = ::send(sockfd, (void*)buf, len, MSG_NOSIGNAL);
+            if (i < 1) {
+                return i;
+            }
+            buf += i;
+            len -= i;
+        }
+        return 0;
+    }
+    ssize_t HTTPClient::SecureSocket::send(const char * buf, size_t len) {
+        auto rv = SSL_write(ssl, buf, len);
         if (rv <= 0) {
             int error = SSL_get_error(ssl, rv);
             switch (error)
@@ -195,86 +296,30 @@ namespace search {
                 case SSL_ERROR_SYSCALL:
                 case SSL_ERROR_SSL:
                 default:
-                    return nullptr;
+                    return 0;
             }
+        } else {
+            return len;
         }
     }
 
-    void HTTPClient::SubmitURLSync(const std::string &url) {
-        HTTPRequest request = parseURLStack(url);
-        SSL * ssl = nullptr;
-        request.method = getMethod;
-        request.headers = connClose;
-        if (request.protocol == httpsStr) {
-            request.port = 443;
-        }
-        else if (request.protocol == httpStr) {
-            request.port = 80;
-        }
-        else {
-            // invalid, TODO log bad request
-            return;
-        }
-        // open a socket to the host
-        int sockfd = getConnToHost(request.host, request.port);
-        // send request non-blocking
-        const std::string requestStr = request.requestString();
-        if (request.port == 443) {
-            ssl = sendSsl(sockfd, request, sslContext);
-            if (!ssl) {
-                // TODO: log
-            }
-        } else {
-            if (!sendall(sockfd, requestStr.c_str(), requestStr.size(), MSG_NOSIGNAL)) {
-            // TODO: log
-            }
-        }
-        // open a file
-        const int oFlags = O_APPEND | O_CREAT | O_TRUNC | O_RDWR;
-        int outputFd = open(request.filename().c_str(), oFlags, S_IWRITE);
+    ssize_t HTTPClient::Socket::recv(char * buf, size_t len, int flags) {
+        return ::recv(sockfd, (void*) buf, len, flags);
+    }
+    
+    ssize_t HTTPClient::SecureSocket::recv(char * buf, size_t len, int flags) {
+        auto rv = ::SSL_read(ssl, (void*)buf, len);
+        // todo error handling
+        // https://linux.die.net/man/3/ssl_read
+        return rv;
+    }
 
-        const int mmapFlags = PROT_READ | PROT_WRITE;
-        char * map = (char*)mmap(0, DEFAULT_FILE_SIZE, mmapFlags, MAP_SHARED, outputFd, 0);
-
-        size_t currentBufferSize = DEFAULT_FILE_SIZE;
-        // receive loop into that memory
-
-        ssize_t rv;
-        int bytes_received = 0;
-        do {
-            // recv blocks and returns if:
-            if (ssl) {
-                rv = SSL_read(ssl, (void*)(map + bytes_received), currentBufferSize - bytes_received);
-            } else {
-                rv = recv(sockfd, (void*)(map + bytes_received), currentBufferSize - bytes_received, MSG_WAITALL);
-            }             
-            if (rv == 0) {
-                // EOF
-                bytes_received += rv;
-            }
-            else if(rv < 0) {
-                // ERR
-                // TODO handle
-            }
-            else if (rv == DEFAULT_FILE_SIZE) {
-                // update bytes received
-                bytes_received += rv;
-                // unmap
-                munmap((void*)map, currentBufferSize);
-                // update current buffer size
-                currentBufferSize += DEFAULT_FILE_SIZE;
-                // reset the file descriptor to the beginning of the file
-                off_t currentPos = lseek(outputFd, (size_t)0, SEEK_CUR);
-                lseek(outputFd, currentPos, SEEK_SET);
-                // mmap
-                map = (char*)mmap(0, DEFAULT_FILE_SIZE, mmapFlags, MAP_SHARED, outputFd, 0);
-            }
-        } while (rv > 0);
-        if (ssl)  {
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            close(sockfd);
-        }
-        process(map, bytes_received);
+    ssize_t HTTPClient::Socket::close() {
+        return ::close(sockfd);
+    }
+    ssize_t HTTPClient::SecureSocket::close() {
+        ::SSL_shutdown(ssl);
+        ::SSL_free(ssl);
+        ::close(sockfd);
     }
 }
