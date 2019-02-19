@@ -109,29 +109,11 @@ namespace search {
     HTTPClient::HTTPClient() {
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
-
-        // SSL stuff
-        initSSLCtx();
     }
 
     HTTPClient::~HTTPClient() {
         // SSL Stuff, shouldn't run until all the threads return!
         destroySSL();
-    }
-
-    void HTTPClient::initSSLCtx() {
-        SSL_library_init();
-        SSL_load_error_strings();
-        OpenSSL_add_all_algorithms();
-        static const SSL_METHOD * meth = TLSv1_2_client_method();
-        sslContext = SSL_CTX_new(meth);
-        // this is deprecated and is potentially unnecessary
-        // the OpenSSL wiki says to call it anyway.
-        OPENSSL_config(NULL);
-        /* Include <openssl/opensslconf.h> to get this define */
-        #if defined (OPENSSL_THREADS)
-        fprintf(stdout, "Warning: thread locking is not implemented\n");
-        #endif
     }
 
     void HTTPClient::destroySSL() {
@@ -197,7 +179,6 @@ namespace search {
         // get the size of the header by searching for /r/n/r/n
         ssize_t rv = 0;
         ssize_t content_length = -1;
-        ssize_t current_buf_size = BUFFER_SIZE;
         int bytes_received = 0;
         char * full_response = (char*)malloc(BUFFER_SIZE);
 
@@ -212,24 +193,24 @@ namespace search {
             }
             // check if the header has been downloaded
             if (content_length == -1) {
-                char * header_pos = std::find(full_response, full_response + bytes_received, "\r\n\r\n");
-                if (header_pos) {
-                    size_t header_size = header_pos - full_response + 4;
-                    size_t leftover = bytes_received - header_size;
-                    // search for Content-Length
+                std::string_view view(full_response, bytes_received);
+                size_t header_pos = view.find("\r\n\r\n");
+                if (header_pos != std::string_view::npos) {
                     static const std::string cLen = "Content-Length: ";
-                    const char * content_length_pos = std::find(full_response, full_response + header_size, cLen);
-                    if (content_length_pos) {
-                        // copy data to a new buffer the known size of our full response
-                        content_length = std::atoi(content_length_pos + cLen.size());
+                    size_t header_size = header_pos + 4;
+                    // search for "Content-Length"
+                    size_t content_length_pos = view.find(cLen);
+                    if (content_length_pos != std::string_view::npos) {
+                        // copy data to a new buffer of known size
+                        content_length = std::stoi(std::string(view.substr(content_length_pos, content_length_pos + cLen.size())));
                         size_t total_size = header_size + 4 + content_length;
                         size_t remaining = total_size - bytes_received;
-                        char * tmp = (char*)malloc(total_size);
+                        char * tmp = (char *)malloc(total_size);
                         memcpy(tmp, full_response, bytes_received);
                         free(full_response);
                         full_response = tmp;
                         char * buf_front = full_response + bytes_received;
-                        rv = sock->recv(full_response, remaining, MSG_WAITALL);
+                        rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                         if (rv < 0 || bytes_received < content_length) {
                             // error reading from socket
                         } else {
@@ -248,8 +229,8 @@ namespace search {
         // either going to write to a file or add another request to the queue
     }
 
-    void process(char * file, size_t len) {
-        // where
+    void HTTPClient::process(char * file, size_t len) {
+        std::cout << "TODO" << '\n';
     }
 
     int HTTPClient::Socket::setFd(int fd_in) {
@@ -263,6 +244,7 @@ namespace search {
             // log error
         }
         int sslsock = ::SSL_get_fd(ssl);
+        ::SSL_set_fd(ssl, sslsock);
         int rv = ::SSL_connect(ssl);
         if (rv <= 0) {
             // TODO better error handling
@@ -318,8 +300,9 @@ namespace search {
         return ::close(sockfd);
     }
     ssize_t HTTPClient::SecureSocket::close() {
+        // TODO error handling
         ::SSL_shutdown(ssl);
         ::SSL_free(ssl);
-        ::close(sockfd);
+        return ::close(sockfd);
     }
 }

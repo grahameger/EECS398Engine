@@ -15,8 +15,8 @@
 namespace search {
     class Crawler {
     public:
-        Crawler::Crawler();
-        Crawler::~Crawler();
+        Crawler();
+        ~Crawler();
     private:
         const static size_t MAX_CRAWLER_THREADS = 10000;
         threading::Semaphore<MAX_CRAWLER_THREADS> sem;

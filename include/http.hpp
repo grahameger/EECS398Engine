@@ -21,6 +21,7 @@
 #include <array>
 #include <fstream>
 #include <algorithm>
+#include <string_view>
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -34,7 +35,6 @@
 #include <unistd.h> 
 #include <sys/epoll.h>
 #include <sys/mman.h>
-#include <buffer.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -96,7 +96,27 @@ namespace search {
         void initSSLCtx();
         void destroySSL();
 
-        static SSL_CTX * sslContext;
+        inline static SSL_CTX * sslContext;
+
+        // hack a static constructor for the SSL_CTX
+        friend class SSLContextConstructor;
+        struct SSLContextConstructor {
+                SSLContextConstructor() {
+                SSL_library_init();
+                SSL_load_error_strings();
+                OpenSSL_add_all_algorithms();
+                static const SSL_METHOD * meth = TLSv1_2_client_method();
+                sslContext = SSL_CTX_new(meth);
+                // this is deprecated and is potentially unnecessary
+                // the OpenSSL wiki says to call it anyway.
+                OPENSSL_config(NULL);
+                /* Include <openssl/opensslconf.h> to get this define */
+                #if defined (OPENSSL_THREADS)
+                fprintf(stdout, "Warning: thread locking is not implemented\n");
+                #endif
+            }
+        };
+        static SSLContextConstructor cons;
 
         struct Socket {
         public:
@@ -107,7 +127,7 @@ namespace search {
         protected:
             int sockfd;
         };
-
+        
         struct SecureSocket : public Socket {
         public:
             virtual int setFd(int fd_in);
