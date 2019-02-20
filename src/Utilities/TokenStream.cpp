@@ -5,6 +5,16 @@
 #include "TokenStream.h"
 
 const int TokenStream::BufferSize = 4096;
+const char WhitespaceCharacters[4] = {' ', '\t', '\r', 0};
+
+bool IsWhitespace(const char toCheck) {
+	for(int i = 0; WhitespaceCharacters[i] != 0; i++) {
+		if(WhitespaceCharacters[i] == toCheck)
+			return true;
+	}
+
+	return false;
+}
 
 /* ### PUBLIC METHODS ### */
 
@@ -28,6 +38,35 @@ bool TokenStream::MatchKeyword(const String keyword) {
 
 	ConsumeLexeme();
 	return true;
+}
+
+bool TokenStream::DiscardWhitespace() {
+	bool returnValue = false;
+	while(IsWhitespace(PeekNext())) { returnValue = true; }
+	DecrementPeek();
+	ConsumeLexeme();
+	return returnValue;
+}
+
+bool TokenStream::MatchEndline() {
+	switch(PeekNext()) {
+		case '\n':
+			break;
+		case '\r':
+			if(PeekNext() == '\n')
+				break;
+		default:
+			ResetPeek();
+			return false;
+	}
+
+	ConsumeLexeme();
+	return true;
+}
+
+void TokenStream::SkipLine() {
+	while(PeekNext() != '\n') {}
+	ConsumeLexeme();
 }
 
 TokenStream::operator bool() const {
@@ -56,7 +95,15 @@ const char TokenStream::PeekNext() {
 
 void TokenStream::ResetPeek() {
 	peekIndex = lexemeStart;
-	while(back != front) { back--; }
+	back = front;
+}
+
+void TokenStream::DecrementPeek() {
+	if(peekIndex == lexemeStart)
+		return;
+
+	if(peekIndex-- % BufferSize == 0)
+		back--;
 }
 
 void TokenStream::ConsumeLexeme() {

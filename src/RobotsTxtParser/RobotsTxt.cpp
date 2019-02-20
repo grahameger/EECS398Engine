@@ -18,17 +18,12 @@ struct Rule {
 	operator bool() const { return !path.Empty(); }
 };
 
-bool FindUserAgentRules(String, TwoBufferFileReader&);
-Rule ReadNextRule(TwoBufferFileReader&);
-
-bool MatchWhitespaceKleene(TwoBufferFileReader&);
-bool Match(string, TwoBufferFileReader&);
-bool MatchPath(string&, TwoBufferFileReader&);
-void MoveToNextLine(TwoBufferFileReader&);
+bool FindUserAgentRules(String, TokenStream&);
+Rule ReadNextRule(TokenStream&);
 
 // TODO: Add in TwoBufferFileReader exception to conditions
 RobotsTxt::RobotsTxt(String robotsFilename) {
-	TwoBufferFileReader robotsReader(robotsFilename.CString());
+	TokenStream robotsReader(robotsFilename.CString());
 	
 	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
 		return;
@@ -41,19 +36,19 @@ void RobotsTxt::AddRule(Rule rule) {
 	// Follow Allow/Disallow rules in RobotsPseudoCode
 }
 
-bool FindUserAgentRules(String userAgent, TwoBufferFileReader& fileReader) {
+bool FindUserAgentRules(String userAgent, TokenStream& tokenStream) {
 	try{
 		while(true) {
 			if(
-			   Match(UserAgentCommand_G, fileReader) && 
-			   MatchWhitespaceKleene(fileReader) &&
-			   Match(UserAgentName_G, fileReader) && 
-			   MatchWhitespaceKleene(fileReader) &&
-			   fileReader.GetNextCharacter() == '\n'
+			   tokenStream.MatchKeyword(UserAgentCommand_G) && 
+			   tokenStream.DiscardWhitespace() &&
+			   tokenStream.MatchKeyword(UserAgentName_G) && 
+			   (tokenStream.DiscardWhitespace() || true) &&
+			   tokenStream.MatchEndline()
 			)
 				return true;
 
-			MoveToNextLine(fileReader);
+			tokenStream.SkipLine();
 		}
 	} catch(...) {
 		// Do Nothing
@@ -62,9 +57,10 @@ bool FindUserAgentRules(String userAgent, TwoBufferFileReader& fileReader) {
 	return false;
 }
 
-Rule ReadNextRule(TwoBufferFileReader& fileReader) {
+/*
+Rule ReadNextRule(TokenStream& tokenStream) {
 	try{
-		String toMatch = DisallowCommand_G;
+		String toMatch(DisallowCommand_G);
 		String path;
 
 		// End of User-Agent Rules
@@ -90,26 +86,4 @@ Rule ReadNextRule(TwoBufferFileReader& fileReader) {
 
 	return {String(), false};
 }
-
-void MoveToNextLine(TwoBufferFileReader& fileReader) {
-	MatchWhitespaceKleene(fileReader);
-	while(fileReader.GetNextCharacter() != '\n') {}
-}
-
-bool Match(string toMatch, TwoBufferFileReader& fileReader) {
-	for(int i = 0; i < toMatch.size(); i++) {
-		if(fileReader.Peek() != toMatch[i])
-			return false;
-		fileReader.GetNextCharacter();
-	}
-
-	return true;
-}
-
-bool MatchWhitespaceKleene(TwoBufferFileReader& fileReader) {
-	while(fileReader.Peek() == ' ' || fileReader.Peek() == '\t' ||
-	      fileReader.Peek() == '\r')
-	   fileReader.GetNextCharacter();
-	
-	return true;
-}
+*/
