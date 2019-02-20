@@ -10,10 +10,21 @@
 #include "crawler.hpp"
 
 namespace search {
-    Crawler::Crawler(const std::vector<std::string> &urls_in) {
+    Crawler::Crawler(const std::string &directory, const std::vector<std::string> &urls_in) {
+        watchDir = directory;
+
+        // inotify stuff
+        inotifyfd = inotify_init();
+        wd = inotify_add_watch(inotifyfd, directory.c_str(), IN_CREATE);
+
         for (auto &i : urls_in) {
             urls.push(i);
         }
+        pthread_create(&watchThread, nullptr, &Crawler::watchForFilesWrapper, (void*) this);
+    }
+
+    void * Crawler::watchForFilesWrapper(void * context) {
+        ((Crawler *)context)->watchForFiles();
     }
 
     void Crawler::SubmitOne(const std::string &url) {
@@ -23,4 +34,27 @@ namespace search {
         args->url = new std::string(url);
         pthread_create(&t, NULL, &HTTPClient::SubmitUrlSyncWrapper, (void *)args);
     }
+
+    void Crawler::watchForFiles() {
+        // use select to wait
+        while (true) {
+            char buffer[INOTIFY_BUFFER_SIZE];
+            int length = read(inotifyfd, buffer, INOTIFY_BUFFER_SIZE);
+            if (length < 0) {
+                perror("read");
+                // TODO, better.
+            }
+            int i = 0;
+            while (i < length) {
+                inotify_event * event = (inotify_event * ) &buffer[i];
+                if (event->len && (event->mask & IN_CREATE) && !(event->mask & IN_ISDIR)) {
+                    // file created with name and filename length
+                    event->name;
+                    event->len;
+                }
+                i += EVENT_SIZE + event->len;
+            }
+        }
+    }
+
 }
