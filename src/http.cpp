@@ -24,6 +24,8 @@ namespace search {
     static const std::string httpVersion = "HTTP/1.1";
     static const std::string hostString = "Host: ";
     static const std::string connClose = "Connection: close" + endl;
+    static const std::string userAgent = "User-Agent: Ceatles/1.0 (Linux)";
+    static const std::string encoding = "Accept-Encoding: identity";
     static const std::string httpStr = "http";
     static const std::string httpsStr = "https";
     static const std::string port80 = "80";
@@ -39,6 +41,8 @@ namespace search {
         std::stringstream ss;
         ss << method << ' ' << path << ' ' << httpVersion << endl;
         ss << hostString << ' ' << host << endl;
+        ss << userAgent << endl;
+        ss << encoding << endl;
         ss << connClose << endl;
         return ss.str();
     }
