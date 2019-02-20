@@ -23,6 +23,9 @@ List<T>::~List() {
 }
 
 template <typename T>
+List<T>::Iterator::Iterator() : node(nullptr) {}
+
+template <typename T>
 List<T>::Iterator::Iterator(Node<T>* n) : node(n) {}
 
 template <typename T>

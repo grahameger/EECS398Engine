@@ -21,6 +21,7 @@ public:
 
 	class Iterator {
 	public:
+		Iterator();
 		const baseType& operator[] (int index);
 		bool operator!= (Iterator rhs);
 		Iterator& operator++ ();
