@@ -1,29 +1,39 @@
+/* Created on 2/18, wrote function outlines for constructor/helpers
+ * Updated on 2/19, fixed compile issues
+ */
 #include <unistd.h>
 #include "RobotsTxt.h"
-#include "DirectoryRules.h"
+#include "TwoBufferFileReader.h"
 
-using std::string_view;
+using std::string;
 
-string_view UserAgentName_G("*");
-string_view UserAgentCommand_G("User-agent:");
-string_view AllowCommand_G("Allow:");
-string_view DisallowCommand_G("Disallow:");
+string UserAgentName_G("*");
+string UserAgentCommand_G("User-agent:");
+string AllowCommand_G("Allow:");
+string DisallowCommand_G("Disallow:");
 
 struct Rule {
-	string_view path;
+	string path;
 	bool allow;
 
-	operator bool() const { return path.data; }
+	operator bool() const { return !path.empty(); }
 };
 
+bool FindUserAgentRules(string, TwoBufferFileReader&);
+Rule ReadNextRule(TwoBufferFileReader&);
+bool MatchWhitespaceKleene(TwoBufferFileReader&);
+bool Match(string, TwoBufferFileReader&);
+bool MatchPath(string&, TwoBufferFileReader&);
+void MoveToNextLine(TwoBufferFileReader&);
+
 // TODO: Add in TwoBufferFileReader exception to conditions
-RobotsTxt::RobotsTxt(string_view robotsFilename) : root("/", true) {
-	TwoBufferFileReader robotsReader(robotsFilename.data);
+RobotsTxt::RobotsTxt(string robotsFilename) {
+	TwoBufferFileReader robotsReader(robotsFilename.c_str());
 	
 	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
 		return;
 	
-	while(Rule curRule = ReadNextRule(fileReader))
+	while(Rule curRule = ReadNextRule(robotsReader))
 		AddRule(curRule);
 }
 
@@ -31,7 +41,7 @@ void RobotsTxt::AddRule(Rule rule) {
 	// Follow Allow/Disallow rules in RobotsPseudoCode
 }
 
-bool FindUserAgentRules(string_view userAgent, TwoBufferFileReader& fileReader) {
+bool FindUserAgentRules(string userAgent, TwoBufferFileReader& fileReader) {
 	try{
 		while(true) {
 			if(
@@ -43,9 +53,9 @@ bool FindUserAgentRules(string_view userAgent, TwoBufferFileReader& fileReader) 
 			)
 				return true;
 
-			MoveToNextLine();
+			MoveToNextLine(fileReader);
 		}
-	} catch( ) {
+	} catch(...) {
 		// Do Nothing
 	}
 
@@ -54,12 +64,12 @@ bool FindUserAgentRules(string_view userAgent, TwoBufferFileReader& fileReader) 
 
 Rule ReadNextRule(TwoBufferFileReader& fileReader) {
 	try{
-		string_view toMatch = DisallowCommand_G;
-		string_view path;
+		string toMatch = DisallowCommand_G;
+		string path;
 
 		// End of User-Agent Rules
 		if(fileReader.Peek() == '\n')
-			return {string_view(), false};
+			return {string(), false};
 
 		if(fileReader.Peek() == AllowCommand_G[0])
 			toMatch = AllowCommand_G;
@@ -67,16 +77,18 @@ Rule ReadNextRule(TwoBufferFileReader& fileReader) {
 		// Match Allow or Disallow Rule
 		if(Match(toMatch, fileReader) &&
 				MatchWhitespaceKleene(fileReader) &&
-				MatchPath(fileReader, path) &&
+				MatchPath(path, fileReader) &&
 				MatchWhitespaceKleene(fileReader) &&
 				fileReader.GetNextCharacter() == '\n')
 			return {path, toMatch == AllowCommand_G ? true : false};
 
 		// Malformed Rule
-		MoveToNextLine();
-	} catch( ) {
+		MoveToNextLine(fileReader);
+	} catch(...) {
 		
 	}
+
+	return {string(), false};
 }
 
 void MoveToNextLine(TwoBufferFileReader& fileReader) {
@@ -84,7 +96,7 @@ void MoveToNextLine(TwoBufferFileReader& fileReader) {
 	while(fileReader.GetNextCharacter() != '\n') {}
 }
 
-bool Match(string_view toMatch, TwoBufferFileReader& fileReader) {
+bool Match(string toMatch, TwoBufferFileReader& fileReader) {
 	for(int i = 0; i < toMatch.size(); i++) {
 		if(fileReader.Peek() != toMatch[i])
 			return false;
