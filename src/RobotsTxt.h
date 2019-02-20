@@ -1,7 +1,7 @@
 #ifndef ROBOTSTXT_H
 #define ROBOTSTXT_H
 
-#include <string_view>
+#include <string>
 
 class DirectoryRule;
 struct Rule;
@@ -9,13 +9,13 @@ struct Rule;
 // TODO: Figure out how to deal with "*" wildcards in paths
 class RobotsTxt {
 public:
-   RobotsTxt(std::string_view robotsFilename);
-   bool IsAllowed(std::string_view path);
+   RobotsTxt(std::string robotsFilename);
+   bool IsAllowed(std::string path);
 
 private:
-   AddRule(Rule rule);
+   void AddRule(Rule rule);
 
-   DirectoryRule root;
+   DirectoryRule* root;
 };
 
 #endif
