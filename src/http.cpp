@@ -149,6 +149,13 @@ namespace search {
         }
     }
 
+    static void SubmitUrlSyncWrapper(void * context) {
+        SubmitArgs * args = (SubmitArgs*)context;
+        args->client->SubmitURLSync(*args->url);
+        delete args->url;
+        delete args;
+    }
+
     void HTTPClient::SubmitURLSync(const std::string &url) {
         HTTPRequest request = parseURLStack(url);
         Socket * sock;
