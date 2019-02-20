@@ -22,6 +22,7 @@ public:
 	class Iterator {
 	public:
 		Iterator();
+		void operator=(const Iterator&);
 		const baseType& operator[] (int index);
 		bool operator!= (Iterator rhs);
 		Iterator& operator++ ();

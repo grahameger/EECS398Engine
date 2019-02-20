@@ -29,6 +29,11 @@ template <typename T>
 List<T>::Iterator::Iterator(Node<T>* n) : node(n) {}
 
 template <typename T>
+void List<T>::Iterator::operator= (const Iterator& toCopy) {
+	node = toCopy.node;
+}
+
+template <typename T>
 const typename List<T>::baseType& List<T>::Iterator::operator[] (int index) {
 	return node->data[index];
 }

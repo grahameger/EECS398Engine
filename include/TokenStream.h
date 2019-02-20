@@ -12,6 +12,10 @@ public:
 	void operator=(const TokenStream&) = delete;
 
 	bool MatchKeyword(const String keyword);
+	bool DiscardWhitespace();
+	bool MatchEndline();
+
+	void SkipLine();
 
 	operator bool() const;
 
@@ -24,6 +28,7 @@ private:
 
 	void AddPage();
 	void ResetPeek();
+	void DecrementPeek();
 	void ConsumeLexeme();
 	const char PeekNext();
 };
