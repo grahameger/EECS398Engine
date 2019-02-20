@@ -1,6 +1,7 @@
 #ifndef LIST_H
 #define LIST_H
 
+template <typename T>
 class Node;
 
 template <typename T>
@@ -14,6 +15,9 @@ public:
 	typedef typename PointerLess<T>::type baseType;
 
 	List();
+	~List();
+	List(const List&) = delete;
+	void operator=(const List&) = delete;
 
 	class Iterator {
 	public:
@@ -24,7 +28,8 @@ public:
 		Iterator& operator-- ();
 		Iterator operator-- (int);
 	private:
-		Node* node;
+		Iterator(Node<T>* node);
+		Node<T>* node;
 	};
 
 	bool Empty();
@@ -32,12 +37,11 @@ public:
 	void AddToBack(T);
 	Iterator GetFront();
 	Iterator GetBack();
-	T RemoveFront();
-	T RemoveBack();
+	T&& RemoveFront();
+	T&& RemoveBack();
 
 private:
-	Node *front, *back;
-	unsigned int size;
+	Node<T> *front, *back;
 };
 
 #endif
