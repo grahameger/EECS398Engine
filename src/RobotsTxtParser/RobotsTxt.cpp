@@ -2,33 +2,33 @@
  * Updated on 2/19, fixed compile issues
  */
 #include <unistd.h>
+#include "String.h"
+#include "TokenStream.h"
 #include "RobotsTxt.h"
-#include "TwoBufferFileReader.h"
 
-using std::string;
-
-string UserAgentName_G("*");
-string UserAgentCommand_G("User-agent:");
-string AllowCommand_G("Allow:");
-string DisallowCommand_G("Disallow:");
+String UserAgentName_G("*");
+String UserAgentCommand_G("User-agent:");
+String AllowCommand_G("Allow:");
+String DisallowCommand_G("Disallow:");
 
 struct Rule {
-	string path;
+	String path;
 	bool allow;
 
-	operator bool() const { return !path.empty(); }
+	operator bool() const { return !path.Empty(); }
 };
 
-bool FindUserAgentRules(string, TwoBufferFileReader&);
+bool FindUserAgentRules(String, TwoBufferFileReader&);
 Rule ReadNextRule(TwoBufferFileReader&);
+
 bool MatchWhitespaceKleene(TwoBufferFileReader&);
 bool Match(string, TwoBufferFileReader&);
 bool MatchPath(string&, TwoBufferFileReader&);
 void MoveToNextLine(TwoBufferFileReader&);
 
 // TODO: Add in TwoBufferFileReader exception to conditions
-RobotsTxt::RobotsTxt(string robotsFilename) {
-	TwoBufferFileReader robotsReader(robotsFilename.c_str());
+RobotsTxt::RobotsTxt(String robotsFilename) {
+	TwoBufferFileReader robotsReader(robotsFilename.CString());
 	
 	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
 		return;
@@ -41,7 +41,7 @@ void RobotsTxt::AddRule(Rule rule) {
 	// Follow Allow/Disallow rules in RobotsPseudoCode
 }
 
-bool FindUserAgentRules(string userAgent, TwoBufferFileReader& fileReader) {
+bool FindUserAgentRules(String userAgent, TwoBufferFileReader& fileReader) {
 	try{
 		while(true) {
 			if(
@@ -64,12 +64,12 @@ bool FindUserAgentRules(string userAgent, TwoBufferFileReader& fileReader) {
 
 Rule ReadNextRule(TwoBufferFileReader& fileReader) {
 	try{
-		string toMatch = DisallowCommand_G;
-		string path;
+		String toMatch = DisallowCommand_G;
+		String path;
 
 		// End of User-Agent Rules
 		if(fileReader.Peek() == '\n')
-			return {string(), false};
+			return {String(), false};
 
 		if(fileReader.Peek() == AllowCommand_G[0])
 			toMatch = AllowCommand_G;
@@ -88,7 +88,7 @@ Rule ReadNextRule(TwoBufferFileReader& fileReader) {
 		
 	}
 
-	return {string(), false};
+	return {String(), false};
 }
 
 void MoveToNextLine(TwoBufferFileReader& fileReader) {

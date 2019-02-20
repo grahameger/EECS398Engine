@@ -1,5 +1,5 @@
-#ifndef BUFFEREDFILEREADER_H
-#define BUFFEREDFILEREADER_H
+#ifndef TOKENSTREAM_H
+#define TOKENSTREAM_H
 
 #include "List.h"
 
@@ -11,7 +11,7 @@ public:
 	TokenStream(const TokenStream&) = delete;
 	void operator=(const TokenStream&) = delete;
 
-	bool MatchKeyword(const char* keyword, int length);
+	bool MatchKeyword(const String keyword);
 
 	operator bool() const;
 

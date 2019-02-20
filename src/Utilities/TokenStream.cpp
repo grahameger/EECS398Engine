@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include "String.h"
 #include "List.h"
 #include "TokenStream.h"
 
@@ -9,15 +10,16 @@ const int TokenStream::BufferSize = 4096;
 
 TokenStream::TokenStream(const char* filename) 
 : fileDescriptor(open(filename, O_RDONLY)), lexemeStart(0), peekIndex(0) {
-	// Do Nothing RN
+	front = buffers.GetFront();
+	back = buffers.GetBack();
 }
 
 TokenStream::~TokenStream() {
 	while(!buffers.Empty()) { delete buffers.RemoveBack(); }
 }
 
-bool TokenStream::MatchKeyword(const char* keyword, int length) {
-	for(int i = 0; i < length; i++) {
+bool TokenStream::MatchKeyword(const String keyword) {
+	for(int i = 0; i < keyword.Size(); i++) {
 		if(PeekNext() == keyword[i])
 			continue;
 		ResetPeek();
