@@ -108,18 +108,18 @@ namespace search {
         friend class SSLContextConstructor;
         struct SSLContextConstructor {
                 SSLContextConstructor() {
-                SSL_library_init();
-                SSL_load_error_strings();
-                OpenSSL_add_all_algorithms();
-                static const SSL_METHOD * meth = TLSv1_2_client_method();
-                sslContext = SSL_CTX_new(meth);
-                // this is deprecated and is potentially unnecessary
-                // the OpenSSL wiki says to call it anyway.
-                OPENSSL_config(NULL);
-                /* Include <openssl/opensslconf.h> to get this define */
-                #if defined (OPENSSL_THREADS)
-                fprintf(stdout, "Warning: thread locking is not implemented\n");
-                #endif
+                    SSL_library_init();
+                    SSL_load_error_strings();
+                    OpenSSL_add_all_algorithms();
+                    static const SSL_METHOD * meth = TLSv1_2_client_method();
+                    sslContext = SSL_CTX_new(meth);
+                    // this is deprecated and is potentially unnecessary
+                    // the OpenSSL wiki says to call it anyway.
+                    OPENSSL_config(NULL);
+                    /* Include <openssl/opensslconf.h> to get this define */
+                    #if defined (OPENSSL_THREADS)
+                    fprintf(stdout, "Warning: thread locking is not implemented\n");
+                    #endif
             }
         };
         static SSLContextConstructor cons;
