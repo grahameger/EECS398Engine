@@ -22,11 +22,14 @@ namespace search {
     public:
         Crawler(const std::vector<std::string> &urls);
         ~Crawler();
+        void run();
     private:
         const static size_t MAX_CRAWLER_THREADS = 10000;
         threading::Semaphore<MAX_CRAWLER_THREADS> sem;
         HTTPClient client;
         threading::ThreadQueue<std::string> urls;
+
+        void SubmitOne(const std::string &url);
     };
 }
 

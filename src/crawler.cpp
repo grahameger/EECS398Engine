@@ -15,4 +15,12 @@ namespace search {
             urls.push(i);
         }
     }
+
+    void Crawler::SubmitOne(const std::string &url) {
+        pthread_t t;
+        SubmitArgs * args = new SubmitArgs;
+        args->client = &client;
+        args->url = new std::string(url);
+        pthread_create(&t, NULL, &HTTPClient::SubmitUrlSyncWrapper, (void *)args);
+    }
 }

@@ -67,11 +67,17 @@ namespace search {
     HTTPRequest * parseURL(const std::string &url);
     static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
+    struct SubmitArgs {
+        HTTPClient * client;
+        std::string * url;
+    };
+
     class HTTPClient {
     public:
         HTTPClient();
         ~HTTPClient();
         void SubmitURLSync(const std::string &url);
+        static void * SubmitUrlSyncWrapper(void * context);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
         static const size_t RECV_SIZE = 8192;
