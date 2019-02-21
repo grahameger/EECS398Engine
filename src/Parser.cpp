@@ -1,4 +1,4 @@
-#include "Parser.hpp"
+#include "Parser.h"
 using std::regex;
 
 //default constructor
@@ -20,9 +20,10 @@ void LinkFinder::findLinks(const char* html_file, char* result[], int* size) {
     int end_index = 0;
     bool a_tag = false;
     //Iterate through file. Get start and end positions of links
-    for(int i = 0; i < strlen(html_file); i++) {
+    int file_length = (int)strlen(html_file);
+    for(int i = 0; i < file_length; i++) {
         //Found an <a or <A tag
-        if(i+2 < strlen(html_file) && html_file[i] == '<' && (html_file[i+1] == 'a' || html_file[i+1] == 'A') && html_file[i+2] == ' ') {
+        if(i+2 < file_length && html_file[i] == '<' && (html_file[i+1] == 'a' || html_file[i+1] == 'A') && html_file[i+2] == ' ') {
             start_positions[start_index] = i;
             a_tag = true;
             start_index++;
