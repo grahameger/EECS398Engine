@@ -1,5 +1,0 @@
-HTTP/1.1 400 Bad Request
-Content-Type: text/plain; charset=utf-8
-Connection: close
-
-400 Bad Request
