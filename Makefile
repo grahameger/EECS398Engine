@@ -1,4 +1,9 @@
 CC := g++ # This is the main compiler
+
+ifeq ($(shell uname -s),Darwin) # Mac OS X
+	CC := clang++
+endif
+
 LINTER := astyle
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := src

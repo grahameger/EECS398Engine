@@ -74,5 +74,6 @@
         "strstream": "cpp",
         "numeric": "cpp",
         "typeindex": "cpp"
-    }
+    },
+    "cquery.cacheDirectory": "${workspaceFolder}/.vscode/cquery_cached_index/"
 }
