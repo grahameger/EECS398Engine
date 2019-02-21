@@ -121,11 +121,6 @@ namespace search {
         // this is deprecated and is potentially unnecessary
         // the OpenSSL wiki says to call it anyway.
         OPENSSL_config(NULL);
-        /* Include <openssl/opensslconf.h> to get this define */
-        #if defined (OPENSSL_THREADS)
-        fprintf(stdout, "Warning: thread locking is not implemented\n");
-        #endif
-
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
     }
