@@ -8,7 +8,7 @@ struct Rule;
 // TODO: Figure out how to deal with "*" wildcards in paths
 class RobotsTxt {
 public:
-   RobotsTxt(String robotsFilename);
+   RobotsTxt(const char* robotsFilename);
    bool IsAllowed(String path);
 
 private:

@@ -40,6 +40,11 @@ const typename List<T>::baseType& List<T>::Iterator::operator[] (int index) {
 
 template <typename T>
 bool List<T>::Iterator::operator != (Iterator rhs) {
+	return node != rhs.node;
+}
+
+template <typename T>
+bool List<T>::Iterator::operator == (Iterator rhs) {
 	return node == rhs.node;
 }
 
@@ -75,16 +80,24 @@ bool List<T>::Empty() { return front == nullptr; }
 template <typename T>
 void List<T>::AddToFront(T toAdd) {
 	Node<T>* newNode = new Node<T>(toAdd, nullptr, front);
-	front->prev = newNode;
+	if(front == nullptr) {
+		front = back = newNode;
+		return;
+	}
 
+	front->prev = newNode;
 	front = newNode;
 }
 
 template <typename T>
 void List<T>::AddToBack(T toAdd) {
 	Node<T>* newNode = new Node<T>(toAdd, back, nullptr);
-	back->next = newNode;
+	if(back == nullptr) {
+		front = back = newNode;
+		return;
+	}
 
+	back->next = newNode;
 	back = newNode;
 }
 
@@ -100,22 +113,34 @@ typename List<T>::Iterator List<T>::GetBack() {
 
 template <typename T>
 T&& List<T>::RemoveFront() {
-	T returnVal = std::move(front.data);
+	T returnVal = std::move(front->data);
 
-	front = front.next;
-	delete front.prev;
-	front.prev = nullptr;
+	if(front == back) {
+		delete front;
+		front = back = nullptr;
+	} else {
+		front = front->next;
+		delete front->prev;
+		front->prev = nullptr;
+	}
 
-	return returnVal;
+	return std::move(returnVal);
 }
 
 template <typename T>
 T&& List<T>::RemoveBack() {
-	T returnVal = std::move(back.data);
+	T returnVal = std::move(back->data);
 
-	back = back.prev;
-	delete back.next;
-	back.next = nullptr;
+	if(front == back) {
+		delete back;
+		front = back = nullptr;
+	} else {
+		back = back->prev;
+		delete back->next;
+		back->next = nullptr;
+	}
 
-	return returnVal;
+	return std::move(returnVal);
 }
+
+template class List<char*>;
