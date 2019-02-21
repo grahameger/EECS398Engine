@@ -25,6 +25,7 @@ public:
 		void operator=(const Iterator&);
 		const baseType& operator[] (int index);
 		bool operator!= (Iterator rhs);
+		bool operator== (Iterator rhs);
 		Iterator& operator++ ();
 		Iterator operator++ (int);
 		Iterator& operator-- ();
@@ -32,6 +33,8 @@ public:
 	private:
 		Iterator(Node<T>* node);
 		Node<T>* node;
+	friend Iterator List<T>::GetFront();
+	friend Iterator List<T>::GetBack();
 	};
 
 	bool Empty();

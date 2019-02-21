@@ -11,18 +11,18 @@ public:
 	TokenStream(const TokenStream&) = delete;
 	void operator=(const TokenStream&) = delete;
 
-	bool MatchKeyword(const String keyword);
+	bool MatchKeyword(const String& keyword);
 	bool DiscardWhitespace();
 	bool MatchEndline();
 
-	void SkipLine();
+	bool SkipLine();
 
 	operator bool() const;
 
 private:
 	const static int BufferSize;
 
-	int fileDescriptor, lexemeStart, peekIndex;
+	int fileDescriptor, lexemeStart, peekIndex, lastIndex;
 	List<char*> buffers;
 	List<char*>::Iterator front, back;
 
@@ -30,7 +30,7 @@ private:
 	void ResetPeek();
 	void DecrementPeek();
 	void ConsumeLexeme();
-	const char PeekNext();
+	const int PeekNext();
 };
 
 #endif

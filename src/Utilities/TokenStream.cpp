@@ -5,7 +5,7 @@
 #include "TokenStream.h"
 
 const int TokenStream::BufferSize = 4096;
-const char WhitespaceCharacters[4] = {' ', '\t', '\r', 0};
+const char WhitespaceCharacters[] = {' ', '\t', '\r', 0};
 
 bool IsWhitespace(const char toCheck) {
 	for(int i = 0; WhitespaceCharacters[i] != 0; i++) {
@@ -19,7 +19,9 @@ bool IsWhitespace(const char toCheck) {
 /* ### PUBLIC METHODS ### */
 
 TokenStream::TokenStream(const char* filename) 
-: fileDescriptor(open(filename, O_RDONLY)), lexemeStart(0), peekIndex(0) {
+: fileDescriptor(open(filename, O_RDONLY)), lexemeStart(0), 
+peekIndex(0), lastIndex(-1)
+{
 	front = buffers.GetFront();
 	back = buffers.GetBack();
 }
@@ -28,7 +30,7 @@ TokenStream::~TokenStream() {
 	while(!buffers.Empty()) { delete buffers.RemoveBack(); }
 }
 
-bool TokenStream::MatchKeyword(const String keyword) {
+bool TokenStream::MatchKeyword(const String& keyword) {
 	for(int i = 0; i < keyword.Size(); i++) {
 		if(PeekNext() == keyword[i])
 			continue;
@@ -64,13 +66,15 @@ bool TokenStream::MatchEndline() {
 	return true;
 }
 
-void TokenStream::SkipLine() {
-	while(PeekNext() != '\n') {}
+bool TokenStream::SkipLine() {
+	int c = PeekNext();
+	for( ; c != '\n' && c >= 0; c = PeekNext()) {}
 	ConsumeLexeme();
+	return c >= 0;
 }
 
 TokenStream::operator bool() const {
-	return fileDescriptor != -1;
+	return fileDescriptor != -1 && lastIndex == -1;
 }
 
 /* ### PRIVATE METHODS */
@@ -79,16 +83,21 @@ void TokenStream::AddPage() {
 	if(back != buffers.GetBack()) { ++back; return; }
 
 	char* newBuffer = new char[BufferSize];
-	if(read(fileDescriptor, newBuffer, BufferSize * sizeof(char)) != BufferSize)
-		fileDescriptor = -1;
+	int bytesRead = read(fileDescriptor, newBuffer, BufferSize);
+	if(bytesRead != BufferSize)
+		lastIndex = bytesRead;
 	
 	buffers.AddToBack(newBuffer);
-	++back;
+	back = buffers.GetBack();
+	front = buffers.GetFront();
 }
 
-const char TokenStream::PeekNext() {
-	if(peekIndex % BufferSize == 0)
+const int TokenStream::PeekNext() {
+	if(peekIndex % BufferSize == 0 && (peekIndex != 0 || buffers.Empty()))
 		AddPage();
+	
+	if(peekIndex % BufferSize == lastIndex && back == buffers.GetBack())
+		return -1;
 	
 	return back[peekIndex++ % BufferSize];
 }
