@@ -5,6 +5,8 @@
 !.vscode/extensions.json
 
 wd/*
+.ccls-cache/
+.idea/
 
 # Xcode
 #
