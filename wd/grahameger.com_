@@ -1,0 +1,399 @@
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 17358
+Content-Type: text/html; charset=utf-8
+Etag: "plqykcd6n"
+Last-Modified: Tue, 22 Jan 2019 19:09:48 GMT
+Server: Caddy
+Server: Caddy
+Strict-Transport-Security: max-age=31536000
+Strict-Transport-Security: max-age=31536000
+X-Content-Type-Options: nosniff
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Xss-Protection: 1; mode=block
+X-Xss-Protection: 1; mode=block
+Date: Thu, 21 Feb 2019 03:09:12 GMT
+Connection: close
+
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <!-- <script async src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script> -->
+    <!-- <script async src="js/scripts.min.js"></script>     -->
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Graham Eger</title>
+	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+	<link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700,900" rel="stylesheet">
+    <link rel="stylesheet" href="libs/font-awesome/css/font-awesome.min.css">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+<script async src="https://grahameger.com/js/analytics.js"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-112728339-1');
+</script>
+</head>
+
+
+<body>
+    <div id="mobile-menu-open" class="shadow-large">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+    </div>
+    <!-- End #mobile-menu-toggle -->
+    <header>
+        <div id="mobile-menu-close">
+            <span>Close</span> <i class="fa fa-times" aria-hidden="true"></i>
+        </div>
+        <ul id="menu" class="shadow">
+            <li>
+                <a href="#about">About</a>
+            </li>
+            <li>
+                <a href="#experience">Experience</a>
+            </li>
+            <li>
+                <a href="#education">Education</a>
+            </li>
+            <li>
+                <a href="#projects">Projects</a>
+            </li>
+            <li>
+                <a href="#skills">Skills</a>
+            </li>
+            <li>
+                <a href="#contact">Contact</a>
+            </li>
+        </ul>
+    </header>
+    <!-- End header -->
+
+    <div id="lead">
+        <div id="lead-content">
+            <h1>Graham Eger</h1>
+            <h2>Software Engineer - Student</h2>
+            <a href="static/GrahamEgerResume.pdf" class="btn-rounded-white">Download Resume</a>
+            <br><br>
+            <a href="134DCCECEA6576438AA0282DC9B221AEE6FB4E8B5164EB787621248242589AE8.pub" class="btn-rounded-white">PGP</a>
+        </div>
+        <!-- End #lead-content -->
+
+        <div id="lead-overlay"></div>
+
+        <div id="lead-down">
+            <span>
+                <i class="fa fa-chevron-down" aria-hidden="true"></i>
+            </span>
+        </div>
+        <!-- End #lead-down -->
+    </div>
+    <!-- End #lead -->
+
+    <div id="about">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h2 class="heading">About Me</h2>
+                </div>
+                <div class="col-md-8">
+                    <p>
+                        My name is Graham Eger and I’m a Senior studying Computer Science at the University of Michigan-Ann Arbor. I am also a board member of the <a href="https://umichsailing.org">Michigan Sailing Team</a>. 
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End #about -->
+
+    <div id="experience" class="background-alt">
+        <h2 class="heading">Experience</h2>
+        <div id="experience-timeline">
+            <div data-date="May - August 2018">
+                <h3>Quicken Loans</h3>
+                <h4>Software Engineering Intern</h4>
+                    <p>
+                        At Quicken Loans I was a member of a 4-person team building an internal productivity tool using C# and .NET Core on the backend with a TypeScript Angular6 frontend. 
+                        During my time at Quicken I was working approximately 80:20 backend:frontend. I was able to convert the project from a ASP.NET Windows-only project to a .NET Core, Docker-compatible one.
+                    </p>
+            </div>
+            <div data-date="April – August 2017">
+                <h3>MSX International</h3>
+                <h4>System Administrator</h4>
+                <p>
+                    At MSX International in 2017 I administered Windows and Linux systems in a team of four; focusing on the hardware software, and server infrastructure for MSX International's entire North American Market. I was able to furhter improve my technical, analytical, problem-solving skills, and task prioritization. I also worked myself throughout the summer engineering and testing a new worldwide ransomware incident response process.
+                </p>
+            </div>
+
+            <div data-date="April – August 2016">
+                <h3>MSX International</h3>
+                <h4>Junior System Administrator</h4>
+                <p>
+                    At MSX International in 2016 I created and maintained virtual Windows and Linux environments for critical business applicatoins. Over the summer I developed a Python web application which was run on thin clients to display business, market, and industry specific news to the department which the display is located. I also provided custom system setup and VIP desk-side support for C-level executives.
+                </p>
+            </div>
+        </div>
+    </div>
+    <!-- End #experience -->
+
+    <div id="education">
+        <h2 class="heading">Education</h2>
+        <div class="education-block">
+            <h3>University of Michigan - Ann Arbor</h3>
+            <span class="education-date">Sept 2015 - May 2019</span>
+            <h4>Bachelor of Science in Computer Science - GPA: 3.0</h4>
+            <p>
+                I am currently a Junior majoring in Computer Science through the EECS department at the University of Michigan - Ann Arbor. I have taken or are currently enrolled in the following advanced Computer Science courses. A brief description of the courses is linked <a href="https://bulletin.engin.umich.edu/courses/eecs/">here.</a>
+                <ul>
+                	<li>
+                		EECS 281: Data Structures and Algorithms 
+           			</li>
+           			<li>
+                		EECS 376: Theory of Computation
+                	</li>
+                	<li>
+                		EECS 370: Computer Organization
+                	</li>
+                	<li>
+                		EECS 388: Computer Security
+                	</li>
+                	<li>
+                		EECS 482: Operating Systems. 
+                    </li>
+                    <li>
+                        EECS 485: Web Systems
+                    </li>
+                    <li>
+                        EECS 489: Computer Network Programming
+                    </li>
+               	</ul>
+            </p>
+        </div>
+
+        <div class="education-block">
+            <h3>Delta Tau Delta Fraternity</h3>
+            <span class="education-date">Sept 2015 - Present</span>
+            <h4>Delta Chapter</h4>
+            <p>
+                <ul>
+                	<li>President - Led a chapter of 100+ men, recruited our two largest recruiting classes of all time, managed a budget of over $100,000.</li>
+                	<li>Director of Risk Management - Developed and implemented a new risk management program addresssing concerns related to building maintenance, safety, fire, and member health.</li>
+                </ul>
+            </p>
+        </div>
+
+        <div class="education-block">
+            <h3><a href="http://michigansailing.org">University of Michigan Sailing Team</a></h3>
+            <span class="education-date">Sept 2017 - Present</span>
+            <h4>Club Sport</h4>
+            <p>
+                <ul>
+                	<li>University Liason and Travel Director - Team representative for all University matters. Responsible for Arranging travel and housing nationwide for 20+ events per semester.</li>
+                	<li>Active racing member. Competed in 4 Interconference events in Fall 2017 including Keelboat National Championship hosted by the United States Naval Academy.</li>
+                </ul>
+            </p>
+        </div>
+        <!-- End .education-block -->
+    </div>
+    <!-- End #education -->
+
+    <div id="projects" class="background-alt">
+        <h2 class="heading">Projects</h2><br>
+        <!-- <h4 class="heading">Code Available at request.</h4> -->
+        <div class="container">
+            <div class="row">
+
+            	<div class="project shadow-large">
+                    <div class="project-image">
+                        <img src="images/BetterScheduler.png" />
+                    </div>
+                    <!-- End .project-image -->
+                    <div class="project-info">
+                        <h3>Better Scheduler</h3>
+                        <p>
+                            A replacement for University of Michigan's course guide written in Python using Flask and Jinja, Javascript, HTML, and CSS. Given a dataset of every term, school, subject, and course at the University of Michigan, I was tasked to develop a Python web app which displays the information in a way that is significatly easier to read and navigate than the dated WolverineAccess.
+                        </p>
+                        <!-- <a href="#">View Project</a> -->
+                    </div>
+                    <!-- End .project-info -->
+                </div>
+                <!-- End .project -->
+
+            	<div class="project shadow-large">
+                    <div class="project-image">
+                        <img src="images/LC2K.png" />
+                    </div>
+                    <!-- End .project-image -->
+                    <div class="project-info">
+                        <h3>DissassembleLC2K</h3>
+                        <p>
+                            A sample disassembler for the educational instruction set architecture LC2K. Used for Computer Organization classes at the University of Michigan, UC Santa Cruz, and University of Colorado.
+                        </p>
+                        <a href="https://github.com/grahameger/DissassembleLC2K">View Project</a>
+                    </div>
+                    <!-- End .project-info -->
+                </div>
+                <!-- End .project -->              
+
+            	<div class="project shadow-large">
+                    <div class="project-image">
+                        <img src="images/SoberMagic.jpg" />
+                    </div>
+                    <!-- End .project-image -->
+                    <div class="project-info">
+                        <h3>SoberMagic</h3>
+                        <p>
+                            A command line application that automatically assigns sober monitors to different social events and tiers based on a point system. Used by Risk Managers at multiple fraternities at the University of Michigan.
+                        </p>
+                        <a href="https://github.com/grahameger/SoberMagic">View Project</a>
+                    </div>
+                    <!-- End .project-info -->
+                </div>
+                <!-- End .project -->
+
+                <div class="project shadow-large">
+                    <div class="project-image">
+                        <img src="images/sql.png" />
+                    </div>
+                    <!-- End .project-image -->
+                    <div class="project-info">
+                        <h3>SillyQL</h3>
+                        <p>
+                            A ground-up implementation of a relational database with SQL syntax. Implemented in C++ without the use of the STL Data Structures & Algorithms. All data structures written by myself to be compatible with the STL.
+                        </p>
+                        <!-- <a href="#">View Project</a> -->
+                    </div>
+                    <!-- End .project-info -->
+                </div>
+                <!-- End .project -->
+                <div class="project shadow-large">
+                	<div class="project-image">
+                		<img src="images/send_file.png"/>
+                	</div>
+                	<div class="project-info">
+                		<h3>wSender and wReceiver</h3>
+                        <p>Reliable Transport in C++ over UDP. Highly configurable. Per-packet ACKs and Timers, cumulative ACKs, early retransmission, Congestion Window size and decrease algorithm, etc.</p>
+                        <p>Code not posted publically until May 2019. Available upon request.</p>
+                		<a href="https://github.com/mosharaf/eecs489/tree/master/Assignments/Assignment-3">View Project</a>
+                	</div>
+                </div>
+                <div class="project shadow-large">
+                	<div class="project-image">
+                		<img src="images/bbb.png"/>
+                	</div>
+                	<div class="project-info">
+                		<h3>Autothrottling Video CDN and DNS Loadbalancer.</h3>
+                        <p>GeoIP based Video CDN. Auto adjusts video bitrate based on throughput. Custom DNS nameserver Load balances video servers based on multiple factors.</p>
+                        <p>Implemented in C++ using only the STL.</p>
+                        <p>Code not posted publically until May 2019. Available upon request.</p>
+                		<a href="https://github.com/mosharaf/eecs489/tree/master/Assignments/Assignment-2">View Project</a>
+                	</div>
+                </div>
+                <div class="project shadow-large">
+                	<div class="project-image">
+                		<img src="images/routingtable.png"/>
+                	</div>
+                	<div class="project-info">
+                        <h3>Static Router</h3>
+                        <h4>Level 2 and 3 Static Router in C using Raw Sockets.</h4>
+                        <p>Handles Routing Packets given in Static Routing Table. Generates and Handles ARP and ICMP packets. Routes and drops packets when necesary. Configurable to capture and log packets to pcap file.</p>
+                        <p>Code not posted publically until May 2019. Available upon request.</p>
+                		<a href="https://github.com/mosharaf/eecs489/tree/master/Assignments/Assignment-4">View Project</a>
+                	</div>
+                </div>
+                
+
+
+
+                
+            </div>
+        </div>
+    </div>
+    <!-- End #projects -->
+
+    <div id="skills">
+        <h2 class="heading">Skills</h2>
+        <ul>
+            <li>JavaScript</li>
+            <li>C</li>
+            <li>C++</li>
+            <li>AngularJS</li>
+            <li>RxJS</li>
+            <li>C#</li>
+            <li>F#</li>
+            <li>.NET</li>
+            <li>TypeScript</li>
+            <li>Python</li>
+            <li>HTML/CSS</li>
+            <li>Linux</li>
+            <li>ARM Assembly</li>
+            <li>Swift</li>
+            <li>SQL</li>
+            <li>Flask</li>
+            <li>Berkeley Sockets</li>
+        </ul>
+    </div>
+    <!-- End #skills -->
+
+    <div id="contact">
+        <h2>Get in Touch</h2>
+        <div id="contact-form">
+            <form method="POST" action="https://formspree.io/eger@umich.edu">
+                <input type="hidden" name="_subject" value="Contact request from personal website" />
+                <input type="email" name="_replyto" placeholder="Your email" required>
+                <textarea name="message" placeholder="Your message" required></textarea>
+                <button type="submit">Send</button>
+            </form>
+        </div>
+        <!-- End #contact-form -->
+    </div>
+    <!-- End #contact -->
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-5 copyright">
+                    <p>
+                        Copyright &copy; <script>document.write(new Date().getFullYear())</script> GRAHAM EGER
+                    </p>
+                </div>
+                <div class="col-sm-2 top">
+                    <span id="to-top">
+                        <i class="fa fa-chevron-up" aria-hidden="true"></i>
+                    </span>
+                </div>
+                <div class="col-sm-5 social">
+                    <ul>
+                        <li>
+                            <a href="https://github.com/grahameger" target="_blank"><i class="fa fa-github" aria-hidden="true"></i></a>
+                        </li>
+<!--                         <li>
+                            <a href="https://stackoverflow.com/" target="_blank"><i class="fa fa-stack-overflow" aria-hidden="true"></i></a>
+                        </li> -->
+                        <li>
+                            <a href="https://www.facebook.com/grahameger" target="_blank"><i class="fa fa-facebook" aria-hidden="true"></i></a>
+                        </li>
+                        <li>
+                            <a href="https://twitter.com/grahameger" target="_blank"><i class="fa fa-twitter" aria-hidden="true"></i></a>
+                        </li>
+<!--                         <li>
+                            <a href="https://plus.google.com/" target="_blank"><i class="fa fa-google-plus" aria-hidden="true"></i></a>
+                        </li> -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- End footer -->
+
+    
+</body>
+
+</html>

@@ -25,6 +25,7 @@ namespace search {
 
     void * Crawler::watchForFilesWrapper(void * context) {
         ((Crawler *)context)->watchForFiles();
+        return nullptr; 
     }
 
     void Crawler::SubmitOne(const std::string &url) {
@@ -36,7 +37,7 @@ namespace search {
     }
 
     void Crawler::watchForFiles() {
-        // use select to wait
+        // use our Eventing class which is no longer in use
         while (true) {
             char buffer[INOTIFY_BUFFER_SIZE];
             int length = read(inotifyfd, buffer, INOTIFY_BUFFER_SIZE);
