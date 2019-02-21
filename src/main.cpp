@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 	int two = q.pop();
 	assert(one == 1 && two == 2);
 	search::HTTPClient client;
-	client.SubmitURLSync("http://localhost/index.html");
-	client.SubmitURLSync("http://example.com/index.html");
-	client.SubmitURLSync("http://neverssl.com/index.html");
+	//client.SubmitURLSync("http://example.com/index.html");
+	//client.SubmitURLSync("http://neverssl.com/index.html");
+	client.SubmitURLSync("https://grahameger.com");
 }

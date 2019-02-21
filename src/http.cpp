@@ -99,7 +99,7 @@ namespace search {
         // fill in struct
         memset(&serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(80);
+        serv_addr.sin_port = htons(port);
         memcpy(&serv_addr.sin_addr.s_addr,
                 server->h_addr,
                 server->h_length);
@@ -111,6 +111,21 @@ namespace search {
     }
 
     HTTPClient::HTTPClient() {
+        // this will become a bug if there is ever more than
+        // one instance of HTTP client.
+        SSL_library_init();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
+        static const SSL_METHOD * meth = TLSv1_2_client_method();
+        search::HTTPClient::sslContext = SSL_CTX_new(meth);
+        // this is deprecated and is potentially unnecessary
+        // the OpenSSL wiki says to call it anyway.
+        OPENSSL_config(NULL);
+        /* Include <openssl/opensslconf.h> to get this define */
+        #if defined (OPENSSL_THREADS)
+        fprintf(stdout, "Warning: thread locking is not implemented\n");
+        #endif
+
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
     }
@@ -147,17 +162,50 @@ namespace search {
             rv.path =     result[5];
             rv.query =    result[7];
             rv.fragment = result[9];
+            if (rv.path == "")
+                rv.path = "/";
             return rv;
         } else {
             return emptyHTTPRequest;
         }
     }
 
-    static void SubmitUrlSyncWrapper(void * context) {
+    void * HTTPClient::SubmitUrlSyncWrapper(void * context) {
         SubmitArgs * args = (SubmitArgs*)context;
         args->client->SubmitURLSync(*args->url);
         delete args->url;
         delete args;
+    }
+
+    static ssize_t getContentLength(std::string_view response) {
+        static const std::string CONTENT_LENGTH_STR = "Content-Length: ";
+        size_t contentLenStart = response.find(CONTENT_LENGTH_STR);
+        if (contentLenStart == std::basic_string_view<char>::npos)
+            return -1;
+        size_t intStart = std::string_view::npos;
+        size_t intEnd = intStart;
+
+        size_t i;
+        // get the start of the integer inclusize
+        for (i = contentLenStart; i < response.size(); i++) {
+            if (std::isdigit(response[i])) {
+                intStart = i;
+                ++i;
+                break;
+            }
+        }
+        // get the end of the integer
+        for (; i < response.size(); i++) {
+            if (!std::isdigit(response[i])) {
+                intEnd = i;
+                break;
+            }
+        }
+        size_t rv = -1;
+        auto result = std::from_chars(response.data() + intStart,
+                                      response.data() + intEnd,
+                                      rv);
+        return rv;
     }
 
     void HTTPClient::SubmitURLSync(const std::string &url) {
@@ -178,9 +226,9 @@ namespace search {
             return;
         }
         // open a socket to the host
-        int sockfd = getConnToHost(request.host, request.port);
+        int sockfd = getConnToHost(request.host, request.port , true);
         sock->setFd(sockfd);
-        // send request non-blocking
+        // send request blocking
         const std::string requestStr = request.requestString();
         sock->send(requestStr.c_str(), requestStr.size());
 
@@ -192,52 +240,57 @@ namespace search {
         ssize_t content_length = -1;
         int bytes_received = 0;
         char * full_response = (char*)malloc(BUFFER_SIZE);
-
+        size_t total_size;
         while (true) {
-            sock->recv(full_response, BUFFER_SIZE, 0);
+            rv = sock->recv(full_response, BUFFER_SIZE, 0);
             if (rv < 0) {
                 // error check
+                return;
             } else if (rv == 0) {
                 // handle EOF
-            } else {
-                // check content_length to see if we need to continue or can break
-            }
-            // check if the header has been downloaded
-            if (content_length == -1) {
+                break;
+                // might need to do more?
+            } else if (content_length == -1) {
+                // check if the header has been downloaded
+                bytes_received += rv;
                 std::string_view view(full_response, bytes_received);
                 size_t header_pos = view.find("\r\n\r\n");
                 if (header_pos != std::string_view::npos) {
-                    static const std::string cLen = "Content-Length: ";
                     size_t header_size = header_pos + 4;
                     // search for "Content-Length"
-                    size_t content_length_pos = view.find(cLen);
-                    if (content_length_pos != std::string_view::npos) {
-                        // copy data to a new buffer of known size
-                        content_length = std::stoi(std::string(view.substr(content_length_pos, content_length_pos + cLen.size())));
-                        size_t total_size = header_size + 4 + content_length;
-                        size_t remaining = total_size - bytes_received;
+                    content_length = getContentLength(std::string_view(full_response, bytes_received));
+                    total_size = header_size + content_length;
+                    size_t remaining = total_size - bytes_received;
+                    if (remaining > 0) {
                         char * tmp = (char *)malloc(total_size);
                         memcpy(tmp, full_response, bytes_received);
                         free(full_response);
                         full_response = tmp;
                         char * buf_front = full_response + bytes_received;
                         rv = sock->recv(buf_front, remaining, MSG_WAITALL);
-                        if (rv < 0 || bytes_received < content_length) {
-                            // error reading from socket
-                        } else {
-                            // done, break
+                        if (rv >= 0) {
+                            bytes_received += rv;
                             break;
                         }
-                    } else {
-                        break;
+                        if (rv < 0 || bytes_received < content_length) {
+                            // error reading from socket
+                            break;
+                        }
                     }
                 }
+            } else {
+                // no content length found?
+                break;
             }
         }
         // full response is completely downloaded now we can process
         process(full_response, bytes_received);
 
         // either going to write to a file or add another request to the queue
+        // write it to a file
+        std::ofstream outfile(request.filename());
+        outfile.write(full_response, total_size);
+        outfile.close();
     }
 
     void HTTPClient::process(char * file, size_t len) {
@@ -248,21 +301,22 @@ namespace search {
         sockfd = fd_in;
         return sockfd;
     }
+
     int HTTPClient::SecureSocket::setFd(int fd_in) {
         sockfd = fd_in;
-        ssl = ::SSL_new(sslContext);
+        ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
         }
         int sslsock = ::SSL_get_fd(ssl);
-        ::SSL_set_fd(ssl, sslsock);
+        ::SSL_set_fd(ssl, sockfd);
         int rv = ::SSL_connect(ssl);
         if (rv <= 0) {
             // TODO better error handling
             fprintf(stderr, "Error creating SSL connection");
             fflush(stderr);
-            return rv;
         }
+        return rv;
     }
 
     ssize_t HTTPClient::Socket::send(const char * buf, size_t len) {
@@ -294,6 +348,7 @@ namespace search {
         } else {
             return len;
         }
+        return rv;
     }
 
     ssize_t HTTPClient::Socket::recv(char * buf, size_t len, int flags) {
@@ -301,10 +356,34 @@ namespace search {
     }
     
     ssize_t HTTPClient::SecureSocket::recv(char * buf, size_t len, int flags) {
-        auto rv = ::SSL_read(ssl, (void*)buf, len);
-        // todo error handling
-        // https://linux.die.net/man/3/ssl_read
-        return rv;
+        if (flags & MSG_WAITALL) {
+            size_t bytes_received = 0;
+            size_t rv = 0;
+            while ((rv = ::SSL_read(ssl, (void*)(buf + bytes_received), len - bytes_received)) > 0) {
+                bytes_received += rv;
+            }
+            if (rv < 0) {
+                int error = SSL_get_error(ssl, rv);
+                switch (error)
+                {
+                    case SSL_ERROR_WANT_WRITE:
+                    case SSL_ERROR_WANT_READ:
+                        break;
+                    case SSL_ERROR_ZERO_RETURN:
+                    case SSL_ERROR_SYSCALL:
+                    case SSL_ERROR_SSL:
+                    default:
+                        return 0;
+                }
+                return -1;
+            }
+            return bytes_received;
+        } else {
+            auto rv = ::SSL_read(ssl, (void*)buf, len);
+            // todo error handling
+            // https://linux.die.net/man/3/ssl_read
+            return rv;
+        }
     }
 
     ssize_t HTTPClient::Socket::close() {

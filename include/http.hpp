@@ -22,6 +22,8 @@
 #include <fstream>
 #include <algorithm>
 #include <string_view>
+#include <charconv>
+#include <cctype>
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -67,11 +69,6 @@ namespace search {
     HTTPRequest * parseURL(const std::string &url);
     static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
-    struct SubmitArgs {
-        HTTPClient * client;
-        std::string * url;
-    };
-
     class HTTPClient {
     public:
         HTTPClient();
@@ -102,30 +99,11 @@ namespace search {
         void initSSLCtx();
         void destroySSL();
 
-        inline static SSL_CTX * sslContext;
-
-        // hack a static constructor for the SSL_CTX
-        friend class SSLContextConstructor;
-        struct SSLContextConstructor {
-                SSLContextConstructor() {
-                    SSL_library_init();
-                    SSL_load_error_strings();
-                    OpenSSL_add_all_algorithms();
-                    static const SSL_METHOD * meth = TLSv1_2_client_method();
-                    sslContext = SSL_CTX_new(meth);
-                    // this is deprecated and is potentially unnecessary
-                    // the OpenSSL wiki says to call it anyway.
-                    OPENSSL_config(NULL);
-                    /* Include <openssl/opensslconf.h> to get this define */
-                    #if defined (OPENSSL_THREADS)
-                    fprintf(stdout, "Warning: thread locking is not implemented\n");
-                    #endif
-            }
-        };
-        static SSLContextConstructor cons;
+        static inline SSL_CTX * sslContext;
 
         struct Socket {
         public:
+            Socket() : sockfd(0) {}
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);
@@ -136,6 +114,7 @@ namespace search {
         
         struct SecureSocket : public Socket {
         public:
+            SecureSocket() : ssl(nullptr) {}
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);
@@ -143,6 +122,11 @@ namespace search {
         private:
             SSL * ssl;
         };
+    };
+
+    struct SubmitArgs {
+            HTTPClient * client;
+            std::string * url;
     };
 }
 

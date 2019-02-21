@@ -65,6 +65,14 @@
         "queue": "cpp",
         "set": "cpp",
         "thread": "cpp",
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "charconv": "cpp",
+        "clocale": "cpp",
+        "fstream": "cpp",
+        "optional": "cpp",
+        "cinttypes": "cpp",
+        "strstream": "cpp",
+        "numeric": "cpp",
+        "typeindex": "cpp"
     }
 }
