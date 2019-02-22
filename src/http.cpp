@@ -159,6 +159,7 @@ namespace search {
             rv.fragment = result[9];
             if (rv.path == "")
                 rv.path = "/";
+            }
             return rv;
         } else {
             return emptyHTTPRequest;
@@ -203,7 +204,7 @@ namespace search {
         return rv;
     }
 
-    void HTTPClient::SubmitURLSync(const std::string &url) {
+    void HTTPClient::SubmitURLSync(const std::string &url) { //should submit to robotstxt data structure
         HTTPRequest request = parseURLStack(url);
         Socket * sock;
         request.method = getMethod;
@@ -286,6 +287,14 @@ namespace search {
         std::ofstream outfile(request.filename());
         outfile.write(full_response, total_size);
         outfile.close();
+
+        //handle robots.txt files
+        if(rv.path.find("robots.txt") != string::npos)
+        {
+            int i = 0;
+            //TODO: implement
+        }
+        
     }
 
     void HTTPClient::process(char * file, size_t len) {
