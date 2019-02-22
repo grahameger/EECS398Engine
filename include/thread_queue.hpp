@@ -16,7 +16,7 @@
 #include <array>
 #include <vector>
 
-namespace search {
+namespace threading {
     template <typename T>
     class ThreadQueue
     {
