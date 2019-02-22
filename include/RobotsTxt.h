@@ -26,6 +26,9 @@ private:
    whenever you miss the cache. All parsed robots Txt files will be saved to disc.
 
    Saving a robots.txt representation into disc will involve creating a tree->vector->file representation
+
+   Consider making it a templated virtual function, as the functionality of check lru cache otherwise get file
+   will be common
    */
 };
 
