@@ -64,6 +64,16 @@
         "condition_variable": "cpp",
         "queue": "cpp",
         "set": "cpp",
-        "thread": "cpp"
-    }
+        "thread": "cpp",
+        "*.tcc": "cpp",
+        "charconv": "cpp",
+        "clocale": "cpp",
+        "fstream": "cpp",
+        "optional": "cpp",
+        "cinttypes": "cpp",
+        "strstream": "cpp",
+        "numeric": "cpp",
+        "typeindex": "cpp"
+    },
+    "cquery.cacheDirectory": "${workspaceFolder}/.vscode/cquery_cached_index/"
 }

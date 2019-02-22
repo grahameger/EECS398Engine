@@ -1,4 +1,9 @@
 CC := g++ # This is the main compiler
+
+ifeq ($(shell uname -s),Darwin) # Mac OS X
+	CC := clang++
+endif
+
 LINTER := astyle
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := src
@@ -9,7 +14,7 @@ SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 CFLAGS := -g3 -Wall -std=c++17
-LIB := -pthread
+LIB := -pthread -lssl -lcrypto
 INC := -I include
 
 $(TARGET): $(OBJECTS)

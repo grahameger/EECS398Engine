@@ -6,6 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 // 
+#ifdef __linux__ 
 
 #include "event.hpp"
 #include <unistd.h>
@@ -62,4 +63,6 @@ namespace search {
         close(sockfd);
     }
 }
+
+#endif
 

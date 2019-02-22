@@ -4,6 +4,13 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 
+wd/*
+.ccls-cache/
+.idea/
+
+compile_commands.json
+test/majestic_million.csv
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore

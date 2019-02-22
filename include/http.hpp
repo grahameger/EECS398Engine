@@ -21,6 +21,9 @@
 #include <array>
 #include <fstream>
 #include <algorithm>
+#include <string_view>
+#include <charconv>
+#include <cctype>
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -28,21 +31,31 @@
 #include <sys/socket.h> 
 #include <signal.h>
 #include <netinet/in.h> 
+#include <arpa/inet.h>
 #include <netdb.h> 
 #include <sys/stat.h>
 #include <unistd.h> 
 #include <sys/epoll.h>
+#include <sys/mman.h>
+
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/opensslconf.h>
+#if (SSLEAY_VERSION_NUMBER >= 0x0907000L)
+# include <openssl/conf.h>
+#endif
 
 #include "event.hpp"
 
 
 
 namespace search {
+
     struct HTTPRequest
     {
         // can optimize this later
-        std::string filename();
-        std::string requestString();
+        std::string filename() const;
+        std::string requestString() const;
         void print();
         std::string   method;       // only GET implemented
         std::string   host;
@@ -53,52 +66,67 @@ namespace search {
         std::string   protocol;
         int           port;         // note 0 defaults to 80
     };
-
     HTTPRequest * parseURL(const std::string &url);
-
-    struct HTTPResponse 
-    {
-        HTTPResponse() : header_length(-1), content_length(-1) {}
-        void process(HTTPRequest * request);
-        void writeToFile(HTTPRequest * request);
-        std::stringstream data;
-        ssize_t header_length;
-        ssize_t content_length;
-        int code;
-        std::string mimeType;
-        std::string encoding;
-    };
-
-    struct ClientInfo {
-        HTTPRequest  * request;
-        HTTPResponse * response;
-    };
+    static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
     class HTTPClient {
     public:
         HTTPClient();
         ~HTTPClient();
-        void SubmitURL(const std::string &url);
+        void SubmitURLSync(const std::string &url);
+        static void * SubmitUrlSyncWrapper(void * context);
     private:
         static const size_t MAX_CONNECTIONS = 1000;
-        static const size_t RECV_SIZE = 2048;
+        static const size_t RECV_SIZE = 8192;
         static const size_t BUFFER_SIZE = RECV_SIZE;
         static const size_t NUM_THREADS = 4;
         static const uint32_t SLEEP_US = 10000;
+        const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
 
         // returns connected TCP socket to host
-        int getConnToHost(const std::string &host, int port);
+        int getConnToHost(const std::string &host, int port, bool blocking = false);
 
         // 'main' function our worker threads run
         void processResponses();
-        void parseResponse(int sockfd, ClientInfo &info);
+        void process(char* file, size_t len);
 
         // given a socket return the clientInfo
-        std::unordered_map<int, ClientInfo> clientInfo;
         std::mutex m;
-        std::thread threads[NUM_THREADS];
-        search::EventQueue io;
 
+        // openSSL functions and state
+        // init (called by constructor)
+        // teardown (called by destructor)
+        void initSSLCtx();
+        void destroySSL();
+
+        static inline SSL_CTX * sslContext;
+
+        struct Socket {
+        public:
+            Socket() : sockfd(0) {}
+            virtual int setFd(int fd_in);
+            virtual ssize_t send(const char * buf, size_t len);
+            virtual ssize_t recv(char * buf, size_t len, int flags);
+            virtual ssize_t close();
+        protected:
+            int sockfd;
+        };
+        
+        struct SecureSocket : public Socket {
+        public:
+            SecureSocket() : ssl(nullptr) {}
+            virtual int setFd(int fd_in);
+            virtual ssize_t send(const char * buf, size_t len);
+            virtual ssize_t recv(char * buf, size_t len, int flags);
+            virtual ssize_t close();
+        private:
+            SSL * ssl;
+        };
+    };
+
+    struct SubmitArgs {
+            HTTPClient * client;
+            std::string * url;
     };
 }
 
