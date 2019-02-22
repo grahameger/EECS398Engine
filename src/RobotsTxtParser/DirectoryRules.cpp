@@ -1,4 +1,4 @@
-#include "DirectoryRules.h"
+#include "../../include/DirectoryRules.h"
 #include <iostream>
 using std::set;
 using std::string;
