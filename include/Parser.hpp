@@ -1,9 +1,15 @@
 //  Created by Jake C on 2/10/19.
-#ifndef Parser_hpp
-#define Parser_hpp
+#ifndef Parser_h
+#define Parser_h
 #include <regex>
 #include <iostream>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+using std::regex;
 
 class LinkFinder {
 public:
@@ -13,41 +19,49 @@ public:
     //destructor
     ~LinkFinder();
     
-    //EFFECTS: Takes an HTML file as a char*, an empty array, and size ptr as inputs.
-    //         Modifies result[] by adding found links. returns size as # of links.
-    //         If no links found, Size is 0.
+    //EFFECTS: Atomically rewrites filename with stripped html
+    //         Returns -1 on failed file creation, 0 on success
+    //MODIFIES: HTML file
+    int stripTags(const char* filename);
+    
+    //EFFECTS: Takes an HTML filename and creates a new file called links<filename>
+    //         Where each link is separated by a space. If no links found, file is empty.
+    //         Returns -1 on failed file creation, 0 on success
     //MODIFIES: result[], Size
-    void findLinks(const char* html_file, char* result[], int* size);
+    int findLinks(const char* filename);
     
 private:
-    char** linkArray;
-    int numLinks = 0;
 };
-#endif /* Parser_hpp */
+#endif /* Parser_h */
 // -----------------------------------------------------------------------------
 //TESTING + HOW TO USE
-/*#include "Parser.h"
- #include <sys/types.h>
- #include <sys/mman.h>
- #include <sys/stat.h>
- #include <fcntl.h>
- #include <unistd.h>
+/*
+ #include "Parser.h"
+ #include <ctime>
+ #include <fstream>
  using namespace std;
- Filename is argument 1
- int main(int argc, const char * argv[]) {
- int fd = open(argv[1], O_RDONLY);
- long long len = lseek(fd, 0, SEEK_END);
- void *data = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
- char *linkArray[1000];
- int size = 0;
- LinkFinder L;
- L.findLinks((char*)data, linkArray, &size);
- for(int i = 0; i < size; i++) {
- std::cout << linkArray[i] << std::endl;
- }
- std::cout << "end ";
- //delete[] s;
  
- return 0;
+ int main(int argc, const char * argv[]) {
+ std::clock_t start;
+ double duration = 0;
+ start = std::clock();
+ LinkFinder L;
+ L.findLinks(argv[1]);
+ string word;
+ int count = 0;
+ ifstream ifs("linksfile3.txt");
+ if(!ifs.is_open()) {
+ cout << "Error opening linksfile3.txt" << endl;
+ exit(EXIT_FAILURE);
  }
- */
+ while(ifs >> word) {
+ cout << word << endl;
+ count++;
+ }
+ cout << count << endl;
+ L.stripTags(argv[1]); **ALWAYS CALL STRIPTAGS AFTER AS IT LITERALLY CHANGES FILE
+ duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+ std::cout<<"printf: "<< duration <<'\n';
+ std::cout << "end";
+ return 0;
+ }*/
