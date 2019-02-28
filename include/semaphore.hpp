@@ -14,7 +14,7 @@
 namespace threading {
     class Semaphore {
     public:
-        Semaphore(int count_in) {
+        Semaphore(size_t count_in) {
             count = count_in;
             pthread_mutex_init(&m, nullptr);
             pthread_cond_init(&cv, nullptr);

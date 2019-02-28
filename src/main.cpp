@@ -17,10 +17,6 @@ void * wrapper(search::HTTPClient * client, threading::Semaphore * sem, const st
 	return nullptr;
 }
 
-void do_join(std::thread& t) {
-	t.join();
-}
-
 int main(int argc, char *argv[]) {
 	threading::ThreadQueue<int> q;
 	q.push(1);
@@ -38,10 +34,10 @@ int main(int argc, char *argv[]) {
 	std::vector<std::thread> v;
 	while (std::getline(start_list, line)) {
 		sem.wait();
-		v.push_back(std::thread(wrapper, &client, &sem, line));
+		v.emplace_back(std::thread(wrapper, &client, &sem, line));
 	}
 
-	std::for_each(v.begin(), v.end(), do_join);
+	for (auto& t : v) t.join();
 
 	// client.SubmitURLSync("http://example.com/index.html");
 	// client.SubmitURLSync("http://neverssl.com/index.html");

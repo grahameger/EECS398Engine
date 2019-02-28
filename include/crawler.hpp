@@ -29,7 +29,7 @@ namespace search {
     private:
         // HTTP stuff
         const size_t MAX_CRAWLER_THREADS = 10000;
-        threading::Semaphore sem(10000);
+        threading::Semaphore sem;
         HTTPClient client;
         threading::ThreadQueue<std::string> urls;
         void SubmitOne(const std::string &url);

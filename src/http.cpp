@@ -242,7 +242,7 @@ namespace search {
         char * full_response = (char*)malloc(BUFFER_SIZE);
         size_t total_size;
         while (true) {
-            rv = sock->recv(full_response, BUFFER_SIZE, 0);
+            rv = sock->recv(full_response + bytes_received,  BUFFER_SIZE - bytes_received, 0);
             if (rv < 0) {
                 // error check
                 return;
@@ -350,7 +350,8 @@ namespace search {
     }
 
     ssize_t HTTPClient::Socket::recv(char * buf, size_t len, int flags) {
-        return ::recv(sockfd, (void*) buf, len, flags);
+        ssize_t rv = ::recv(sockfd, (void*) buf, len, flags);
+        return rv;
     }
     
     ssize_t HTTPClient::SecureSocket::recv(char * buf, size_t len, int flags) {

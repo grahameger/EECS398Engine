@@ -10,7 +10,7 @@
 #include "crawler.hpp"
 
 namespace search {
-    Crawler::Crawler(const std::string &directory, const std::vector<std::string> &urls_in) {
+    Crawler::Crawler(const std::string &directory, const std::vector<std::string> &urls_in) : sem(MAX_CRAWLER_THREADS) {
         watchDir = directory;
 
         // inotify stuff
