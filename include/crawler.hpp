@@ -16,9 +16,9 @@
 #include <sys/inotify.h>
 #include <sys/types.h>
 
-#include "semaphore.hpp"
 #include "http.hpp"
 #include "thread_queue.hpp"
+#include "semaphore.hpp"
 
 namespace search {
     class Crawler {
@@ -28,8 +28,8 @@ namespace search {
         void run();
     private:
         // HTTP stuff
-        const static size_t MAX_CRAWLER_THREADS = 10000;
-        threading::Semaphore<MAX_CRAWLER_THREADS> sem;
+        const size_t MAX_CRAWLER_THREADS = 10000;
+        threading::Semaphore sem(10000);
         HTTPClient client;
         threading::ThreadQueue<std::string> urls;
         void SubmitOne(const std::string &url);

@@ -16,6 +16,8 @@
 #include <string.h> 
 #include <errno.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 namespace search {
@@ -76,37 +78,40 @@ namespace search {
     }
 
     int HTTPClient::getConnToHost(const std::string &host, int port, bool blocking) {
-        struct hostent *server;
-        struct sockaddr_in serv_addr;
+        struct addrinfo hints, *servinfo, *p;
         int sockfd;
-        // create socket
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
+        int rv;
+        // load up address structs with getaddrinfo();
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        if ((rv = getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &servinfo)) != 0) {
             // TODO: log
         }
-        if (!blocking) {
-            // set socket to non blocking
-            int rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
-            if (rv == -1) {
-                // TODO: log error
+        for (p = servinfo; p != nullptr; p = p->ai_next) {
+            if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+                // TODO log error
+                continue;
             }
+            if (!blocking) {
+                rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
+                if (rv == -1) {
+                    // TODO: log error, could not set to non-blocking socket
+                }
+            }
+            if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+                // TODO log connect error
+                close(sockfd);
+                continue;
+            }
+            break;
         }
-        // lookup ip address
-        server = gethostbyname(host.c_str());
-        if (server == nullptr) {
-            // TODO: log
+        // end of list with no connection
+        if (p == nullptr) {  
+            // TODO: log, failed to connect
+            return -1;
         }
-        // fill in struct
-        memset(&serv_addr, 0, sizeof(serv_addr));
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(port);
-        memcpy(&serv_addr.sin_addr.s_addr,
-                server->h_addr,
-                server->h_length);
-        // connect the socket
-        if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) {
-            // TODO: log
-        }
+        freeaddrinfo(servinfo);
         return sockfd;
     }
 
@@ -257,10 +262,7 @@ namespace search {
                     total_size = header_size + content_length;
                     size_t remaining = total_size - bytes_received;
                     if (remaining > 0) {
-                        char * tmp = (char *)malloc(total_size);
-                        memcpy(tmp, full_response, bytes_received);
-                        free(full_response);
-                        full_response = tmp;
+                        full_response = (char *)malloc(total_size);
                         char * buf_front = full_response + bytes_received;
                         rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                         if (rv >= 0) {
@@ -286,6 +288,7 @@ namespace search {
         std::ofstream outfile(request.filename());
         outfile.write(full_response, total_size);
         outfile.close();
+        free(full_response);
     }
 
     void HTTPClient::process(char * file, size_t len) {

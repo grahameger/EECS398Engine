@@ -10,26 +10,37 @@
 #define semaphore_hpp_398
 
 #include <pthread.h>
-#include <semaphore.h>
 
 namespace threading {
-    template <size_t N>
     class Semaphore {
     public:
-        Semaphore() {
-            sem_init(&s, 0, N);
+        Semaphore(int count_in) {
+            count = count_in;
+            pthread_mutex_init(&m, nullptr);
+            pthread_cond_init(&cv, nullptr);
         }
         ~Semaphore() {
-            sem_destroy(&s);
+            pthread_mutex_destroy(&m);
+            pthread_cond_destroy(&cv);
         }
-        void notify() {
-            sem_post(&s);
+        inline void notify() {
+            pthread_mutex_lock(&m);
+            count++;
+            pthread_mutex_unlock(&m);
+            pthread_cond_signal(&cv);
         }
-        void wait() {
-            sem_wait(&s);
+        inline void wait() {
+            pthread_mutex_lock(&m);
+            while (count == 0) {
+                pthread_cond_wait(&cv, &m);
+            }
+            count--;
+            pthread_mutex_unlock(&m);
         }
     private:
-        sem_t s;
+        size_t count;
+        pthread_mutex_t m;
+        pthread_cond_t  cv;
     };
 }
 
