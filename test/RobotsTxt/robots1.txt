@@ -1,0 +1,6 @@
+User-agent: Googlebot
+Rules
+Rules
+
+User-agent: *
+Disallow: /path
