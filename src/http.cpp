@@ -236,6 +236,7 @@ namespace search {
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
             // cleaup our stuff
+            close(sockfd);
             delete sock; 
             return; 
         }
@@ -259,6 +260,7 @@ namespace search {
             if (rv < 0) {
                 // error check
                 fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                sock->close();
                 free(full_response);
                 return;
             } else if (rv == 0) {
