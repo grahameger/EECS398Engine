@@ -219,16 +219,16 @@ namespace search {
     void HTTPClient::SubmitURLSync(const std::string &url) {
         HTTPRequest request = parseURLStack(url);
         std::unique_ptr<Socket> sock;
-        Socket * sock;
         request.method = getMethod;
         request.headers = connClose;
         if (request.protocol == httpsStr) {
             request.port = 443;
-            sock = new SecureSocket;
+            sock = std::unique_ptr<SecureSocket>(new SecureSocket);
         }
         else if (request.protocol == httpStr) {
             request.port = 80;
             sock = new Socket; 
+            sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
             // invalid, TODO log bad request
