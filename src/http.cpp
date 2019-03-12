@@ -102,6 +102,7 @@ namespace search {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
                     fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
+                    ::close(sockfd);
                     return -1;
                 }
             }
@@ -115,6 +116,7 @@ namespace search {
         if (p == nullptr) {  
             // TODO: log, failed to connect
             fprintf(stderr, "unable to connect to host '%s'\n", host.c_str());
+            close(sockfd);
             return -1;
         }
         freeaddrinfo(servinfo);
@@ -234,7 +236,6 @@ namespace search {
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
-            // cleaup our stuff
             return; 
         }
         sock->setFd(sockfd);
@@ -257,7 +258,6 @@ namespace search {
             if (rv < 0) {
                 // error check
                 fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
-                sock->close();
                 free(full_response);
                 return;
             } else if (rv == 0) {
@@ -278,9 +278,6 @@ namespace search {
                     if (remaining > 0) {
                         full_response = (char *)realloc(full_response, total_size);
                         char * buf_front = full_response + bytes_received;
-                        if (bytes_received > buffer_size) {
-                            fprintf(stderr, "attempting to write past end of buffer for url '%s'\n", url.c_str());
-                        }
                         rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                         if (rv >= 0) {
                             bytes_received += rv;
@@ -298,7 +295,6 @@ namespace search {
             }
         }
         // full response is completely downloaded now we can process
-        sock->close();
         process(full_response, bytes_received);
 
         // either going to write to a file or add another request to the queue
