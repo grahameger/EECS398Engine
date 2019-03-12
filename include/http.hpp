@@ -107,7 +107,9 @@ namespace search {
         public:
             Socket() : sockfd(0) {}
 
-            virtual ~Socket() {}
+            virtual ~Socket() {
+                close(sockfd);
+            }
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);
