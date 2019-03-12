@@ -77,16 +77,20 @@ namespace search {
         return true;
     }
 
+    // returns a connected socket, -1 if error
     int HTTPClient::getConnToHost(const std::string &host, int port, bool blocking) {
+        std::string portStr = std::to_string(port);
         struct addrinfo hints, *servinfo, *p;
+        servinfo = p = nullptr;
         int sockfd;
         int rv;
         // load up address structs with getaddrinfo();
         memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
-        if ((rv = getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &servinfo)) != 0) {
-            // TODO: log
+        if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
+            fprintf(stderr, "getaddrinfo returned %d for host '%s'\n", rv, host.c_str());
+            return -1;
         }
         for (p = servinfo; p != nullptr; p = p->ai_next) {
             if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
@@ -96,7 +100,9 @@ namespace search {
             if (!blocking) {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
-                    // TODO: log error, could not set to non-blocking socket
+                    fprintf(stderr, "could not set socket to non-blocking for host '%s'\n", host.c_str());
+                    close(sockfd);
+                    return -1;
                 }
             }
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
@@ -109,6 +115,7 @@ namespace search {
         // end of list with no connection
         if (p == nullptr) {  
             // TODO: log, failed to connect
+            fprintf(stderr, "unable to connect to host '%s'\n", host.c_str());
             return -1;
         }
         freeaddrinfo(servinfo);
@@ -227,6 +234,11 @@ namespace search {
         }
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
+        if (sockfd < 0) {
+            // cleaup our stuff
+            delete sock; 
+            return; 
+        }
         sock->setFd(sockfd);
         // send request blocking
         const std::string requestStr = request.requestString();
@@ -240,11 +252,14 @@ namespace search {
         ssize_t content_length = -1;
         int bytes_received = 0;
         char * full_response = (char*)malloc(BUFFER_SIZE);
-        size_t total_size;
+        size_t total_size = 0;
+        size_t buffer_size = BUFFER_SIZE;
         while (true) {
-            rv = sock->recv(full_response + bytes_received,  BUFFER_SIZE - bytes_received, 0);
+            rv = sock->recv(full_response + bytes_received, BUFFER_SIZE - bytes_received, 0);
             if (rv < 0) {
                 // error check
+                fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                free(full_response);
                 return;
             } else if (rv == 0) {
                 // handle EOF
@@ -260,10 +275,13 @@ namespace search {
                     // search for "Content-Length"
                     content_length = getContentLength(std::string_view(full_response, bytes_received));
                     total_size = header_size + content_length;
-                    size_t remaining = total_size - bytes_received;
+                    ssize_t remaining = total_size - bytes_received;
                     if (remaining > 0) {
-                        full_response = (char *)malloc(total_size);
+                        full_response = (char *)realloc(full_response, total_size);
                         char * buf_front = full_response + bytes_received;
+                        if (bytes_received > buffer_size) {
+                            fprintf(stderr, "attempting to write past end of buffer for url '%s'\n", url.c_str());
+                        }
                         rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                         if (rv >= 0) {
                             bytes_received += rv;
@@ -307,6 +325,10 @@ namespace search {
             // log error
         }
         int sslsock = ::SSL_get_fd(ssl);
+        if (sslsock < 0) {
+            // the operation failed because the underlying BIO
+            // is not of the correct type
+        }
         ::SSL_set_fd(ssl, sockfd);
         int rv = ::SSL_connect(ssl);
         if (rv <= 0) {

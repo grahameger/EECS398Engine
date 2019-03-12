@@ -9,8 +9,8 @@ TARGET := bin/engine
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CPPFLAGS := -g3 -Wall -std=c++17
-LIB := -pthread -lssl -lcrypto
+CPPFLAGS := -g3 -Wall -std=c++17 -fsplit-stack -fsanitize=address
+LIB := -pthread -lssl -lcrypto -lasan -fsanitize=address
 INC := -I include
 
 $(TARGET): $(OBJECTS)
@@ -23,7 +23,7 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 
 clean:
 	@echo " Cleaning..."; 
-	@echo " $(RM) -r $(BUILDDIR) $(TARGET)"; $(RM) -r $(BUILDDIR) $(TARGET)
+	@echo " $(RM) -r $(BUILDDIR) $(TARGET)"; $(RM) -r $(BUILDDIR) $(TARGET); $(RM) -r wd; mkdir wd;
 
 # Tests
 tester:
