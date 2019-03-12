@@ -411,8 +411,9 @@ namespace search {
         if (sockfd != -1) {
             int rv = ::close(sockfd);
             sockfd = -1;
+            return rv;
         }
-        return ::close(sockfd);
+        return 0;
     }
     ssize_t HTTPClient::SecureSocket::close() {
         // TODO error handling
@@ -421,6 +422,11 @@ namespace search {
             ::SSL_free(ssl);
             ssl = nullptr;
         }
-        return ::close(sockfd);
+        if (sockfd != -1) {
+            int rv = ::close(sockfd);
+            sockfd = -1;
+            return rv;
+        }
+        return 0;
     }
 }
