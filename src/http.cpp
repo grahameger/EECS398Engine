@@ -409,7 +409,7 @@ namespace search {
 
     ssize_t HTTPClient::Socket::close() {
         if (sockfd != -1) {
-            int rv = close(sockfd);
+            int rv = ::close(sockfd);
             sockfd = -1;
         }
         return ::close(sockfd);
