@@ -414,8 +414,10 @@ namespace search {
     }
     ssize_t HTTPClient::SecureSocket::close() {
         // TODO error handling
-        ::SSL_shutdown(ssl);
-        ::SSL_free(ssl);
+        if (ssl) {
+            ::SSL_shutdown(ssl);
+            ::SSL_free(ssl);
+        }
         return ::close(sockfd);
     }
 }
