@@ -292,6 +292,42 @@ namespace search {
         std::cout << "TODO" << '\n';
     }
 
+    char* HTTPClient::check_redirects(char * get_message){
+        char redirect_lead_int = get_message[9];
+        char* no_redirects = (char*)"No redirects\n";
+        if (redirect_lead_int == '3'){
+            //Convert GET message to string for ease of access
+            std::string message_copy = get_message;
+            std::string curr_line = "";
+            std::string redirected_url = "";
+            //Parse GET message
+            for (int i = 0; i < message_copy.length(); ++i){
+                //Found the redirected link URL
+                if (curr_line == "Location: "){
+                    while (message_copy[i] != '\n'){
+                        redirected_url += message_copy[i];
+                        i++;
+                    }
+                    break;
+                }
+                //Reset parsed line if newline char found
+                else if (message_copy[i] == '\n'){
+                    curr_line = "";
+                }
+                //Append GET message to curr_line to scan for 'Location: ' string
+                else {
+                    curr_line += message_copy[i];
+                }
+            }
+            char* final_url = new char [redirected_url.length() + 1];
+            strcpy(final_url, redirected_url.c_str());
+            return final_url;
+        }
+        else {
+            return no_redirects;
+        }
+    }
+
     int HTTPClient::Socket::setFd(int fd_in) {
         sockfd = fd_in;
         return sockfd;
