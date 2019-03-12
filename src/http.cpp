@@ -227,7 +227,6 @@ namespace search {
         }
         else if (request.protocol == httpStr) {
             request.port = 80;
-            sock = new Socket; 
             sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
