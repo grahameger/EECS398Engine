@@ -417,6 +417,7 @@ namespace search {
         if (ssl) {
             ::SSL_shutdown(ssl);
             ::SSL_free(ssl);
+            ssl = nullptr;
         }
         return ::close(sockfd);
     }
