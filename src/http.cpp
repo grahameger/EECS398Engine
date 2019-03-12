@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <regex>
+#include <memory>
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
@@ -217,6 +218,7 @@ namespace search {
 
     void HTTPClient::SubmitURLSync(const std::string &url) {
         HTTPRequest request = parseURLStack(url);
+        std::unique_ptr<Socket> sock;
         Socket * sock;
         request.method = getMethod;
         request.headers = connClose;
@@ -236,8 +238,6 @@ namespace search {
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
             // cleaup our stuff
-            close(sockfd);
-            delete sock; 
             return; 
         }
         sock->setFd(sockfd);
