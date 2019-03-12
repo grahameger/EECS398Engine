@@ -34,8 +34,10 @@
 #include <arpa/inet.h>
 #include <netdb.h> 
 #include <sys/stat.h>
-#include <unistd.h> 
+#include <unistd.h>
+#ifdef __linux__
 #include <sys/epoll.h>
+#endif
 #include <sys/mman.h>
 
 #include <openssl/ssl.h>
