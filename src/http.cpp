@@ -299,6 +299,7 @@ namespace search {
             }
         }
         // full response is completely downloaded now we can process
+        sock->close();
         process(full_response, bytes_received);
 
         // either going to write to a file or add another request to the queue
