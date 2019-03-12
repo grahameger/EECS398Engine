@@ -89,7 +89,7 @@ namespace search {
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
-            fprintf(stderr, "getaddrinfo returned %d for host '%s'\n", rv, host.c_str());
+            fprintf(stderr, "getaddrinfo returned %d for host '%s' -- %s\n", rv, host.c_str(), gai_strerror(rv));
             return -1;
         }
         for (p = servinfo; p != nullptr; p = p->ai_next) {
@@ -100,7 +100,7 @@ namespace search {
             if (!blocking) {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
-                    fprintf(stderr, "could not set socket to non-blocking for host '%s'\n", host.c_str());
+                    fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
                     close(sockfd);
                     return -1;
                 }
