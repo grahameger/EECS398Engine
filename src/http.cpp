@@ -108,7 +108,7 @@ namespace search {
             }
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 // TODO log connect error
-                close(sockfd);
+                ::close(sockfd);
                 continue;
             }
             break;
