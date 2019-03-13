@@ -8,7 +8,7 @@
 #include "semaphore.hpp"
 
 //--std=c++11 -I/Users/graham/grahameger_com/eecs/398/project/include /Users/graham/grahameger_com/eecs/398/project/src/http.cpp
-const size_t MAX_THREADS = 10000; 
+const size_t MAX_THREADS = 1000; 
 threading::Semaphore sem(MAX_THREADS);
 
 void * wrapper(search::HTTPClient * client, threading::Semaphore * sem, const std::string url) {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 	while (std::getline(start_list, line)) {
 		sem.wait();
 		v.emplace_back(std::thread(wrapper, &client, &sem, line));
-		//v.back().join();
+		v.back().join();
 	}
 
 	for (auto& t : v) t.join();
