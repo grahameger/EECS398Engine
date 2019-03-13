@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 	while (std::getline(start_list, line)) {
 		sem.wait();
 		v.emplace_back(std::thread(wrapper, &client, &sem, line));
-		v.back().join();
+		//v.back().join();
 	}
 
 	for (auto& t : v) t.join();
