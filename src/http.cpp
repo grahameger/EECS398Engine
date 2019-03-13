@@ -90,7 +90,10 @@ namespace search {
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
-            fprintf(stderr, "getaddrinfo returned %d for host '%s' -- %s\n", rv, host.c_str(), gai_strerror(rv));
+            fprintf(stderr, "getaddrinfo returned %d for host '%s' -- %s -- %s\n", rv, host.c_str(), gai_strerror(rv), strerror(errno));
+            if (rv == -11) {
+                rv = 0;
+            }
             return -1;
         }
         for (p = servinfo; p != nullptr; p = p->ai_next) {
