@@ -109,6 +109,13 @@ namespace search {
                     return -1;
                 }
             }
+            // timeout section of the show
+            if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&TIMEOUT, sizeof(timeval)) == -1) {
+                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                close(sockfd);
+                return -1;
+            }
+
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 // TODO log connect error
                 close(sockfd);
@@ -242,10 +249,14 @@ namespace search {
         if (sockfd < 0) {
             return; 
         }
-        sock->setFd(sockfd);
+        int rv = sock->setFd(sockfd);
+        if (rv < 0) {
+            fprintf(stderr, "error setting file descriptor for host '%s' : %s", url.c_str(), strerror(errno));
+            return;
+        }
         // send request blocking
         const std::string requestStr = request.requestString();
-        sock->send(requestStr.c_str(), requestStr.size());
+        if (sock->send(requestStr.c_str(), requestStr.size()) == -1);
 
         // dynamic buffering
         // every time recv returns we'll look for "Content-Length", length of the body
@@ -314,17 +325,23 @@ namespace search {
     }
 
     int HTTPClient::Socket::setFd(int fd_in) {
+        if (fd_in < 3) {
+            return -1;
+        }
         sockfd = fd_in;
         return sockfd;
     }
 
     int HTTPClient::SecureSocket::setFd(int fd_in) {
+        if (fd_in < 3) {
+            return -1;
+        }
         sockfd = fd_in;
         ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
         }
-        int sslsock = ::SSL_get_fd(ssl);
+        //int sslsock = ::SSL_get_fd(ssl);
         if (sslsock < 0) {
             // the operation failed because the underlying BIO
             // is not of the correct type

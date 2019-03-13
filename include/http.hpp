@@ -33,6 +33,7 @@
 #include <netinet/in.h> 
 #include <arpa/inet.h>
 #include <netdb.h> 
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #ifdef __linux__
@@ -83,7 +84,8 @@ namespace search {
         static const size_t BUFFER_SIZE = RECV_SIZE;
         static const size_t NUM_THREADS = 4;
         static const uint32_t SLEEP_US = 10000;
-        const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
+        static const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
+        static const timeval TIMEOUT = {5, 0}; // {seconds, microseconds}
 
         // returns connected TCP socket to host
         int getConnToHost(const std::string &host, int port, bool blocking = false);
