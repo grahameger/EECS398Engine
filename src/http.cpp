@@ -110,6 +110,7 @@ namespace search {
                 }
             }
             // timeout section of the show
+            timeval tm = {TIMEOUTSECONDS, TIMEOUTUSECONDS};
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&TIMEOUT, sizeof(timeval)) == -1) {
                 fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
                 close(sockfd);
@@ -137,8 +138,6 @@ namespace search {
     HTTPClient::HTTPClient() {
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
-        TIMEOUT.tv_sec = TIMEOUTSECONDS;
-        TIMEOUT.tv_usec = TIMEOUTUSECONDS;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
