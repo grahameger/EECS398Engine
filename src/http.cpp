@@ -111,7 +111,7 @@ namespace search {
             }
             // timeout section of the show
             timeval tm = {TIMEOUTSECONDS, TIMEOUTUSECONDS};
-            if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&TIMEOUT, sizeof(timeval)) == -1) {
+            if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
                 fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
                 close(sockfd);
                 return -1;
