@@ -86,6 +86,8 @@ namespace search {
         static const uint32_t SLEEP_US = 10000;
         static const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
         static const timeval TIMEOUT; // {seconds, microseconds}
+        static const size_t TIMEOUTSECONDS = 5;
+        static const size_t TIMEOUTUSECONDS = 0;
 
         // returns connected TCP socket to host
         int getConnToHost(const std::string &host, int port, bool blocking = false);
