@@ -404,7 +404,7 @@ namespace search {
     }
 
     ssize_t HTTPClient::Socket::close() {
-        if (sockfd != -1) {
+        if (sockfd <= -1) {
             int rv = ::close(sockfd);
             sockfd = -1;
             return rv;
@@ -418,7 +418,7 @@ namespace search {
             ::SSL_free(ssl);
             ssl = nullptr;
         }
-        if (sockfd != -1) {
+        if (sockfd <= 0) {
             int rv = ::close(sockfd);
             sockfd = -1;
             return rv;
