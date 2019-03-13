@@ -105,7 +105,7 @@ namespace search {
 
         struct Socket {
         public:
-            Socket() : sockfd(0) {}
+            Socket() : sockfd(-1) {}
 
             virtual ~Socket() {
                 ::close(sockfd);
