@@ -105,11 +105,13 @@ namespace search {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
                     fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
+                    close(sockfd);
                     return -1;
                 }
             }
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 // TODO log connect error
+                close(sockfd);
                 continue;
             }
             break;
@@ -118,6 +120,7 @@ namespace search {
         if (p == nullptr) {  
             // TODO: log, failed to connect
             fprintf(stderr, "unable to connect to host '%s'\n", host.c_str());
+            close(sockfd);
             return -1;
         }
         freeaddrinfo(servinfo);
