@@ -342,10 +342,10 @@ namespace search {
             // log error
         }
         //int sslsock = ::SSL_get_fd(ssl);
-        if (sslsock < 0) {
-            // the operation failed because the underlying BIO
-            // is not of the correct type
-        }
+        // if (sslsock < 0) {
+        //     // the operation failed because the underlying BIO
+        //     // is not of the correct type
+        // }
         ::SSL_set_fd(ssl, sockfd);
         int rv = ::SSL_connect(ssl);
         if (rv <= 0) {
