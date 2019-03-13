@@ -250,7 +250,7 @@ namespace search {
         if (sockfd < 0) {
             return; 
         }
-        int rv = sock->setFd(sockfd);
+        ssize_t rv = sock->setFd(sockfd);
         if (rv < 0) {
             fprintf(stderr, "error setting file descriptor for host '%s' : %s", url.c_str(), strerror(errno));
             return;
@@ -263,7 +263,7 @@ namespace search {
         // every time recv returns we'll look for "Content-Length", length of the body
         // when we get the length of the body then we can have a hard coded size to check for
         // get the size of the header by searching for /r/n/r/n
-        ssize_t rv = 0;
+        rv = 0;
         ssize_t content_length = -1;
         int bytes_received = 0;
         char * full_response = (char*)malloc(BUFFER_SIZE);
