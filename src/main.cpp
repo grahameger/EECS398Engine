@@ -38,7 +38,9 @@ int main(int argc, char *argv[]) {
 		//v.back().join();
 	}
 
-	for (auto& t : v) t.join();
+	for (size_t i = 0; i < v.size(); i++) {
+		v[i].join();
+	}
 
 	// client.SubmitURLSync("http://example.com/index.html");
 	// client.SubmitURLSync("http://neverssl.com/index.html");
