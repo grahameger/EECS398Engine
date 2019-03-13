@@ -137,7 +137,8 @@ namespace search {
     HTTPClient::HTTPClient() {
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
-        TIMEOUT = {5, 0};
+        TIMEOUT.tv_sec = TIMEOUTSECONDS;
+        TIMEOUT.tv_usec = TIMEOUTUSECONDS;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
