@@ -11,6 +11,7 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include <semaphore.h>
 #include <string.h>
 #include <errno.h>
 
