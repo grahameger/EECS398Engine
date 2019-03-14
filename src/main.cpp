@@ -3,6 +3,7 @@
 #include <string>
 #include <cassert>
 #include <thread>
+#include <mutex>
 #include "http.hpp"
 #include "thread_queue.hpp"
 #include "semaphore.hpp"
@@ -34,7 +35,17 @@ int main(int argc, char *argv[]) {
 	std::vector<std::thread> v;
 	while (std::getline(start_list, line)) {
 		sem.wait();
-		v.emplace_back(std::thread(wrapper, &client, &sem, line));
+		try
+		{
+			v.emplace_back(std::thread(wrapper, &client, &sem, line));
+		}
+		catch (const std::exception&)
+		{
+			// pause the program forever
+			std::mutex m;
+			m.lock();
+			m.lock();
+		}
 		//v.back().join();
 	}
 
