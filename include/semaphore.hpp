@@ -69,7 +69,7 @@ namespace threading {
         }
     private:
         sem_t _s;
-    }
+    };
 }
 
 #endif
