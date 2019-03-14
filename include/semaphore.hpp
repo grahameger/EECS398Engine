@@ -16,36 +16,6 @@
 #include <errno.h>
 
 namespace threading {
-    // class Semaphore {
-    // public:
-    //     Semaphore(size_t count_in) {
-    //         count = count_in;
-    //         pthread_mutex_init(&m, nullptr);
-    //         pthread_cond_init(&cv, nullptr);
-    //     }
-    //     ~Semaphore() {
-    //         pthread_mutex_destroy(&m);
-    //         pthread_cond_destroy(&cv);
-    //     }
-    //     inline void notify() {
-    //         pthread_mutex_lock(&m);
-    //         count++;
-    //         pthread_mutex_unlock(&m);
-    //         pthread_cond_signal(&cv);
-    //     }
-    //     inline void wait() {
-    //         pthread_mutex_lock(&m);
-    //         while (count == 0) {
-    //             pthread_cond_wait(&cv, &m);
-    //         }
-    //         count--;
-    //         pthread_mutex_unlock(&m);
-    //     }
-    // private:
-    //     size_t count;
-    //     pthread_mutex_t m;
-    //     pthread_cond_t  cv;
-    // };
     class Semaphore {
     public:
         Semaphore(size_t count_in) {
