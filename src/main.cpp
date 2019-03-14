@@ -10,7 +10,7 @@
 #include "semaphore.hpp"
 
 //--std=c++11 -I/Users/graham/grahameger_com/eecs/398/project/include /Users/graham/grahameger_com/eecs/398/project/src/http.cpp
-const size_t MAX_THREADS = 100000; 
+const size_t MAX_THREADS = 10000; 
 
 void wrapper(search::HTTPClient * client, const std::string url) {
 	client->SubmitURLSync(url);	
