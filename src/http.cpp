@@ -83,8 +83,8 @@ namespace search {
         std::string portStr = std::to_string(port);
         struct addrinfo hints, *servinfo, *p;
         servinfo = p = nullptr;
-        int sockfd;
-        int rv;
+        int sockfd = 0;
+        int rv = 0;
         // load up address structs with getaddrinfo();
         memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_UNSPEC;
@@ -128,7 +128,6 @@ namespace search {
         if (p == nullptr) {  
             // TODO: log, failed to connect
             fprintf(stderr, "unable to connect to host '%s'\n", host.c_str());
-            close(sockfd);
             return -1;
         }
         freeaddrinfo(servinfo);
@@ -261,7 +260,7 @@ namespace search {
 
         // dynamic buffering
         // every time recv returns we'll look for "Content-Length", length of the body
-        // when we get the length of the body then we can have a hard coded size to check for
+        // when we get t he length of the body then we can have a hard coded size to check for
         // get the size of the header by searching for /r/n/r/n
         rv = 0;
         ssize_t content_length = -1;
