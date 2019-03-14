@@ -51,7 +51,6 @@
 #include "event.hpp"
 
 
-
 namespace search {
 
     struct HTTPRequest
