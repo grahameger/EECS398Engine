@@ -35,26 +35,15 @@ int main(int argc, char *argv[]) {
 	std::vector<std::thread> v;
 	while (std::getline(start_list, line)) {
 		sem.wait();
-		try
-		{
-			v.emplace_back(std::thread(wrapper, &client, &sem, line));
-		}
-		catch (const std::exception&)
-		{
-			// pause the program forever
-			std::mutex m;
-			m.lock();
-			m.lock();
-		}
-		//v.back().join();
+		v.emplace_back(std::thread(wrapper, &client, &sem, line));
 	}
 
 	for (size_t i = 0; i < v.size(); i++) {
 		v[i].join();
 	}
 
-	// client.SubmitURLSync("http://example.com/index.html");
-	// client.SubmitURLSync("http://neverssl.com/index.html");
-	// client.SubmitURLSync("https://grahameger.com");
-	// client.SubmitURLSync("https://stackoverflow.com/questions/27205810/how-recv-function-works-when-looping");
+	client.SubmitURLSync("http://example.com/index.html");
+	client.SubmitURLSync("http://neverssl.com/index.html");
+	client.SubmitURLSync("https://grahameger.com");
+	client.SubmitURLSync("https://stackoverflow.com/questions/27205810/how-recv-function-works-when-looping");
 }

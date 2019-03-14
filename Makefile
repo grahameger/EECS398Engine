@@ -9,8 +9,8 @@ TARGET := bin/engine
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CPPFLAGS := -g3 -Wall -std=c++17
-LIB := -pthread -lssl -lcrypto
+CPPFLAGS := -g3 -Wall -std=c++17 -fsanitize=address
+LIB := -pthread -lssl -lcrypto -fsanitiz=address
 INC := -I include
 
 $(TARGET): $(OBJECTS)
