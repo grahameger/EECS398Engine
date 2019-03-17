@@ -303,7 +303,7 @@ namespace search {
             //Parse GET message
             for (int i = 0; i < message_copy.length(); ++i){
                 //Found the redirected link URL
-                if (curr_line == "Location: "){
+                if (curr_line == "Location: " || curr_line == "location: "){
                     while (message_copy[i] != '\n'){
                         redirected_url += message_copy[i];
                         i++;
