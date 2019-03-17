@@ -26,6 +26,15 @@ const char* String::CString() const {
 	return cstring == nullptr ? nullString : cstring;
 }
 
+bool String::Compare(const String& other) const {
+	if(size != other.size) return false;
+
+	int index = 0, i;
+	while((i = index++) != size && cstring[i] == other.cstring[i]) {}
+
+	return index > size;
+}
+
 const char String::operator[] (int index) const {
 	if(cstring == nullptr)
 		return nullString[index];

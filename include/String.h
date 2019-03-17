@@ -11,6 +11,7 @@ public:
 	bool Empty() const;
 	int Size() const;
 	const char* CString() const;
+	bool Compare(const String& other) const;
 
 	const char operator[] (int index) const;
 	char& operator[] (int index);

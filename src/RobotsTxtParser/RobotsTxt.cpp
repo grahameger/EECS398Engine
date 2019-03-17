@@ -18,14 +18,14 @@ struct Rule {
 	operator bool() const { return !path.Empty(); }
 };
 
-bool FindUserAgentRules(String&, TokenStream&);
+bool FindUserAgentRules(TokenStream&);
 //Rule ReadNextRule(TokenStream&);
 
 // TODO: Add in TwoBufferFileReader exception to conditions
 RobotsTxt::RobotsTxt(const char* robotsFilename) {
 	TokenStream robotsReader(robotsFilename);
 	
-	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
+	if(!robotsReader || !FindUserAgentRules(robotsReader))
 		return;
 	
 	//while(Rule curRule = ReadNextRule(robotsReader))
@@ -36,15 +36,9 @@ void RobotsTxt::AddRule(Rule rule) {
 	// Follow Allow/Disallow rules in RobotsPseudoCode
 }
 
-bool FindUserAgentRules(String& userAgent, TokenStream& tokenStream) {
+bool FindUserAgentRules(TokenStream& tokenStream) {
 	while(true) {
-		if(
-		   tokenStream.MatchKeyword(UserAgentCommand_G) && 
-		   tokenStream.DiscardWhitespace() &&
-		   tokenStream.MatchKeyword(UserAgentName_G) && 
-		   (tokenStream.DiscardWhitespace() || true) &&
-		   tokenStream.MatchEndline()
-		)
+		if(MatchedUserAgent(tokenStream))
 			return true;
 
 		if(!tokenStream.SkipLine())
@@ -52,6 +46,14 @@ bool FindUserAgentRules(String& userAgent, TokenStream& tokenStream) {
 	}
 
 	return false;
+}
+
+bool MatchedUserAgent(TokenStream& tokenStream) {
+	return tokenStream.MatchKeyword(UserAgentCommand_G) && 
+		   tokenStream.DiscardWhitespace() &&
+		   tokenStream.MatchKeyword(UserAgentName_G) && 
+		   (tokenStream.DiscardWhitespace() || true) &&
+		   tokenStream.MatchEndline();
 }
 
 /*
