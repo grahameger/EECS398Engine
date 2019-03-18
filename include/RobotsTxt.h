@@ -1,8 +1,9 @@
 #ifndef ROBOTSTXT_H
 #define ROBOTSTXT_H
 
+#include "DirectoryRules.h"
+
 class String;
-class DirectoryRule;
 struct Rule;
 
 // TODO: Figure out how to deal with "*" wildcards in paths
@@ -14,7 +15,7 @@ public:
 private:
    void AddRule(Rule rule);
 
-   DirectoryRule* root;
+   DirectoryRules* root;
 };
 
 #endif

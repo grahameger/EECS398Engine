@@ -1,3 +1,7 @@
+/* Created on 2/18, wrote most functionality
+ * Updated on 3/17, added Compare function
+ * Updated on 3/18, added copy/move assignment/constructors, added boolean conversion
+ */
 #include <cstring>
 #include "String.h"
 
@@ -14,9 +18,48 @@ String::String(char*&& toMove) : cstring(toMove), size(strlen(toMove)) {
 	toMove = nullptr;
 }
 
+String::String(const String& toCopy) {
+	size = toCopy.size;
+
+	if(toCopy.cstring == nullptr) {
+		cstring = nullptr;
+		return;
+	}
+
+	cstring = new char[size + 1];
+	strcpy(cstring, toCopy.cstring);
+}
+
+String::String(String&& toMove) {
+	size = toMove.size;
+	cstring = toMove.cstring;
+	toMove.cstring = nullptr;
+}
+
+String& String::operator = (const String& toCopy) {
+	String temp(toCopy);
+	Swap(temp);
+	return *this;
+}
+
+String& String::operator = (String&& toMove) {
+	Swap(toMove);
+	return *this;
+}
+
 String::~String() {
 	delete[] cstring;
 	cstring = nullptr;
+}
+
+void String::Swap(String& toSwap)
+{
+	char* tempCString = cstring;
+	int tempSize = size;
+	cstring = toSwap.cstring;
+	size = toSwap.size;
+	toSwap.cstring = tempCString;
+	toSwap.size = tempSize;
 }
 
 bool String::Empty() const { return size == 0; }
@@ -49,4 +92,8 @@ char& String::operator[] (int index) {
 	}
 
 	return cstring[index];
+}
+
+String::operator bool() const {
+	return size > 0;
 }

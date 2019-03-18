@@ -11,11 +11,14 @@ public:
 	TokenStream(const TokenStream&) = delete;
 	void operator=(const TokenStream&) = delete;
 
-	bool MatchKeyword(const String& keyword);
-	bool DiscardWhitespace();
-	bool MatchEndline();
+	void DiscardWhitespace();
 
-	bool SkipLine();
+	bool MatchKeyword(const String& keyword);
+	bool MatchEndline();
+	String MatchPath();
+
+	bool MatchNextKeyword(const String& keyword);
+	bool MatchNextEndline();
 
 	operator bool() const;
 
@@ -30,6 +33,7 @@ private:
 	void ResetPeek();
 	void DecrementPeek();
 	void ConsumeLexeme();
+	String ConsumeLexemeToString();
 	const int PeekNext();
 };
 
