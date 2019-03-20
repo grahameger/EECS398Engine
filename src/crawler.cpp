@@ -21,7 +21,7 @@ namespace search {
     void * Crawler::stub() {
         while (true) {
             auto p = q.pop();
-            auto host = client.getHost(p);
+            auto host = getHost(p);
 
             // check the domain timer, we want to wait
             // WAIT_TIME seconds between pages on the same host
