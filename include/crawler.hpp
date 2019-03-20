@@ -34,7 +34,6 @@ namespace search {
         void * stub();
         static void * stubHelper(void * context);
 
-        size_t msSinceLastRequest(const std::string &domain);
     private:
         static const size_t NUM_THREADS = 10000;
         static const size_t WAIT_TIME = 2;

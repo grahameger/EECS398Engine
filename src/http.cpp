@@ -55,6 +55,13 @@ namespace search {
         return ss.str();
     }
 
+    // returns true if the given url has already been fetched
+    bool alreadyFetched(const std::string &url) {
+        auto filename = parseURLStack(url).filename();
+        struct stat buffer;
+        return (stat (filename.c_str(), &buffer) == 0);
+    }
+
     void HTTPRequest::print() {
         std::stringstream ss;
         ss << "{\n";
@@ -182,9 +189,9 @@ namespace search {
         if (std::regex_match(url, result, r)) {
             HTTPRequest rv;
             rv.protocol = result[2];
-            rv.host =     result[4];
-            rv.path =     result[5];
-            rv.query =    result[7];
+            rv.host = result[4];
+            rv.path = result[5];
+            rv.query = result[7];
             rv.fragment = result[9];
             if (rv.path == "")
                 rv.path = "/";
