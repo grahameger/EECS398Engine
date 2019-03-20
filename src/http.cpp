@@ -168,7 +168,7 @@ namespace search {
     // based version. 
     // Bad urls will copy the empty request but will not
     // run a bunch of std::string constructors.
-    static HTTPRequest parseURLStack(const std::string &url) {
+    HTTPRequest parseURLStack(const std::string &url) {
         static std::regex r(
                 R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended
@@ -189,7 +189,7 @@ namespace search {
         }
     }
 
-    static std::string getHost(const std::string& url) {
+    std::string getHost(const std::string& url) {
         return parseURLStack(url).host;
     }
 
