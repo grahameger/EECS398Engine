@@ -25,21 +25,21 @@ namespace search {
 
             // check the domain timer, we want to wait
             // WAIT_TIME seconds between pages on the same host
-            std::unique_lock<std::mutex> lock(domainMutex);
+            pthread_mutex_lock(&domainMutex);
             auto it = lastHitHost.find(host);
             if (it != lastHitHost.end()) {
                 if (difftime(time(NULL), it->second) > WAIT_TIME) {
                     // reset the time
                     it->second = time(NULL);
                     // unlock mutex
-                    lock.unlock();
+                    pthread_mutex_unlock(&domainMutex);
                     // submitURLSync();
                     client.SubmitURLSync(p);
                     // continue
                     continue;
                 } else {
                     // unlock mutex
-                    lock.unlock();
+                    pthread_mutex_unlock(&domainMutex);
                     // add the page to the back of the Queue
                     q.push(p);
                     // continue
@@ -49,7 +49,7 @@ namespace search {
                 // insert page to the hash table
                 lastHitHost.insert({host, time(NULL)});
                 // unlock mutex
-                lock.unlock();
+                pthread_mutex_unlock(&domainMutex);
                 // submitURLSync
                 client.SubmitURLSync(p);
                 // continue
@@ -63,6 +63,9 @@ namespace search {
     }
 
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {
+        // initialize mutex
+        domainMutex = PTHREAD_MUTEX_INITIALIZER;
+
         // make the robots and pages directory
         makeDir("robots");
         makeDir("pages");

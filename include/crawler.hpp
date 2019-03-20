@@ -43,7 +43,7 @@ namespace search {
 
         HTTPClient client;
 
-        std::mutex domainMutex;
+        pthread_mutex_t domainMutex;
         std::unordered_map<std::string, time_t> lastHitHost;
     };
 }

@@ -138,11 +138,6 @@ namespace search {
             SSL * ssl;
         };
     };
-
-    struct SubmitArgs {
-            HTTPClient * client;
-            std::string * url;
-    };
 }
 
 #endif /* html_hpp */
