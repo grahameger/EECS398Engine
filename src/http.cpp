@@ -38,9 +38,9 @@ namespace search {
         auto s = host + path + query;
         std::replace(s.begin(), s.end(), '/', '_');
         if (path == "robots.txt") {
-            s += "robots/";
+            s = "robots/" + s;
         } else {
-            s += "pages/";
+            s = "pages/" + s;
         }
         return s;
     }
