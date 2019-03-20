@@ -26,24 +26,20 @@
 
 namespace search {
 
-    struct Page {
-        std::string url;
-    };
-
     class Crawler {
     public: 
         Crawler(const std::vector<std::string> &seedUrls);
         ~Crawler();
 
-        void stub();
-        static void stubHelper();
+        void * stub();
+        static void * stubHelper();
 
         size_t msSinceLastRequest(const std::string &domain);
     private:
         static const size_t NUM_THREADS = 10000;
         static const size_t WAIT_TIME = 2;
 
-        ThreadQueue<Page> q;
+        ThreadQueue<std::string> q;
         pthread_t threads[NUM_THREADS];
 
         HTTPClient client;
