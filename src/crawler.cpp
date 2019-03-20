@@ -28,7 +28,7 @@ namespace search {
             std::unique_lock<std::mutex> lock(domainMutex);
             auto it = lastHitHost.find(host);
             if (it != lastHitHost.end()) {
-                if (difftime(time(NULL), &it->second) > WAIT_TIME) {
+                if (difftime(time(NULL), it->second) > WAIT_TIME) {
                     // reset the time
                     it->second = time(NULL);
                     // unlock mutex
