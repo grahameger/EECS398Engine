@@ -4,6 +4,7 @@
 #include <cassert>
 #include <thread>
 #include <mutex>
+#include "crawler.hpp"
 #include "http.hpp"
 #include "thread_queue.hpp"
 #include "semaphore.hpp"
