@@ -51,7 +51,7 @@ namespace search {
                 // unlock mutex
                 lock.unlock();
                 // submitURLSync
-                client.SubmitURLSync(p.url);
+                client.SubmitURLSync(p);
                 // continue
                 continue;
             }
