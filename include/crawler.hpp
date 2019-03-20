@@ -41,7 +41,7 @@ namespace search {
         size_t msSinceLastRequest(const std::string &domain);
     private:
         static const size_t NUM_THREADS = 10000;
-        static const double WAIT_TIME = 2.0;
+        static const size_t WAIT_TIME = 2;
 
         ThreadQueue<Page> q;
         pthread_t threads[NUM_THREADS];
