@@ -59,7 +59,7 @@ namespace search {
     }
 
     static void * stubHelper(void * context) {
-        return ((Crawler *)context->stub());
+        return (((Crawler *)context)->stub());
     }
 
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {

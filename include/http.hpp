@@ -70,6 +70,7 @@ namespace search {
     };
     HTTPRequest * parseURL(const std::string &url);
     static std::string getHost(const std::string& url);
+    static HTTPRequest parseURLStack(const std::string &url);
     static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
     class HTTPClient {
