@@ -32,7 +32,7 @@ namespace search {
         ~Crawler();
 
         void * stub();
-        static void * stubHelper();
+        static void * stubHelper(void * context);
 
         size_t msSinceLastRequest(const std::string &domain);
     private:

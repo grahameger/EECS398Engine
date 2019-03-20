@@ -69,7 +69,7 @@ namespace search {
         int           port;         // note 0 defaults to 80
     };
     HTTPRequest * parseURL(const std::string &url);
-    std::string getHost(const std::string& url);
+    static std::string getHost(const std::string& url) const;
     static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
     class HTTPClient {
