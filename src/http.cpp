@@ -189,7 +189,7 @@ namespace search {
         }
     }
 
-    static std::string HTTPClient::getHost(const std::string& url) const {
+    static std::string HTTPClient::getHost(const std::string& url) {
         return parseURLStack(url).host;
     }
 
