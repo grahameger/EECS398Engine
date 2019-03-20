@@ -20,8 +20,8 @@ namespace search {
 
     void * Crawler::stub() {
         while (true) {
-            Page p = q.pop();
-            auto host = client.getHost(p.url);
+            auto p = q.pop();
+            auto host = client.getHost(p);
 
             // check the domain timer, we want to wait
             // WAIT_TIME seconds between pages on the same host
@@ -34,7 +34,7 @@ namespace search {
                     // unlock mutex
                     lock.unlock();
                     // submitURLSync();
-                    client.SubmitURLSync(p.url);
+                    client.SubmitURLSync(p);
                     // continue
                     continue;
                 } else {

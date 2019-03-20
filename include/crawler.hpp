@@ -39,7 +39,7 @@ namespace search {
         static const size_t NUM_THREADS = 10000;
         static const size_t WAIT_TIME = 2;
 
-        ThreadQueue<std::string> q;
+        threading::ThreadQueue<std::string> q;
         pthread_t threads[NUM_THREADS];
 
         HTTPClient client;
