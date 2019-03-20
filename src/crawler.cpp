@@ -18,7 +18,7 @@ namespace search {
         }
     }
 
-    void stub() {
+    void * Crawler::stub() {
         while (true) {
             Page p = q.pop();
             auto host = client.getHost(p.url);
@@ -58,7 +58,7 @@ namespace search {
         }
     }
 
-    static void stubHelper(void * context) {
+    static void * stubHelper(void * context) {
         return ((Crawler *)context->stub());
     }
 
@@ -80,7 +80,7 @@ namespace search {
     Crawler::~Crawler() {
         for (size_t i = 0; i < NUM_THREADS; i++)
         {
-            pthread_join(&threads[i], NULL);
+            pthread_join(threads[i], NULL);
         }
     }
 }
