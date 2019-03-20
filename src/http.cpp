@@ -37,6 +37,11 @@ namespace search {
     std::string HTTPRequest::filename() const {
         auto s = host + path + query;
         std::replace(s.begin(), s.end(), '/', '_');
+        if (path == "robots.txt") {
+            s += "robots/";
+        } else {
+            s += "pages/";
+        }
         return s;
     }
 
@@ -312,14 +317,16 @@ namespace search {
 
         // either going to write to a file or add another request to the queue
         // write it to a file
-        std::ofstream outfile(request.filename());
+        auto filename = request.filename();
+        std::ofstream outfile(filename);
         outfile.write(full_response, total_size);
         outfile.close();
         free(full_response);
+        fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
     }
 
     void HTTPClient::process(char * file, size_t len) {
-        std::cout << "TODO" << '\n';
+    
     }
 
     int HTTPClient::Socket::setFd(int fd_in) {
