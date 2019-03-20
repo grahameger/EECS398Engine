@@ -58,7 +58,7 @@ namespace search {
         }
     }
 
-    static void * Crawler::stubHelper(void * context) {
+    void * Crawler::stubHelper(void * context) {
         return (((Crawler *)context)->stub());
     }
 
