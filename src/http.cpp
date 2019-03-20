@@ -169,7 +169,7 @@ namespace search {
     // Bad urls will copy the empty request but will not
     // run a bunch of std::string constructors.
     static HTTPRequest parseURLStack(const std::string &url) {
-        std::regex r(
+        static std::regex r(
                 R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended
         );
@@ -189,11 +189,8 @@ namespace search {
         }
     }
 
-    void * HTTPClient::SubmitUrlSyncWrapper(void * context) {
-        SubmitArgs * args = (SubmitArgs*)context;
-        args->client->SubmitURLSync(*args->url);
-        delete args->url;
-        delete args;
+    static std::string HTTPClient::getHost(const std::string& url) const {
+        return parseURLStack(url).host;
     }
 
     static ssize_t getContentLength(std::string_view response) {
@@ -310,6 +307,7 @@ namespace search {
             }
         }
         // full response is completely downloaded now we can process
+        // this should add all the links to the queue
         process(full_response, bytes_received);
 
         // either going to write to a file or add another request to the queue

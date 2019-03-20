@@ -10,52 +10,77 @@
 #include "crawler.hpp"
 
 namespace search {
-    Crawler::Crawler(const std::string &directory, const std::vector<std::string> &urls_in) : sem(MAX_CRAWLER_THREADS) {
-        watchDir = directory;
 
-        // inotify stuff
-        inotifyfd = inotify_init();
-        wd = inotify_add_watch(inotifyfd, directory.c_str(), IN_CREATE);
-
-        for (auto &i : urls_in) {
-            urls.push(i);
+    static void makeDir(const char * name) {
+        struct stat st = {0};
+        if (stat(name, &st) == -1) {
+            mkdir(name, 0700);
         }
-        pthread_create(&watchThread, nullptr, &Crawler::watchForFilesWrapper, (void*) this);
     }
 
-    void * Crawler::watchForFilesWrapper(void * context) {
-        ((Crawler *)context)->watchForFiles();
-        return nullptr; 
-    }
-
-    void Crawler::SubmitOne(const std::string &url) {
-        pthread_t t;
-        SubmitArgs * args = new SubmitArgs;
-        args->client = &client;
-        args->url = new std::string(url);
-        pthread_create(&t, NULL, &HTTPClient::SubmitUrlSyncWrapper, (void *)args);
-    }
-
-    void Crawler::watchForFiles() {
-        // use our Eventing class which is no longer in use
+    void stub() {
         while (true) {
-            char buffer[INOTIFY_BUFFER_SIZE];
-            int length = read(inotifyfd, buffer, INOTIFY_BUFFER_SIZE);
-            if (length < 0) {
-                perror("read");
-                // TODO, better.
-            }
-            int i = 0;
-            while (i < length) {
-                inotify_event * event = (inotify_event * ) &buffer[i];
-                if (event->len && (event->mask & IN_CREATE) && !(event->mask & IN_ISDIR)) {
-                    // file created with name and filename length
-                    event->name;
-                    event->len;
+            Page p = q.pop();
+            auto host = client.getHost(p.url);
+
+            // check the domain timer, we want to wait
+            // WAIT_TIME seconds between pages on the same host
+            std::unique_lock<std::mutex> lock(domainMutex);
+            auto it = lastHitHost.find(host);
+            if (it != lastHitHost.end()) {
+                if (difftime(time(NULL), &it->second) > WAIT_TIME) {
+                    // reset the time
+                    it->second = time(NULL);
+                    // unlock mutex
+                    lock.unlock();
+                    // submitURLSync();
+                    client.SubmitURLSync(p.url);
+                    // continue
+                    continue;
+                } else {
+                    // unlock mutex
+                    lock.unlock();
+                    // add the page to the back of the Queue
+                    q.push(p);
+                    // continue
+                    continue;
                 }
-                i += EVENT_SIZE + event->len;
+            } else {
+                // insert page to the hash table
+                lastHitHost.insert({host, time(NULL)});
+                // unlock mutex
+                lock.unlock();
+                // submitURLSync
+                client.SubmitURLSync(p.url);
+                // continue
+                continue;
             }
         }
     }
 
+    static void stubHelper(void * context) {
+        return ((Crawler *)context->stub());
+    }
+
+    Crawler::Crawler(const std::vector<std::string> &seedUrls) {
+        // make the robots and pages directory
+        makeDir("robots");
+        makeDir("pages");
+         
+        // add the seed urls to the queue
+        q.push(seedUrls);
+
+        // when does this run?
+        for (size_t i = 0; i < NUM_THREADS; i++) {
+            pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
+        }
+    }
+
+    // just join and never ever quit
+    Crawler::~Crawler() {
+        for (size_t i = 0; i < NUM_THREADS; i++)
+        {
+            pthread_join(&threads[i], NULL);
+        }
+    }
 }
