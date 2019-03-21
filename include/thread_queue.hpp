@@ -16,7 +16,17 @@
 #include <array>
 #include <vector>
 
+#include "List.h"
+
 namespace threading {
+
+    // anon namespace keeps this class in the translation unit
+    namespace {
+        class LinkedQueue {
+            
+        };
+    }
+
     template <typename T>
     class ThreadQueue
     {

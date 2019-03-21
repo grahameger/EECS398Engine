@@ -76,19 +76,6 @@ namespace search {
         ss << "}\n";
         std::cout << ss.str() << std::flush;
     }
-    
-    // send an entire buffer
-    static bool sendall(int sockfd, const char * buf, size_t len, int flags) {
-        while (len > 0) {
-            auto i = send(sockfd, buf, len, flags);
-            if (i < 1) {
-                return false; 
-            }
-            buf += i;
-            len -= i;
-        }
-        return true;
-    }
 
     // returns a connected socket, -1 if error
     int HTTPClient::getConnToHost(const std::string &host, int port, bool blocking) {
@@ -152,11 +139,10 @@ namespace search {
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
-        static const SSL_METHOD * meth = TLSv1_2_client_method();
+        static const SSL_METHOD * meth = TLS_client_method();
+
         search::HTTPClient::sslContext = SSL_CTX_new(meth);
-        // this is deprecated and is potentially unnecessary
-        // the OpenSSL wiki says to call it anyway.
-        OPENSSL_config(NULL);
+
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
     }
@@ -230,7 +216,7 @@ namespace search {
             }
         }
         size_t rv = -1;
-        auto result = std::from_chars(response.data() + intStart,
+        std::from_chars(response.data() + intStart,
                                       response.data() + intEnd,
                                       rv);
         return rv;
@@ -265,7 +251,9 @@ namespace search {
         }
         // send request blocking
         const std::string requestStr = request.requestString();
-        if (sock->send(requestStr.c_str(), requestStr.size()) == -1);
+        if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
+            fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
+        }
 
         // dynamic buffering
         // every time recv returns we'll look for "Content-Length", length of the body
@@ -276,7 +264,6 @@ namespace search {
         int bytes_received = 0;
         char * full_response = (char*)malloc(BUFFER_SIZE);
         size_t total_size = 0;
-        size_t buffer_size = BUFFER_SIZE;
         while (true) {
             rv = sock->recv(full_response + bytes_received, BUFFER_SIZE - bytes_received, 0);
             if (rv < 0) {

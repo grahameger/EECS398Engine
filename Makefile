@@ -10,7 +10,7 @@ SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 CPPFLAGS := -g3 -Wall -std=c++17
-LIB := -pthread -lssl -lcrypto 
+LIB := -pthread -lssl -lcrypto
 INC := -I include
 
 $(TARGET): $(OBJECTS)

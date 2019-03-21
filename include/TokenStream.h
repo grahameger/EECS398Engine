@@ -2,6 +2,7 @@
 #define TOKENSTREAM_H
 
 #include "List.h"
+#include "String.h"
 
 class TokenStream {
 public:

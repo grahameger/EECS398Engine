@@ -18,6 +18,5 @@ int main(int argc, char *argv[]) {
 	while (std::getline(start_list, line)) {
 		urls.push_back(line);
 	}
-
 	search::Crawler crawler(urls);
 }
