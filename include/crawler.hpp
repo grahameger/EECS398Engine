@@ -36,7 +36,7 @@ namespace search {
 
     private:
         static const size_t NUM_THREADS = 10000;
-        static const size_t WAIT_TIME = 2;
+        static const size_t WAIT_TIME = 3;
 
         threading::ThreadQueue<std::string> q;
         pthread_t threads[NUM_THREADS];

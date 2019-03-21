@@ -10,6 +10,7 @@
 #include "semaphore.hpp"
 
 int main(int argc, char *argv[]) {
+
 	std::vector<std::string> urls;
 	urls.reserve(1000000);
 	std::ifstream start_list("../test/parsed.urls");
