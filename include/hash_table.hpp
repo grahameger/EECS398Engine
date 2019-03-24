@@ -27,7 +27,7 @@ private:
 	  T* offset;
   };
 	//my very own hash function
-	int hash(String key);
+	long hash(String key);
 	//number of keys in the table
   int entries = 0;
 	//number of bytes a char* would be to hold the index, not this table
@@ -57,7 +57,7 @@ private:
 
 	template <typename T>
 	T* hash_table<T>::operator[](String key){
-		int hashed = hash(key);
+		long hashed = hash(key);
 		hashed = hashed%numBuckets;
 		for(hashStruct entry : array[hashed]){
 			if(entry.key.Compare(key)){
@@ -66,7 +66,7 @@ private:
 			}
 		}
 		//create a new entry
-		String* offset = new String;
+		T* offset = new T;
 		hashStruct new_entry = {key, offset};
     array[hashed].push_back(new_entry);
 		entries++;
@@ -128,33 +128,20 @@ private:
 
 	//murmur
 	template <typename T>
-	int hash_table<T>::hash(String key){
-		int len = key.Size();
-		const unsigned int m = 0x5bd1e995;
-		const int r = 24;
-		unsigned int h = 4 ^ len;
-		const unsigned char* data = (const unsigned char *) key.CString();
-		while(len >= 4){
-			unsigned int k = *(unsigned int*) data;
-			k = k*m;
-			k ^= k>>r;
-			k = k*m;
-			h = h*m;
-			h = h^k;
-			data = data + 4;
-			len = len - 4;
-		}
-		switch(len){
-			case 3: h ^= data[2] << 16;
-			case 2: h ^= data[1] <<8;
-			case 1: h ^= data[0];
-							h *=m;
-		}
-		h ^= h>>13;
-		h *= m;
-		h ^= h>>15;
+	long hash_table<T>::hash(String key){
+		long hash = 0;
+		const char* k = key.CString();		
+		while(*k != '\0'){
+			hash = (hash << 4) + *(k++);
+			long magic = hash & 0xF0000000L;
+			if( magic != 0){
+				long holder = (unsigned long) magic>>24;
+				hash ^= holder;
+			}
+			hash &= ~magic;
 
-		return h;
-	}
+		}
+		return hash;
+	}	
 
 #endif
