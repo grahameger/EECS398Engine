@@ -10,4 +10,8 @@ int main(int argc, char *argv[]) {
   String s = "abc";
 	*(h[s]) = s;
   std::cout<<(*h[s]).CString()<<std::endl;
+
+
+  *(h[s]) = "123";
+  std::cout<<(*h[s]).CString()<<std::endl;
 }
