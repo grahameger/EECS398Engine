@@ -1,16 +1,18 @@
-<<<<<<< HEAD
 //todo change these to adhere to makefile
 #include "http.hpp"
 #include "RobotsTxt.h"
 
-void RobotsTxt::submitRobotsTxt(HTTPRequest &robotsTxtHTTPInfo, string &pathOnDisc) //given url?
+RobotsTxt::RobotsTxt()
+   : domainRulesCache(CACHE_CAPACITY) {}
+
+void RobotsTxt::SubmitRobotsTxt(HTTPRequest &robotsTxtHTTPInfo, string &pathOnDisc) //given url?
    {
    string &domain = robotsTxtHTTPInfo.host;
 
-   DomainRules *newDomainRules = new DomainRules(pathOnDisc);//todo implement and ask if this is what DomainRules expects
-   domainRulesCache.insert({domain, newDomainRules});
+   DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
+   domainRulesCache.put(domain, newDomainRules);
    
-   newDomainRules->writeRulesToDisc();
+   newDomainRules->WriteRulesToDisc();
    }
 
 DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName, 
@@ -19,12 +21,13 @@ DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName,
    string dirNameStr(directoryName);
    DirectoryRules *newDirRule = new DirectoryRules(dirNameStr, isAllowed, hasRule);
    newDirRule->SetChildIndices(childIndices);
+   return newDirRule;
    }
 
 void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
    {
    char curChar = (char)fgetc(file);
-   while(curChar != EOF
+   while(curChar != EOF)
        {
        //get name of directory
        char dirName[99];
@@ -33,7 +36,7 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
        while(curChar != ' ')
        {
        dirName[dirNameInd++] = curChar;
-       curChar = (char)fgetc(file):
+       curChar = (char)fgetc(file);
        }
 
        dirName[dirNameInd] = 0;
@@ -98,10 +101,10 @@ bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    if(!file)
       return false;
 
-   vector<DirectoryRule*> rules;
+   vector<DirectoryRules*> rules;
    ReadRulesFromDisc(file, rules);
 
-   fclose(fileName.c_str());
+   fclose(file);
 
    //convert to DomainRules object and place in cache
    CreateDirectoryRuleTree(rules);
@@ -113,124 +116,29 @@ bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
 
    DirectoryRules *root = rules[0];
    DomainRules *newRule = new DomainRules(root);
-   domainRulesCache.insert(domain, newRule);
+   domainRulesCache.put(domain, newRule);
    } 
 
 bool RobotsTxt::GetRule(string &path, string &domain)
    { 
    //Look in cache
-   if(domainRulesCache.find(domain) != domainRulesCache.end())
+   String tmpPath(path.c_str()); //todo remove
+   try
       {
-      DomainRules *domainRule = domainRulesCache[domain];
-      return domainRule->IsAllowed(path);
+      DomainRules *domainRule = domainRulesCache.get(domain);
+      return domainRule->IsAllowed(tmpPath);
       }
-
-   //Search in disc
-   else
+   //search disc
+   catch(const std::exception& e)
       {
       bool transferSuccess = TransferRulesFromDiscToCache(domain);
-      if(!transferSucccess)
+      if(!transferSuccess)
          {
          printf("This domain is not on file!");
          throw(1);
          }
-      if(domainRulesCache.find(domain) != domainRulesCache.end())
-          {
-          DomainRules *domainRule = domainRulesCache[domain];
-          return domainRule->IsAllowed(path);
-          }
-      else
-         {
-         printf("Something's wrong with transfering from disc to cache!");
-         throw(1);
-         }
+
+      DomainRules *domainRule = domainRulesCache.get(domain);
+      return domainRule->IsAllowed(tmpPath);
       }
    }
-=======
-/* Created on 2/18, wrote function outlines for constructor/helpers
- * Updated on 2/19, fixed compile issues
- */
-#include <unistd.h>
-#include "String.h"
-#include "TokenStream.h"
-#include "RobotsTxt.h"
-
-String UserAgentName_G("*");
-String UserAgentCommand_G("User-agent:");
-String AllowCommand_G("Allow:");
-String DisallowCommand_G("Disallow:");
-
-struct Rule {
-	String path;
-	bool allow;
-
-	operator bool() const { return !path.Empty(); }
-};
-
-bool FindUserAgentRules(String&, TokenStream&);
-//Rule ReadNextRule(TokenStream&);
-
-// TODO: Add in TwoBufferFileReader exception to conditions
-RobotsTxt::RobotsTxt(const char* robotsFilename) {
-	TokenStream robotsReader(robotsFilename);
-	
-	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
-		return;
-	
-	//while(Rule curRule = ReadNextRule(robotsReader))
-	//	AddRule(curRule);
-}
-
-void RobotsTxt::AddRule(Rule rule) {
-	// Follow Allow/Disallow rules in RobotsPseudoCode
-}
-
-bool FindUserAgentRules(String& userAgent, TokenStream& tokenStream) {
-	while(true) {
-		if(
-		   tokenStream.MatchKeyword(UserAgentCommand_G) && 
-		   tokenStream.DiscardWhitespace() &&
-		   tokenStream.MatchKeyword(UserAgentName_G) && 
-		   (tokenStream.DiscardWhitespace() || true) &&
-		   tokenStream.MatchEndline()
-		)
-			return true;
-
-		if(!tokenStream.SkipLine())
-			return false;
-	}
-
-	return false;
-}
-
-/*
-Rule ReadNextRule(TokenStream& tokenStream) {
-	try{
-		String toMatch(DisallowCommand_G);
-		String path;
-
-		// End of User-Agent Rules
-		if(fileReader.Peek() == '\n')
-			return {String(), false};
-
-		if(fileReader.Peek() == AllowCommand_G[0])
-			toMatch = AllowCommand_G;
-
-		// Match Allow or Disallow Rule
-		if(Match(toMatch, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				MatchPath(path, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				fileReader.GetNextCharacter() == '\n')
-			return {path, toMatch == AllowCommand_G ? true : false};
-
-		// Malformed Rule
-		MoveToNextLine(fileReader);
-	} catch(...) {
-		
-	}
-
-	return {String(), false};
-}
-*/
->>>>>>> robots

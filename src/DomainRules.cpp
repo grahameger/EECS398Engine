@@ -2,9 +2,7 @@
  * Updated on 2/19, fixed compile issues
  */
 #include <unistd.h>
-#include "String.h"
-#include "TokenStream.h"
-#include "RobotsTxt.h"
+#include "DomainRules.h"
 
 String UserAgentName_G("*");
 String UserAgentCommand_G("User-agent:");
