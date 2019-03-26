@@ -1,7 +1,7 @@
 #ifndef ROBOTSTXT_H
 #define ROBOTSTXT_H
 #include <string>
-#include "LRUCache.h"
+#include "LRUCache.hpp"
 #include "DomainRules.h"
 
 using std::string;

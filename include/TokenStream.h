@@ -3,34 +3,39 @@
 
 #include "List.h"
 
-class TokenStream {
+class TokenStream 
+   {
 public:
-	TokenStream(const char* filename);
-	~TokenStream();
+   TokenStream( const char* filename );
+   ~TokenStream( );
 
-	TokenStream(const TokenStream&) = delete;
-	void operator=(const TokenStream&) = delete;
+   TokenStream( const TokenStream& ) = delete;
+   void operator=( const TokenStream& ) = delete;
 
-	bool MatchKeyword(const String& keyword);
-	bool DiscardWhitespace();
-	bool MatchEndline();
+   void DiscardWhitespace( );
 
-	bool SkipLine();
+   bool MatchKeyword( const String& keyword );
+   bool MatchEndline( );
+   String MatchPath( );
 
-	operator bool() const;
+   bool MatchNextKeyword( const String& keyword );
+   bool MatchNextEndline( );
+
+   operator bool( ) const;
 
 private:
-	const static int BufferSize;
+   const static int BufferSize;
 
-	int fileDescriptor, lexemeStart, peekIndex, lastIndex;
-	List<char*> buffers;
-	List<char*>::Iterator front, back;
+   int fileDescriptor, lexemeStart, peekIndex, lastIndex;
+   List<char*> buffers;
+   List<char*>::Iterator front, back;
 
-	void AddPage();
-	void ResetPeek();
-	void DecrementPeek();
-	void ConsumeLexeme();
-	const int PeekNext();
-};
+   void AddPage( );
+   void ResetPeek( );
+   void DecrementPeek( );
+   void ConsumeLexeme( );
+   String ConsumeLexemeToString( );
+   const int PeekNext( );
+   };
 
 #endif

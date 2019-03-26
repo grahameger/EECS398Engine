@@ -1,86 +1,103 @@
-/* Created on 2/18, wrote function outlines for constructor/helpers
- * Updated on 2/19, fixed compile issues
- */
 #include <unistd.h>
 #include "String.h"
 #include "TokenStream.h"
-#include "RobotsTxt.h"
+#include "DomainRules.h"
+#include "DirectoryRules.h"
 
-String UserAgentName_G("*");
-String UserAgentCommand_G("User-agent:");
-String AllowCommand_G("Allow:");
-String DisallowCommand_G("Disallow:");
+String UserAgentName_G( "*" );
+String UserAgentCommand_G( "User-agent:" );
+String AllowCommand_G( "Allow:" );
+String DisallowCommand_G( "Disallow:" );
 
-struct Rule {
-	String path;
-	bool allow;
+struct Rule 
+   {
+   String path;
+   bool allow;
 
-	operator bool() const { return !path.Empty(); }
-};
+   operator bool( ) const { return !path.Empty( ); }
+   };
 
-bool FindUserAgentRules(String&, TokenStream&);
-//Rule ReadNextRule(TokenStream&);
 
-// TODO: Add in TwoBufferFileReader exception to conditions
-DomainRules::DomainRules(const char* robotsFilename) {
-	TokenStream robotsReader(robotsFilename);
+bool FindUserAgentRules( TokenStream& );
+Rule ReadNextRule( TokenStream& );
+
+
+DomainRules::DomainRules( const char* robotsFilename )
+      : root( new DirectoryRules( "/" ) )
+   {
+   TokenStream robotsReader( robotsFilename );
 	
-	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
-		return;
+   if( !robotsReader || !FindUserAgentRules( robotsReader ) )
+      return;
+
+   #ifdef TEST
+   std::cout << "User agent rules found" << std::endl;
+   #endif
 	
-	//while(Rule curRule = ReadNextRule(robotsReader))
-	//	AddRule(curRule);
-}
+   while( Rule curRule = ReadNextRule( robotsReader ) )
+      AddRule( curRule );
 
-void DomainRules::AddRule(Rule rule) {
-	// Follow Allow/Disallow rules in RobotsPseudoCode
-}
+   }
 
-bool FindUserAgentRules(String& userAgent, TokenStream& tokenStream) {
-	while(true) {
-		if(
-		   tokenStream.MatchKeyword(UserAgentCommand_G) && 
-		   tokenStream.DiscardWhitespace() &&
-		   tokenStream.MatchKeyword(UserAgentName_G) && 
-		   (tokenStream.DiscardWhitespace() || true) &&
-		   tokenStream.MatchEndline()
-		)
-			return true;
 
-		if(!tokenStream.SkipLine())
-			return false;
-	}
+void DomainRules::AddRule( Rule rule ) 
+   {
+   DirectoryRules* node = root->FindOrCreateChild( rule.path.CString( ) );
+   node->SetAllowed( rule.allow );
+   node->SetHasRule( );
+   }
 
-	return false;
-}
 
-/*
-Rule ReadNextRule(TokenStream& tokenStream) {
-	try{
-		String toMatch(DisallowCommand_G);
-		String path;
+bool FindUserAgentRules( TokenStream& tokenStream )
+   {
+   while ( true )
+      {
+	  if ( tokenStream.MatchNextKeyword( UserAgentCommand_G ) )
+	     return false;
+	  tokenStream.DiscardWhitespace( );
 
-		// End of User-Agent Rules
-		if(fileReader.Peek() == '\n')
-			return {String(), false};
+	  if ( !tokenStream.MatchKeyword( UserAgentName_G ) )
+	     continue;
+      tokenStream.DiscardWhitespace( );
 
-		if(fileReader.Peek() == AllowCommand_G[0])
-			toMatch = AllowCommand_G;
+	  if ( tokenStream.MatchEndline( ) )
+	     return true;
+	  }
 
-		// Match Allow or Disallow Rule
-		if(Match(toMatch, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				MatchPath(path, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				fileReader.GetNextCharacter() == '\n')
-			return {path, toMatch == AllowCommand_G ? true : false};
+   return false;
+   }
 
-		// Malformed Rule
-		MoveToNextLine(fileReader);
-	} catch(...) {
-		
-	}
 
-	return {String(), false};
-}
-*/
+Rule ReadNextRule( TokenStream& tokenStream ) 
+   {
+   while ( true )
+	  {
+	  if ( tokenStream.MatchEndline( ) )
+	     return { String( ), false };
+	  
+	  bool allowed;
+	  if ( tokenStream.MatchKeyword( DisallowCommand_G ) )
+	     allowed = false;
+	  else if ( tokenStream.MatchKeyword( AllowCommand_G ) )
+	     allowed = true;
+	  else
+	     {
+		 tokenStream.MatchNextEndline( );
+		 continue;
+		 }
+	  
+	  tokenStream.DiscardWhitespace( );
+
+	  String path = tokenStream.MatchPath( );
+	  tokenStream.MatchNextEndline( );
+
+	  if ( !path ) continue;
+
+	  #ifdef TEST
+	  std::cout << "Rule Found: " << path.CString( );
+	  std::cout << " is " << ( allowed ? "allowed" : "disallowed" ) << std::endl;
+	  #endif
+
+	  return { path, allowed };
+	  }
+   }

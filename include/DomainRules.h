@@ -2,24 +2,25 @@
 #define DOMAINROBOTSTXTRULES_H
 
 class String;
-class DirectoryRule;
+class DirectoryRules;
 struct Rule;
 
 //TODO create desctructor
 // TODO: Figure out how to deal with "*" wildcards in paths
-class DomainRules {
+class DomainRules
+   {
 public:
-   DomainRules(const char* robotsFilename);
+   DomainRules( const char* robotsFilename );
    //construct from existing DirectoryRules tree
-   DomainRules(DirectoryRules* root);
-   bool IsAllowed(String path);
-   void WriteRulesToDisc();
+   DomainRules( DirectoryRules* root );
+   bool IsAllowed( String path );
+   void WriteRulesToDisc( );
 
 private:
-   void AddRule(Rule rule);
+   void AddRule( Rule rule );
 
-   DirectoryRule* root;
-};
+   DirectoryRules* root;
+   };
 
 #endif
 /*

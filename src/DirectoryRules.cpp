@@ -1,9 +1,9 @@
-#include "../../include/DirectoryRules.h"
+#include "DirectoryRules.h"
 #include <iostream>
 using std::set;
 using std::string;
 
-DirectoryRules::DirectoryRules(string &name, bool allowed, bool hasRuleIn) 
+DirectoryRules::DirectoryRules(string name, bool allowed, bool hasRuleIn) 
     : directoryName(name), isAllowed(allowed), hasRule(hasRuleIn) {}
 
 //Return index one past the last letter of the next directory name
@@ -22,7 +22,7 @@ void DirectoryRules::SetChildIndices(vector<int> &childIndicesIn)
    childIndicesInDstVec = childIndicesIn;
 }
 
-DirectoryRules* DirectoryRules::FindOrCreateChild(string &path)
+DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
 {
     //edge case: user searches for permissions of directory "/"
     if(path == "/")
