@@ -10,7 +10,8 @@ using std::string;
 using std::vector;
 using search::HTTPRequest;
 
-size_t CACHE_CAPACITY = 3;
+//TODO move these params to central yaml file
+extern const size_t CACHE_CAPACITY;
 
 //Our crawler will have one instance of this RobotsTxt class. 
 //todo: change to our String and Hashtable class. Can't do until both are complete

@@ -12,18 +12,19 @@ struct Rule;
 
 //TODO create desctructor
 // TODO: Figure out how to deal with "*" wildcards in paths
+//TODO: add domain member variable if necessary
 class DomainRules {
 public:
    DomainRules(const char* robotsFilename);
    //construct from existing DirectoryRules tree
-   DomainRules(DirectoryRules* root);
+   DomainRules(DirectoryRules* rootIn);
    bool IsAllowed(String path);
-   void WriteRulesToDisc();
+   void WriteRulesToDisc(std::string &domain);
 
 private:
    void AddRule(Rule rule);
 
-   DirectoryRule* root;
+   DirectoryRules* root;
 };
 
 #endif

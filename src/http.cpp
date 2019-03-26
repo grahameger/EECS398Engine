@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <regex>
+#include <charconv>
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
@@ -159,7 +160,6 @@ namespace search {
             rv.fragment = result[9];
             if (rv.path == "")
                 rv.path = "/";
-            }
             return rv;
         } else {
             return emptyHTTPRequest;
@@ -289,14 +289,15 @@ namespace search {
         outfile.close();
 
         //handle robots.txt files
-        if(request.path.find("robots.txt") != string::npos)
+        if(request.path.find("robots.txt") != std::string::npos)
         {
             //TODO (Graham and Dennis): Replace CRAWLER.robotstxt with the instance of RobotsTxt object
             //that our crawler will have (there should only be one RobotsTxt object which contains
             //all RobotsTxt info). Also, need to populate variable filePath, a string that contains
             //the file path in disc that we saved our file. Consider making this filePath a part of 
             //class HTTPrequest so I can just send the request object to submitRobotsTxt()
-            CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
+            
+            //CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
         }
         
     }

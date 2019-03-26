@@ -1,8 +1,15 @@
-/* Created on 2/18, wrote function outlines for constructor/helpers
- * Updated on 2/19, fixed compile issues
+/* Created on 2/18, wrote function outlines for constructor/helpers, author: Jason
+ * Updated on 2/19, fixed compile issues, author: Jason
+ * Updated on 3/18, rewrote FindUserAgentRules, author: Jason
+ * Updated on 3/20, added new constructor and WriteToDisc(), author: Dennis
  */
+
+#include <iostream>
 #include <unistd.h>
-#include "DomainRules.h"
+#include "RobotsTxt.h"
+#include "String.h"
+#include "TokenStream.h"
+#include "DirectoryRules.h"
 
 String UserAgentName_G("*");
 String UserAgentCommand_G("User-agent:");
@@ -16,69 +23,87 @@ struct Rule {
 	operator bool() const { return !path.Empty(); }
 };
 
-bool FindUserAgentRules(String&, TokenStream&);
-//Rule ReadNextRule(TokenStream&);
+bool FindUserAgentRules(TokenStream&);
+Rule ReadNextRule(TokenStream&);
 
-// TODO: Add in TwoBufferFileReader exception to conditions
-DomainRules::DomainRules(const char* robotsFilename) {
+/* ### PUBLIC METHODS ### */
+DomainRules::DomainRules(DirectoryRules* rootIn)
+	: root(rootIn) {}
+
+DomainRules::DomainRules(const char* robotsFilename)
+{
 	TokenStream robotsReader(robotsFilename);
 	
-	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
+	if(!robotsReader || !FindUserAgentRules(robotsReader))
 		return;
+
+	#ifdef TEST
+	std::cout << "User agent rules found" << std::endl;
+	#endif
 	
-	//while(Rule curRule = ReadNextRule(robotsReader))
-	//	AddRule(curRule);
+	while(Rule curRule = ReadNextRule(robotsReader))
+		AddRule(curRule);
 }
 
 void DomainRules::AddRule(Rule rule) {
 	// Follow Allow/Disallow rules in RobotsPseudoCode
 }
 
-bool FindUserAgentRules(String& userAgent, TokenStream& tokenStream) {
-	while(true) {
-		if(
-		   tokenStream.MatchKeyword(UserAgentCommand_G) && 
-		   tokenStream.DiscardWhitespace() &&
-		   tokenStream.MatchKeyword(UserAgentName_G) && 
-		   (tokenStream.DiscardWhitespace() || true) &&
-		   tokenStream.MatchEndline()
-		)
-			return true;
+/* ### HELPER FUNCTIONS ### */
 
-		if(!tokenStream.SkipLine())
+bool FindUserAgentRules(TokenStream& tokenStream) {
+	while(true) {
+		if(!tokenStream.MatchNextKeyword(UserAgentCommand_G))
 			return false;
+		tokenStream.DiscardWhitespace();
+		if(!tokenStream.MatchKeyword(UserAgentName_G))
+			continue;
+		tokenStream.DiscardWhitespace();
+		if(tokenStream.MatchEndline())
+			return true;
 	}
 
 	return false;
 }
 
-/*
 Rule ReadNextRule(TokenStream& tokenStream) {
-	try{
-		String toMatch(DisallowCommand_G);
-		String path;
-
-		// End of User-Agent Rules
-		if(fileReader.Peek() == '\n')
+	while(true)
+	{
+		if(tokenStream.MatchEndline())
 			return {String(), false};
 
-		if(fileReader.Peek() == AllowCommand_G[0])
-			toMatch = AllowCommand_G;
+		bool allowed;
+		if(tokenStream.MatchKeyword(DisallowCommand_G)) 
+			allowed = false;
+		else if(tokenStream.MatchKeyword(AllowCommand_G))
+			allowed = true;
+		else
+		{
+			tokenStream.MatchNextEndline();
+			continue;
+		}
 
-		// Match Allow or Disallow Rule
-		if(Match(toMatch, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				MatchPath(path, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				fileReader.GetNextCharacter() == '\n')
-			return {path, toMatch == AllowCommand_G ? true : false};
+		tokenStream.DiscardWhitespace();
 
-		// Malformed Rule
-		MoveToNextLine(fileReader);
-	} catch(...) {
-		
+		String path = tokenStream.MatchPath();
+		tokenStream.MatchNextEndline();
+
+		if(!path) continue;
+
+		#ifdef TEST
+		std::cout << "Rule Found: " << path.CString();
+		std::cout << " is " << (allowed ? "allowed" : "disallowed") << std::endl;
+		#endif
+		return {path, allowed};
 	}
 
 	return {String(), false};
 }
-*/
+
+void DomainRules::WriteRulesToDisc(std::string &domain) {
+	FILE *file = fopen(domain.c_str(), "w");
+	root->SaveToFile(file);
+	fclose(file);
+}
+
+

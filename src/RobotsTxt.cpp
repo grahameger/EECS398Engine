@@ -1,6 +1,7 @@
-//todo change these to adhere to makefile
 #include "http.hpp"
 #include "RobotsTxt.h"
+
+const size_t CACHE_CAPACITY = 3;
 
 RobotsTxt::RobotsTxt()
    : domainRulesCache(CACHE_CAPACITY) {}
@@ -12,7 +13,7 @@ void RobotsTxt::SubmitRobotsTxt(HTTPRequest &robotsTxtHTTPInfo, string &pathOnDi
    DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
    domainRulesCache.put(domain, newDomainRules);
    
-   newDomainRules->WriteRulesToDisc();
+   newDomainRules->WriteRulesToDisc(domain);
    }
 
 DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName, 
