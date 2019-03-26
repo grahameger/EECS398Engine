@@ -3,11 +3,19 @@
 using std::set;
 using std::string;
 
+<<<<<<< HEAD
 DirectoryRules::DirectoryRules(string &name, bool allowed, bool hasRuleIn) 
     : directoryName(name), isAllowed(allowed), hasRule(hasRuleIn) {}
 
 //Return index one past the last letter of the next directory name
 int DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, int directoryStartIndex)
+=======
+DirectoryRules::DirectoryRules(string &name, bool allowed) 
+    : directoryName(name), isAllowed(allowed), hasRule(false) {}
+
+//Return index one past the last letter of the next directory name
+int DirectoryRules::findEndIndexOfNextDirectoryName(string &path, int directoryStartIndex)
+>>>>>>> robots
 {
     int tmpIndex = directoryStartIndex;
     while(path[tmpIndex] != '/' && tmpIndex < path.size())
@@ -17,11 +25,20 @@ int DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, int directoryS
     return tmpIndex;
 }
 
+<<<<<<< HEAD
 void DirectoryRules::SetChildIndices(vector<int> &childIndicesIn)
 {
    childIndicesInDstVec = childIndicesIn;
 }
 
+=======
+//TODO: might change to recursive implementation
+//doesn't make sense for this function to be iterative when data structure is defined
+//recursively. Won't be hard to change to recursive. But this works as is 
+//recursive implemention will be much cleaner
+
+//Also consider splitting into find and create functions 
+>>>>>>> robots
 DirectoryRules* DirectoryRules::FindOrCreateChild(string &path)
 {
     //edge case: user searches for permissions of directory "/"
@@ -43,7 +60,11 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string &path)
 
     while(currentDirectoryStartIndex <= path.size())
     {
+<<<<<<< HEAD
         int currentDirectoryEndIndex = FindEndIndexOfNextDirectoryName(path, currentDirectoryStartIndex);
+=======
+        int currentDirectoryEndIndex = findEndIndexOfNextDirectoryName(path, currentDirectoryStartIndex);
+>>>>>>> robots
         string currentDirectoryName = path.substr(currentDirectoryStartIndex, 
             currentDirectoryEndIndex - currentDirectoryStartIndex);
 
@@ -103,6 +124,7 @@ string DirectoryRules::GetDirectoryName()
 void DirectoryRules::SetHasRule()
 {
     hasRule = true;
+<<<<<<< HEAD
 }
 
 void DirectoryRules::GetVectorizedRules(vector<DirectoryRules*> &dstVec)
@@ -161,3 +183,6 @@ void DirectoryRules::AddChildFromFile(DirectoryRules* child)
     directoryNameToChildRuleIndex.insert({child->GetDirectoryName(), childrenRules.size() - 1});
 }
 
+=======
+}
+>>>>>>> robots
