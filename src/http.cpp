@@ -289,10 +289,14 @@ namespace search {
         outfile.close();
 
         //handle robots.txt files
-        if(rv.path.find("robots.txt") != string::npos)
+        if(request.path.find("robots.txt") != string::npos)
         {
-            int i = 0;
-            //TODO: implement
+            //TODO (Graham and Dennis): Replace CRAWLER.robotstxt with the instance of RobotsTxt object
+            //that our crawler will have (there should only be one RobotsTxt object which contains
+            //all RobotsTxt info). Also, need to populate variable filePath, a string that contains
+            //the file path in disc that we saved our file. Consider making this filePath a part of 
+            //class HTTPrequest so I can just send the request object to submitRobotsTxt()
+            CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
         }
         
     }

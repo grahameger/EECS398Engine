@@ -22,7 +22,7 @@ bool FindUserAgentRules(String&, TokenStream&);
 //Rule ReadNextRule(TokenStream&);
 
 // TODO: Add in TwoBufferFileReader exception to conditions
-RobotsTxt::RobotsTxt(const char* robotsFilename) {
+DomainRules::DomainRules(const char* robotsFilename) {
 	TokenStream robotsReader(robotsFilename);
 	
 	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
@@ -32,7 +32,7 @@ RobotsTxt::RobotsTxt(const char* robotsFilename) {
 	//	AddRule(curRule);
 }
 
-void RobotsTxt::AddRule(Rule rule) {
+void DomainRules::AddRule(Rule rule) {
 	// Follow Allow/Disallow rules in RobotsPseudoCode
 }
 

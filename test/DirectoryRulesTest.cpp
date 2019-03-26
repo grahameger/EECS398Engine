@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE DirectoryRuleTest
 #include <boost/test/included/unit_test.hpp>
-#include "../../include/DirectoryRules.h"
+#include "DirectoryRules.h"
 using namespace std;
 
 BOOST_AUTO_TEST_CASE( createEmptyDirectoryRule )
