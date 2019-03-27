@@ -1,6 +1,6 @@
 #pragma once
-#ifndef STRING_H
-#define STRING_H
+#ifndef STRING_H_398
+#define STRING_H_398
 
 class String
    {

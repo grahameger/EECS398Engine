@@ -49,6 +49,7 @@
 # include <openssl/conf.h>
 #endif
 
+#include "crawler.hpp"
 #include "event.hpp"
 
 

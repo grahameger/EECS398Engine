@@ -8,6 +8,8 @@
 // Base Crawler Class
 
 #pragma once
+#ifndef EECS398_CRAWLER_H
+#define EECS398_CRAWLER_H
 
 #include <string>
 #include <vector>
@@ -37,7 +39,7 @@ namespace search {
 
         bool haveRobots(const std::string &domain);
 
-        static RobotsTxt robots;
+        inline static RobotsTxt robots;
 
         static void robotLock();
         static void robotUnlock();
@@ -53,8 +55,10 @@ namespace search {
 
         HTTPClient client;
 
-        static pthread_mutex_t domainMutex;
-        static pthread_mutex_t robotsMutex;
+        inline static pthread_mutex_t domainMutex;
+        inline static pthread_mutex_t robotsMutex;
         std::unordered_map<std::string, time_t> lastHitHost;
     };
 }
+
+#endif

@@ -1,7 +1,7 @@
 //  Created by Jake C on 2/10/19.
 #pragma once
-#ifndef Parser_hpp
-#define Parser_hpp
+#ifndef Parser_hpp_398
+#define Parser_hpp_398
 
 #include <iostream>
 #include <stdio.h>

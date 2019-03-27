@@ -1,14 +1,15 @@
 #pragma once
 
-#ifndef ROBOTSTXT_H
-#define ROBOTSTXT_H
+#ifndef ROBOTSTXT_H_398
+#define ROBOTSTXT_H_398
 
 #include <string>
+#include "http.hpp"
 #include "String.h"
 #include "LRUCache.hpp"
 #include "DomainRules.h"
 #include "DirectoryRules.h"
-#include "http.hpp"
+
 
 using std::string;
 using std::vector;
