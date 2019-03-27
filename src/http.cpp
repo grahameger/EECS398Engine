@@ -11,10 +11,7 @@
 #include <string>
 #include <sstream>
 #include <regex>
-<<<<<<< HEAD
 #include <charconv>
-=======
->>>>>>> 57e88919d64a931761332d7fb7828a3faf66dbad
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
@@ -207,11 +204,7 @@ namespace search {
         return rv;
     }
 
-<<<<<<< HEAD
     void HTTPClient::SubmitURLSync(const std::string &url) { //should submit to robotstxt data structure
-=======
-    void HTTPClient::SubmitURLSync(const std::string &url) {
->>>>>>> 57e88919d64a931761332d7fb7828a3faf66dbad
         HTTPRequest request = parseURLStack(url);
         Socket * sock;
         request.method = getMethod;
@@ -294,7 +287,6 @@ namespace search {
         std::ofstream outfile(request.filename());
         outfile.write(full_response, total_size);
         outfile.close();
-<<<<<<< HEAD
 
         //handle robots.txt files
         if(request.path.find("robots.txt") != std::string::npos)
@@ -308,8 +300,6 @@ namespace search {
             //CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
         }
         
-=======
->>>>>>> 57e88919d64a931761332d7fb7828a3faf66dbad
     }
 
     void HTTPClient::process(char * file, size_t len) {

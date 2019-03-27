@@ -9,11 +9,7 @@
 
 #include "crawler.hpp"
 
-<<<<<<< HEAD
-
 //to check before crawling add to here
-=======
->>>>>>> 57e88919d64a931761332d7fb7828a3faf66dbad
 namespace search {
     Crawler::Crawler(const std::string &directory, const std::vector<std::string> &urls_in) {
         watchDir = directory;
