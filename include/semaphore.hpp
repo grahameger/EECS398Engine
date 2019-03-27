@@ -22,7 +22,6 @@ namespace threading {
             int rv = sem_init(&_s, 0, count_in);
             if (rv != 0) {
                 fprintf(stderr, "sem_init() failed with error '%s'", strerror(errno));
-                exit(1);
             }
         }
         ~Semaphore() {

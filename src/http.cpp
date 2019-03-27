@@ -415,6 +415,8 @@ namespace search {
                 return -1;
             }
             return bytes_received;
+        // This is probably an unnecessary branch. We're doing blocking on all sockets
+        // currently
         } else {
             auto rv = ::SSL_read(ssl, (void*)buf, len);
             // todo error handling
