@@ -116,6 +116,7 @@ bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    DirectoryRules *root = rules[0];
    DomainRules *newRule = new DomainRules(root);
    domainRulesCache.put(domain, newRule);
+   return true;
    } 
 
 bool RobotsTxt::GetRule(string &path, string &domain)
