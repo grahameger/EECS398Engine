@@ -6,6 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
+#pragma once
 #ifndef semaphore_hpp_398
 #define semaphore_hpp_398
 

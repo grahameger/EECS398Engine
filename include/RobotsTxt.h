@@ -1,6 +1,10 @@
+#pragma once
+
 #ifndef ROBOTSTXT_H
 #define ROBOTSTXT_H
+
 #include <string>
+#include "String.h"
 #include "LRUCache.hpp"
 #include "DomainRules.h"
 #include "DirectoryRules.h"

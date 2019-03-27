@@ -7,6 +7,7 @@
 //
 // Abstraction for event driven netowrk IO on Linux / Mac / FreeBSD / NetBSD
 
+#pragma once
 #ifndef event_hpp_398
 #define event_hpp_398
 

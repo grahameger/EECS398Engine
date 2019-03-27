@@ -6,6 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
+#pragma once
 #ifndef thread_queue_hpp_398
 #define thread_queue_hpp_398
 

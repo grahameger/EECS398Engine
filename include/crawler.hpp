@@ -7,6 +7,8 @@
 //
 // Base Crawler Class
 
+#pragma once
+
 #ifndef crawler_hpp_398
 #define crawler_hpp_398
 
