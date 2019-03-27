@@ -24,7 +24,6 @@
 #include "http.hpp"
 #include "thread_queue.hpp"
 #include "semaphore.hpp"
-#include "RobotsTxt.h"
 
 namespace search {
 
@@ -39,10 +38,6 @@ namespace search {
 
         bool haveRobots(const std::string &domain);
 
-        inline static RobotsTxt robots;
-
-        static void robotLock();
-        static void robotUnlock();
         static void domainLock();
         static void domainUnlock();
 
@@ -56,7 +51,7 @@ namespace search {
         HTTPClient client;
 
         inline static pthread_mutex_t domainMutex;
-        inline static pthread_mutex_t robotsMutex;
+        
         std::unordered_map<std::string, time_t> lastHitHost;
     };
 }

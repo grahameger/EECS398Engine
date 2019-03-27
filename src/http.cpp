@@ -135,6 +135,8 @@ namespace search {
     }
 
     HTTPClient::HTTPClient() {
+        robotsMutex = PTHREAD_MUTEX_INITIALIZER;
+
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
         SSL_library_init();
@@ -322,9 +324,9 @@ namespace search {
         if (request.path == "robots.txt") {
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
-            Crawler::robotLock();
-            Crawler::robots.SubmitRobotsTxt(request.host, filename);
-            Crawler::robotUnlock();
+            robotLock();
+            robots.SubmitRobotsTxt(request.host, filename);
+            robotUnlock();
         }
 
         //handle robots.txt files
@@ -496,6 +498,14 @@ namespace search {
             return rv;
         }
         return 0;
+    }
+
+    inline void HTTPClient::robotLock() {
+        pthread_mutex_lock(&robotsMutex);
+    }
+
+    inline void HTTPClient::robotUnlock() {
+        pthread_mutex_unlock(&robotsMutex);
     }
     
 }

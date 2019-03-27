@@ -78,7 +78,6 @@ namespace search {
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
-        robotsMutex = PTHREAD_MUTEX_INITIALIZER;
 
         // make the robots and pages directory
         makeDir("robots");
@@ -99,14 +98,6 @@ namespace search {
         {
             pthread_join(threads[i], NULL);
         }
-    }
-
-    inline void Crawler::robotLock() {
-        pthread_mutex_lock(&robotsMutex);
-    }
-
-    inline void Crawler::robotUnlock() {
-        pthread_mutex_unlock(&robotsMutex);
     }
 
     inline void Crawler::domainLock() {

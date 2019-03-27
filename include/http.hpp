@@ -49,11 +49,12 @@
 # include <openssl/conf.h>
 #endif
 
-#include "crawler.hpp"
+#include "RobotsTxt.h"
 #include "event.hpp"
 
-
 namespace search {
+
+    class RobotsTxt;
 
     struct HTTPRequest
     {
@@ -81,6 +82,11 @@ namespace search {
         ~HTTPClient();
         void SubmitURLSync(const std::string &url);
         static void * SubmitUrlSyncWrapper(void * context);
+
+        static void robotLock();
+        static void robotUnlock();
+        inline static pthread_mutex_t robotsMutex;
+        inline static RobotsTxt robots;
     private:
         static const size_t MAX_CONNECTIONS = 1000;
         static const size_t RECV_SIZE = 8192;

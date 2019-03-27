@@ -11,6 +11,10 @@
 #include "DirectoryRules.h"
 
 
+namespace search {
+   struct HTTPRequest;
+}
+
 using std::string;
 using std::vector;
 using search::HTTPRequest;
