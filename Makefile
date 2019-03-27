@@ -1,4 +1,4 @@
-CC := g++-8 # This is the main compiler
+CC := g++ # This is the main compiler
 
 ifeq ($(shell uname -s),Darwin) # Mac OS X
 	CC := clang++

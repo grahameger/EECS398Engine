@@ -19,7 +19,10 @@
 #include "semaphore.hpp"
 #include "http.hpp"
 #include "thread_queue.hpp"
+<<<<<<< HEAD
 #include "RobotsTxt.h"
+=======
+>>>>>>> 57e88919d64a931761332d7fb7828a3faf66dbad
 
 namespace search {
     class Crawler {
@@ -48,7 +51,10 @@ namespace search {
         int inotifyfd;
         int wd; // watch directory fd
         pthread_t watchThread;
+<<<<<<< HEAD
         RobotsTxt crawlingRules;
+=======
+>>>>>>> 57e88919d64a931761332d7fb7828a3faf66dbad
     };
 }
 
