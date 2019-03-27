@@ -6,10 +6,8 @@ const size_t CACHE_CAPACITY = 3;
 RobotsTxt::RobotsTxt()
    : domainRulesCache(CACHE_CAPACITY) {}
 
-void RobotsTxt::SubmitRobotsTxt(HTTPRequest &robotsTxtHTTPInfo, string &pathOnDisc) //given url?
+void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc) //given url?
    {
-   string &domain = robotsTxtHTTPInfo.host;
-
    DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
    domainRulesCache.put(domain, newDomainRules);
    

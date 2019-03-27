@@ -30,8 +30,12 @@ bool FindUserAgentRules( TokenStream& );
 Rule ReadNextRule( TokenStream& );
 
 
+DomainRules::DomainRules( DirectoryRules* rootIn )
+   : root(rootIn) {}
+
+
 DomainRules::DomainRules( const char* robotsFilename )
-      : root( new DirectoryRules( "/" ) )
+      : root( new DirectoryRules( string( "/" ) ) )
    {
    TokenStream robotsReader( robotsFilename );
 	
@@ -115,3 +119,13 @@ void DomainRules::WriteRulesToDisc(std::string &domain) {
 	root->SaveToFile(file);
 	fclose(file);
 }
+
+bool DomainRules::IsAllowed(String path)
+   {
+   //TODO: change once DirectoryRules works with String
+   const char* pathCStr = path.CString();
+   std::string pathToCheck(pathCStr);
+
+   DirectoryRules* dir = root->FindOrCreateChild(pathToCheck);
+   return dir->GetAllowed();
+   }

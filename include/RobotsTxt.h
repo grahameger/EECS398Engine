@@ -25,7 +25,7 @@ public:
    //Calling this function will replace any existing robotsTxt info
    //for this domain. It will always trigger both a store-in-cache
    //and save-to-disc
-   void SubmitRobotsTxt(HTTPRequest &robotsTxtHTTPInfo, string &pathOnDisc); 
+   void SubmitRobotsTxt(string &domain, string &pathOnDisc); 
    //return true if allowed to crawl. false otherwise
    //path is the path of the http file you are getting the rule for, e.g. "/personal/dennis/resume.http"
    //TODO: the arguments of this function should be grouped into class

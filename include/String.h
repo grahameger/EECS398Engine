@@ -24,8 +24,6 @@ public:
 
    operator bool( ) const;
 
-	operator bool() const;
-
 private:
    const static char* nullString;
    char* cstring;

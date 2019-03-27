@@ -16,24 +16,6 @@ class List
 public:
    typedef typename PointerLess< T >::type baseType;
 
-   List( );
-   ~List( );
-   List( const List& toCopy ) = delete;
-   List( List&& toMove ) = delete;
-   List< T >& operator=( const List& toCopy ) = delete;
-   List< T >& operator=( List&& toMove ) = delete;
-
-   bool Empty( );
-
-   void AddToFront( T toAdd );
-   void AddToBack( T toAdd );
-
-   Iterator GetFront( );
-   Iterator GetBack( );
-
-   T&& RemoveFront( );
-   T&& RemoveBack( );
-
    class Iterator
       {
    public:
@@ -58,6 +40,25 @@ public:
       friend Iterator List< T >::GetBack( );
 
       };
+
+   List( );
+   ~List( );
+   List( const List& toCopy ) = delete;
+   List( List&& toMove ) = delete;
+   List< T >& operator=( const List& toCopy ) = delete;
+   List< T >& operator=( List&& toMove ) = delete;
+
+   bool Empty( );
+
+   void AddToFront( T toAdd );
+   void AddToBack( T toAdd );
+
+   Iterator GetFront( );
+   Iterator GetBack( );
+
+   T&& RemoveFront( );
+   T&& RemoveBack( );
+
 
 private:
    Node< T > *front, *back;
