@@ -1,5 +1,4 @@
-#include <RobotsTxt.h>
-#include <http.hpp>
+#include "RobotsTxt.h"
 #define BOOST_TEST_MODULE DirectoryRuleTest
 #include <boost/test/included/unit_test.hpp>
 
@@ -18,7 +17,7 @@ BOOST_AUTO_TEST_CASE( GetRuleFromCache )
     //todo implement once we can submit
 }
 
-BOOST_AUTO_TEST_CASE( GetRuleFromDisc)
+BOOST_AUTO_TEST_CASE( GetRuleFromDisc )
 {
     //WRITE FILE TO DISC. THIS FUNCTION IS TESTED IN DIRECTORYRULESTEST.CPP
     //**directory and all children directories should change (unless hasRule == true)**

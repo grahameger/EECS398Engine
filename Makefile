@@ -1,4 +1,4 @@
-CC := g++-8 # This is the main compiler
+CC := g++ # This is the main compiler
 
 ifeq ($(shell uname -s),Darwin) # Mac OS X
 	CC := clang++
@@ -32,6 +32,9 @@ clean:
 # Tests
 tester:
 	$(CC) $(CFLAGS) test/tester.cpp $(INC) $(LIB) -o bin/tester
+
+robots:
+	$(CC) $(CFLAGS) test/RobotsTxtTest.cpp $(INC) $(LIB) -o bin/robots-test
 
 # Spikes
 ticket:
