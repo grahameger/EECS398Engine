@@ -1,6 +1,7 @@
 #ifndef TOKENSTREAM_H
 #define TOKENSTREAM_H
 
+#include "String.h"
 #include "List.h"
 
 class TokenStream 
