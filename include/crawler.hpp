@@ -23,6 +23,7 @@
 #include "http.hpp"
 #include "thread_queue.hpp"
 #include "semaphore.hpp"
+#include "RobotsTxt.h"
 
 namespace search {
 

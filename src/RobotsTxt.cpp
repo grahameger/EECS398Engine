@@ -1,86 +1,143 @@
-/* Created on 2/18, wrote function outlines for constructor/helpers
- * Updated on 2/19, fixed compile issues
- */
-#include <unistd.h>
-#include "String.h"
-#include "TokenStream.h"
+#include "http.hpp"
 #include "RobotsTxt.h"
 
-String UserAgentName_G("*");
-String UserAgentCommand_G("User-agent:");
-String AllowCommand_G("Allow:");
-String DisallowCommand_G("Disallow:");
+const size_t CACHE_CAPACITY = 3;
 
-struct Rule {
-	String path;
-	bool allow;
+RobotsTxt::RobotsTxt()
+   : domainRulesCache(CACHE_CAPACITY) {}
 
-	operator bool() const { return !path.Empty(); }
-};
+void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc) //given url?
+   {
+   DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
+   domainRulesCache.put(domain, newDomainRules);
+   
+   newDomainRules->WriteRulesToDisc(domain);
+   }
 
-bool FindUserAgentRules(String&, TokenStream&);
-//Rule ReadNextRule(TokenStream&);
+DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName, 
+   vector<int> &childIndices, bool isAllowed, bool hasRule)
+   {
+   string dirNameStr(directoryName);
+   DirectoryRules *newDirRule = new DirectoryRules(dirNameStr, isAllowed, hasRule);
+   newDirRule->SetChildIndices(childIndices);
+   return newDirRule;
+   }
 
-// TODO: Add in TwoBufferFileReader exception to conditions
-RobotsTxt::RobotsTxt(const char* robotsFilename) {
-	TokenStream robotsReader(robotsFilename);
-	
-	if(!robotsReader || !FindUserAgentRules(UserAgentName_G, robotsReader))
-		return;
-	
-	//while(Rule curRule = ReadNextRule(robotsReader))
-	//	AddRule(curRule);
-}
+void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
+   {
+   char curChar = (char)fgetc(file);
+   while(curChar != EOF)
+       {
+       //get name of directory
+       char dirName[99];
+       int dirNameInd = 0;
 
-void RobotsTxt::AddRule(Rule rule) {
-	// Follow Allow/Disallow rules in RobotsPseudoCode
-}
+       while(curChar != ' ')
+       {
+       dirName[dirNameInd++] = curChar;
+       curChar = (char)fgetc(file);
+       }
 
-bool FindUserAgentRules(String& userAgent, TokenStream& tokenStream) {
-	while(true) {
-		if(
-		   tokenStream.MatchKeyword(UserAgentCommand_G) && 
-		   tokenStream.DiscardWhitespace() &&
-		   tokenStream.MatchKeyword(UserAgentName_G) && 
-		   (tokenStream.DiscardWhitespace() || true) &&
-		   tokenStream.MatchEndline()
-		)
-			return true;
+       dirName[dirNameInd] = 0;
+       string dirNameStr(dirName);
 
-		if(!tokenStream.SkipLine())
-			return false;
-	}
+       //isAllowed
+       bool isAllowed = false;
+       curChar = (char)fgetc(file);
 
-	return false;
-}
+       if(curChar == '1')
+           {
+           isAllowed = true;
+           }
 
-/*
-Rule ReadNextRule(TokenStream& tokenStream) {
-	try{
-		String toMatch(DisallowCommand_G);
-		String path;
+       //hasRule
+       bool hasRule = false;
+       curChar = (char)fgetc(file);
 
-		// End of User-Agent Rules
-		if(fileReader.Peek() == '\n')
-			return {String(), false};
+       if(curChar == '1')
+           {
+           isAllowed = true;
+           }
 
-		if(fileReader.Peek() == AllowCommand_G[0])
-			toMatch = AllowCommand_G;
+       //children indices
+       std::vector<int> childrenInd;
+       while(curChar != '\n' && curChar != EOF)
+           {
+           childrenInd.push_back(curChar - '0');
+           curChar = (char)fgetc(file);
+           }
 
-		// Match Allow or Disallow Rule
-		if(Match(toMatch, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				MatchPath(path, fileReader) &&
-				MatchWhitespaceKleene(fileReader) &&
-				fileReader.GetNextCharacter() == '\n')
-			return {path, toMatch == AllowCommand_G ? true : false};
+       //create new DirectoryRules object
+       DirectoryRules *newRule = CreateDirectoryRules(dirName, 
+          childrenInd, isAllowed, hasRule); 
+       rules.push_back(newRule);
 
-		// Malformed Rule
-		MoveToNextLine(fileReader);
-	} catch(...) {
-		
-	}
+       //read in newLine
+       curChar = (char)fgetc(file);
+       }
+   }
 
-	return {String(), false};
-}
-*/
+void RobotsTxt::CreateDirectoryRuleTree(vector<DirectoryRules*> &rules)
+   {
+   for(int i = 0; i < rules.size(); ++i)
+      {
+      vector<int> &indsInRulesVec = rules[i]->childIndicesInDstVec;
+      for(int j = 0; j < indsInRulesVec.size(); ++j)
+         {
+         int childInd = indsInRulesVec[j];
+         DirectoryRules *childRule = rules[childInd];
+         rules[i]->AddChildFromFile(childRule);
+         }
+       }
+   }
+
+//returns false if file does not exist
+bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
+   {
+   string fileName = domain + ".txt";
+   FILE *file = fopen(fileName.c_str(), "r");
+   //file doesn't exist
+   if(!file)
+      return false;
+
+   vector<DirectoryRules*> rules;
+   ReadRulesFromDisc(file, rules);
+
+   fclose(file);
+
+   //convert to DomainRules object and place in cache
+   CreateDirectoryRuleTree(rules);
+   if(rules.empty())
+      {
+      printf("No root folder!");
+      return false;
+      }
+
+   DirectoryRules *root = rules[0];
+   DomainRules *newRule = new DomainRules(root);
+   domainRulesCache.put(domain, newRule);
+   } 
+
+bool RobotsTxt::GetRule(string &path, string &domain)
+   { 
+   //Look in cache
+   String tmpPath(path.c_str()); //todo remove
+   try
+      {
+      DomainRules *domainRule = domainRulesCache.get(domain);
+      return domainRule->IsAllowed(tmpPath);
+      }
+   //search disc
+   catch(const std::exception& e)
+      {
+      bool transferSuccess = TransferRulesFromDiscToCache(domain);
+      if(!transferSuccess)
+         {
+         printf("This domain is not on file!");
+         throw(1);
+         }
+
+      DomainRules *domainRule = domainRulesCache.get(domain);
+      return domainRule->IsAllowed(tmpPath);
+      }
+   }
