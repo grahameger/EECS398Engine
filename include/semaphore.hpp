@@ -10,26 +10,34 @@
 #define semaphore_hpp_398
 
 #include <pthread.h>
+#include <stdio.h>
 #include <semaphore.h>
+#include <string.h>
+#include <errno.h>
 
 namespace threading {
-    template <size_t N>
     class Semaphore {
     public:
-        Semaphore() {
-            sem_init(&s, 0, N);
+        Semaphore(size_t count_in) {
+            int rv = sem_init(&_s, 0, count_in);
+            if (rv != 0) {
+                fprintf(stderr, "sem_init() failed with error '%s'", strerror(errno));
+            }
         }
         ~Semaphore() {
-            sem_destroy(&s);
+            int rv = sem_destroy(&_s);
+            if (rv != 0) {
+                fprintf(stderr, "sem_destroy() failed with error '%s'", strerror(errno));
+            }
         }
         void notify() {
-            sem_post(&s);
+            sem_post(&_s);
         }
         void wait() {
-            sem_wait(&s);
+            sem_wait(&_s);
         }
     private:
-        sem_t s;
+        sem_t _s;
     };
 }
 

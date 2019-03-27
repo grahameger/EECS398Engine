@@ -33,9 +33,12 @@
 #include <netinet/in.h> 
 #include <arpa/inet.h>
 #include <netdb.h> 
+#include <sys/time.h>
 #include <sys/stat.h>
-#include <unistd.h> 
+#include <unistd.h>
+#ifdef __linux__
 #include <sys/epoll.h>
+#endif
 #include <sys/mman.h>
 
 #include <openssl/ssl.h>
@@ -46,7 +49,6 @@
 #endif
 
 #include "event.hpp"
-
 
 
 namespace search {
@@ -67,6 +69,8 @@ namespace search {
         int           port;         // note 0 defaults to 80
     };
     HTTPRequest * parseURL(const std::string &url);
+    std::string getHost(const std::string& url);
+    HTTPRequest parseURLStack(const std::string &url);
     static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
     class HTTPClient {
@@ -81,7 +85,9 @@ namespace search {
         static const size_t BUFFER_SIZE = RECV_SIZE;
         static const size_t NUM_THREADS = 4;
         static const uint32_t SLEEP_US = 10000;
-        const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
+        static const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
+        static const long int TIMEOUTSECONDS = 5;
+        static const long int TIMEOUTUSECONDS = 0;
 
         // returns connected TCP socket to host
         int getConnToHost(const std::string &host, int port, bool blocking = false);
@@ -103,7 +109,11 @@ namespace search {
 
         struct Socket {
         public:
-            Socket() : sockfd(0) {}
+            Socket() : sockfd(-1) {}
+
+            virtual ~Socket() {
+                ::close(sockfd);
+            }
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);
@@ -115,6 +125,11 @@ namespace search {
         struct SecureSocket : public Socket {
         public:
             SecureSocket() : ssl(nullptr) {}
+            virtual ~SecureSocket() {
+                if (ssl) {
+                    close(); 
+                }
+            }
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);
@@ -122,11 +137,6 @@ namespace search {
         private:
             SSL * ssl;
         };
-    };
-
-    struct SubmitArgs {
-            HTTPClient * client;
-            std::string * url;
     };
 }
 

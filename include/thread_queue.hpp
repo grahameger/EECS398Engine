@@ -11,71 +11,87 @@
 
 #include <iostream>
 #include <deque>
-#include <mutex>
-#include <condition_variable>
 #include <array>
 #include <vector>
+#include <pthread.h>
+
+#include "List.h"
 
 namespace threading {
+
     template <typename T>
     class ThreadQueue
     {
     public:
+
+        ThreadQueue() {
+            m = PTHREAD_MUTEX_INITIALIZER;
+            cv = PTHREAD_COND_INITIALIZER;
+        }
+
         void push(const T &d) {
-            std::unique_lock<std::mutex> lock(m);
+            pthread_mutex_lock(&m);
             q.push_back(d);
-            cv.notify_one();
+            pthread_cond_signal(&cv);
+            pthread_mutex_unlock(&m);
         }
 
         void push(const std::vector<T> &d) {
-            std::unique_lock<std::mutex> lock(m);
+            pthread_mutex_lock(&m);
             for (auto i : d) {
                 q.push_back(i);
             }
-            cv.notify_all();
+            pthread_cond_broadcast(&cv);
+            pthread_mutex_unlock(&m);
         }
 
         // returns true if sucessfully popped
         // modifies &d with the value of the popped item
         T pop() {
-            std::unique_lock<std::mutex> lock(m);
+            //std::unique_lock<std::mutex> lock(m);
+            pthread_mutex_lock(&m);
             // we own the lock
             while (q.empty()) {
-                cv.wait(lock);
+                pthread_cond_wait(&cv, &m);
             }
             // we own the lock
             T temp = q.front();
             q.pop_front();
             return temp;
             // mutex gets released on destruction
+            pthread_mutex_unlock(&m);
         }
 
         // get all of the stuff on the queue
         // used for EventQueue
         void pop_all(std::vector<T> &vec) {
-            std::unique_lock<std::mutex> lock(m);
+            pthread_mutex_lock(&m);
             // we own the lock
             while (q.empty()) {
-                cv.wait(lock);
+                pthread_cond_wait(&cv, &m);
             }
             // we own the lock
             vec = std::vector<T>(q.begin(), q.end());
             q.clear();
-            return;
+            pthread_mutex_unlock(&m);
         }
 
         size_t size() {
-            std::lock_guard<std::mutex> lock(m);
-            return q.size();
+            pthread_mutex_lock(&m);
+            auto rv = q.size();
+            pthread_mutex_unlock(&m);
+            return rv; 
         }
         bool empty() {
-            std::lock_guard<std::mutex> lock(m);
-            return q.empty();
+            pthread_mutex_lock(&m);
+            auto rv = q.empty();
+            pthread_mutex_unlock(&m);
+            return rv;
         }
     private:
         std::deque<T> q;
-        std::mutex m;
-        std::condition_variable cv;
+        pthread_mutex_t m;
+        pthread_cond_t cv;
     };
 }
 #endif
