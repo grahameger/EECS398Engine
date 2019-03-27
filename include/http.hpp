@@ -97,6 +97,8 @@ namespace search {
         void processResponses();
         void process(char* file, size_t len);
 
+        char * checkRedirects(char * getMessage);
+
         // given a socket return the clientInfo
         std::mutex m;
 

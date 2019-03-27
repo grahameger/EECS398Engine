@@ -335,12 +335,12 @@ namespace search {
     
     }
 
-    char* HTTPClient::check_redirects(char * get_message){
-        char redirect_lead_int = get_message[9];
+    char * HTTPClient::checkRedirects(char * getMessage){
+        char redirect_lead_int = getMessage[9];
         char* no_redirects = (char*)"No redirects\n";
         if (redirect_lead_int == '3'){
             //Convert GET message to string for ease of access
-            std::string message_copy = get_message;
+            std::string message_copy = getMessage;
             std::string curr_line = "";
             std::string redirected_url = "";
             //Parse GET message
