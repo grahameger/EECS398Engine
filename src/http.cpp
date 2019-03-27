@@ -335,39 +335,38 @@ namespace search {
     
     }
 
-    char * HTTPClient::checkRedirects(char * getMessage){
-        char redirect_lead_int = getMessage[9];
-        char* no_redirects = (char*)"No redirects\n";
-        if (redirect_lead_int == '3'){
+    char * HTTPClient::checkRedirects(const char * getMessage){
+        const char& redirectLeadInt = getMessage[9];
+        if (redirectLeadInt == '3'){
             //Convert GET message to string for ease of access
-            std::string message_copy = getMessage;
-            std::string curr_line = "";
-            std::string redirected_url = "";
+            std::string messageCopy(getMessage);
+            std::string currentLine;
+            std::string redirURL;
             //Parse GET message
-            for (int i = 0; i < message_copy.length(); ++i){
+            for (size_t i = 0; i < messageCopy.length(); ++i){
                 //Found the redirected link URL
-                if (curr_line == "Location: " || curr_line == "location: "){
-                    while (message_copy[i] != '\n'){
-                        redirected_url += message_copy[i];
+                if (currentLine == "Location: " || currentLine == "location: "){
+                    while (messageCopy[i] != '\n'){
+                        redirURL += messageCopy[i];
                         i++;
                     }
                     break;
                 }
                 //Reset parsed line if newline char found
-                else if (message_copy[i] == '\n'){
-                    curr_line = "";
+                else if (messageCopy[i] == '\n'){
+                    currentLine = "";
                 }
                 //Append GET message to curr_line to scan for 'Location: ' string
                 else {
-                    curr_line += message_copy[i];
+                    currentLine += messageCopy[i];
                 }
             }
-            char* final_url = new char [redirected_url.length() + 1];
-            strcpy(final_url, redirected_url.c_str());
-            return final_url;
+            char * finalUrl = (char*)calloc(redirURL.length() + 1, sizeof(char));
+            strcpy(finalUrl, redirURL.c_str());
+            return finalUrl;
         }
         else {
-            return no_redirects;
+            return nullptr;
         }
     }
 
