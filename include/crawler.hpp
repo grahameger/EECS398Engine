@@ -9,9 +9,6 @@
 
 #pragma once
 
-#ifndef crawler_hpp_398
-#define crawler_hpp_398
-
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -37,6 +34,16 @@ namespace search {
         void * stub();
         static void * stubHelper(void * context);
 
+
+        bool haveRobots(const std::string &domain);
+
+        static RobotsTxt robots;
+
+        static void robotLock();
+        static void robotUnlock();
+        static void domainLock();
+        static void domainUnlock();
+
     private:
         static const size_t NUM_THREADS = 10000;
         static const size_t WAIT_TIME = 3;
@@ -46,9 +53,8 @@ namespace search {
 
         HTTPClient client;
 
-        pthread_mutex_t domainMutex;
+        static pthread_mutex_t domainMutex;
+        static pthread_mutex_t robotsMutex;
         std::unordered_map<std::string, time_t> lastHitHost;
     };
 }
-
-#endif

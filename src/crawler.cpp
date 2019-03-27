@@ -18,10 +18,23 @@ namespace search {
         }
     }
 
+    inline bool Crawler::haveRobots(const std::string &host) {
+        struct stat st = {0};
+        auto path = std::string("robots/" + host);
+        return (stat(path.c_str(), &st) == 0);    
+    }
+
     void * Crawler::stub() {
         while (true) {
-            auto p = q.pop();
-            auto host = getHost(p);
+            std::string p = q.pop();
+            std::string host = getHost(p);
+
+            // check if we have the robots file for this domain
+            if (!haveRobots(host)) {
+                // get the robots.txt file
+                std::string newUrl = "http://" + host + "/robots.txt";
+                client.SubmitURLSync(newUrl);
+            }
 
             // check the domain timer, we want to wait
             // WAIT_TIME seconds between pages on the same host
@@ -65,6 +78,7 @@ namespace search {
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
+        robotsMutex = PTHREAD_MUTEX_INITIALIZER;
 
         // make the robots and pages directory
         makeDir("robots");
@@ -85,5 +99,21 @@ namespace search {
         {
             pthread_join(threads[i], NULL);
         }
+    }
+
+    inline void Crawler::robotLock() {
+        pthread_mutex_lock(&robotsMutex);
+    }
+
+    inline void Crawler::robotUnlock() {
+        pthread_mutex_unlock(&robotsMutex);
+    }
+
+    inline void Crawler::domainLock() {
+        pthread_mutex_lock(&domainMutex);
+    }
+
+    inline void Crawler::domainUnlock() {
+        pthread_mutex_unlock(&domainMutex);
     }
 }

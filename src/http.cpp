@@ -7,6 +7,7 @@
 //
 
 #include "http.hpp"
+#include "crawler.hpp"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -20,7 +21,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 
 namespace search {
     static const std::string getMethod = "GET";
@@ -312,15 +312,23 @@ namespace search {
 
         // either going to write to a file or add another request to the queue
         // write it to a file
-        auto filename = request.filename();
+        std::string filename = request.filename();
         std::ofstream outfile(filename);
         outfile.write(full_response, total_size);
         outfile.close();
         free(full_response);
         fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
 
+        if (request.path == "robots.txt") {
+            // TODO: make the data structure itself thread safe in a
+            // more optimized way than doing this...
+            Crawler::robotLock();
+            Crawler::robots.SubmitRobotsTxt(request.host, filename);
+            Crawler::robotUnlock();
+        }
+
         //handle robots.txt files
-        if(request.path.find("robots.txt") != std::string::npos)
+        if (request.path.find("robots.txt") != std::string::npos)
         {
             //TODO (Graham and Dennis): Replace CRAWLER.robotstxt with the instance of RobotsTxt object
             //that our crawler will have (there should only be one RobotsTxt object which contains
@@ -332,7 +340,7 @@ namespace search {
     }
 
     void HTTPClient::process(char * file, size_t len) {
-    
+         
     }
 
     char * HTTPClient::checkRedirects(const char * getMessage){
