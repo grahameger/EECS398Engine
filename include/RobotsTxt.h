@@ -14,6 +14,7 @@
 #include "DomainRules.h"
 #include "DirectoryRules.h"
 #include "http.h"
+#include "crawler.h"
 
 
 namespace search {
@@ -61,6 +62,8 @@ private:
    DirectoryRules *CreateDirectoryRules(char *directoryName, 
       vector<int> &childIndices, bool isAllowed, bool hasRule);
    void CreateDirectoryRuleTree(vector<DirectoryRules*> &rules);
+   string SerializedRulesPath;
+
 };
 
 #endif

@@ -6,7 +6,10 @@
 const size_t CACHE_CAPACITY = 10000;
 
 RobotsTxt::RobotsTxt()
-   : domainRulesCache(CACHE_CAPACITY, true) {}
+   : domainRulesCache(CACHE_CAPACITY, true), SerializedRulesPath("SerializedRobotsRules")
+   {
+   search::makeDir(SerializedRulesPath);
+   }
 
 RobotsTxt::~RobotsTxt()
    {

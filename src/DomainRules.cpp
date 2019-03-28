@@ -120,7 +120,8 @@ Rule ReadNextRule( TokenStream& tokenStream )
    }
 
 void DomainRules::WriteRulesToDisc(std::string &domain) {
-	FILE *file = fopen(domain.c_str(), "w");
+   string writePath = SerializedRulesPath + "/" + domain;
+	FILE *file = fopen(writePath.c_str(), "w");
 	root->SaveToFile(file);
 	fclose(file);
 }
