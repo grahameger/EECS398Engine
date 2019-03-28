@@ -18,7 +18,8 @@ int main(int argc, char** argv) {
 		string domain = "";
 		domain += ('0' + i);
 		std::cout << domain << std::endl;
-		robots.SubmitRobotsTxt( domain, argv[ i ] );
+		std::string fileStr(argv[ i ]);
+		robots.SubmitRobotsTxt( domain, fileStr );
 	}
 
 	while(true) {

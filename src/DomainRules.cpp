@@ -29,6 +29,11 @@ struct Rule
 bool FindUserAgentRules( TokenStream& );
 Rule ReadNextRule( TokenStream& );
 
+DomainRules::~DomainRules( )
+   {
+   delete root;
+   }
+
 
 DomainRules::DomainRules( DirectoryRules* rootIn )
    : root(rootIn) {}

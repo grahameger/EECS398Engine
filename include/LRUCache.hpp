@@ -10,9 +10,10 @@ template <class Key, class Value>
 class LRUCache
 {
 public:
-	LRUCache(int capacity);
+	LRUCache(int capacityIn, bool valueIsDynamicallyAllocated= false);
 	Value get(Key &key);
 	void put(Key &key, Value &val);
+	void clear();
 
 private:
 	void ChangeToMostRecentlyUsed(Key &key);
@@ -21,21 +22,35 @@ private:
 	unordered_map<Key, typename list<Key>::iterator> LRUQueueKeyPositions;
 	list<Key> LRUQueue;
 	int Capacity;
+	bool ValueIsDynamicallyAllocated;
 };
 
 //implementation
 template <class Key, class Value>
-LRUCache<Key, Value>::LRUCache(int capacityIn)
-	: Capacity(capacityIn) {}
+void LRUCache<Key, Value>::clear()
+{
+	while(!Cache.empty())
+	   EvictLRU();
+}
+
+template <class Key, class Value>
+LRUCache<Key, Value>::LRUCache(int capacity, bool valueIsDynamicallyAllocated)
+	: Capacity(capacity), ValueIsDynamicallyAllocated(valueIsDynamicallyAllocated) {}
 
 template <class Key, class Value>
 void LRUCache<Key, Value>::EvictLRU()
 {
-	Key lruKey = LRUQueue.front();
+	Key *lruKey = &LRUQueue.front();
+
+	if(ValueIsDynamicallyAllocated)
+	{
+		Value valToDelete = Cache[*lruKey];
+		delete valToDelete;
+	}
 
 	LRUQueue.pop_front();
-	LRUQueueKeyPositions.erase(lruKey);
-	Cache.erase(lruKey);
+	LRUQueueKeyPositions.erase(*lruKey);
+	Cache.erase(*lruKey);
 }
 
 template <class Key, class Value>

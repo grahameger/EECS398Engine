@@ -6,6 +6,12 @@ using std::string;
 DirectoryRules::DirectoryRules(string name, bool allowed, bool hasRuleIn) 
     : directoryName(name), isAllowed(allowed), hasRule(hasRuleIn) {}
 
+DirectoryRules::~DirectoryRules()
+{
+    for(int i = 0; i < childrenRules.size(); ++i)
+        delete childrenRules[i];
+}
+
 //Return index one past the last letter of the next directory name
 int DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, int directoryStartIndex)
 {
@@ -37,6 +43,12 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
             exit(1);
         }
     }
+    else if(path.back() == '/')
+    {
+        //another edge case
+        //strip ending '/' from directory names to keep consistent
+        path.pop_back();
+    }
 
     int currentDirectoryStartIndex = 1; //start at 1 to ignore '/'
     DirectoryRules *currentDirectoryRule = this;
@@ -44,15 +56,15 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
     while(currentDirectoryStartIndex <= path.size())
     {
         int currentDirectoryEndIndex = FindEndIndexOfNextDirectoryName(path, currentDirectoryStartIndex);
+        bool currentIsAllowed = currentDirectoryRule->isAllowed;
         string currentDirectoryName = path.substr(currentDirectoryStartIndex, 
             currentDirectoryEndIndex - currentDirectoryStartIndex);
-
         int currentDirectoryRuleIndex = -1;
 
         if(currentDirectoryRule->directoryNameToChildRuleIndex.find(currentDirectoryName) == 
             currentDirectoryRule->directoryNameToChildRuleIndex.end())
         {
-            DirectoryRules *newDirectoryRule = new DirectoryRules(currentDirectoryName, isAllowed);
+            DirectoryRules *newDirectoryRule = new DirectoryRules(currentDirectoryName, currentIsAllowed);
             currentDirectoryRule->childrenRules.push_back(newDirectoryRule);
             currentDirectoryRuleIndex = currentDirectoryRule->childrenRules.size() - 1;
             currentDirectoryRule->directoryNameToChildRuleIndex.insert({currentDirectoryName, currentDirectoryRuleIndex});

@@ -17,6 +17,7 @@ class DirectoryRules
 public:
    //TODO CREATE DESTRUCTOR
    DirectoryRules( std::string name, bool allowed = true, bool hasRule = false );
+   ~DirectoryRules( );
 
    void SetAllowed( bool grantedPermission );
    void SetHasRule( );
