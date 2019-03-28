@@ -111,14 +111,16 @@ const char String::operator[ ] ( int index ) const
 
 char& String::operator[ ] ( int index )
    {
-   if ( cstring == nullptr )
-      return nullString[ index ];
-   
+   if ( cstring == nullptr ) {
+      cstring = new char[1];
+      cstring[0] = 0x0;
+      return cstring[index];
+   }
    return cstring[ index ];
    }
 
 
-String& operator+= ( const String& rhs )
+String& String::operator+= ( const String& rhs )
    {
    if ( rhs.cstring == nullptr )
       return *this;
