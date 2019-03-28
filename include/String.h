@@ -22,6 +22,9 @@ public:
    const char operator[ ] ( int index ) const;
    char& operator[ ] ( int index );
 
+   String& operator+= ( const String& rhs );
+   friend String operator+ ( String lhs, const String& rhs );
+
    operator bool( ) const;
 
 private:

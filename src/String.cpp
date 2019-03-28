@@ -112,12 +112,29 @@ const char String::operator[ ] ( int index ) const
 char& String::operator[ ] ( int index )
    {
    if ( cstring == nullptr )
-      {
-      cstring = new char[ 1 ];
-      cstring[ 0 ] = 0;
-	  }
+      return nullString[ index ];
    
    return cstring[ index ];
+   }
+
+
+String& operator+= ( const String& rhs )
+   {
+   if ( rhs.cstring == nullptr )
+      return *this;
+
+   int newSize = size + rhs.size;
+   char* newCString = new char[newSize + 1];
+
+   if ( cstring != nullptr )
+      strcpy( newCString, cstring );
+   strcpy( newCString + size, rhs.cstring );
+
+   delete cstring;
+   cstring = newCString;
+   size = newSize;
+
+   return *this;
    }
 
 
