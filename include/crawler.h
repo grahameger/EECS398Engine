@@ -27,6 +27,8 @@
 
 namespace search {
 
+    void makeDir(const char * name);
+
     class Crawler {
     public: 
         Crawler(const std::vector<std::string> &seedUrls);

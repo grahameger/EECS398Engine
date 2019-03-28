@@ -110,10 +110,10 @@ Rule ReadNextRule( TokenStream& tokenStream )
 
 	  if ( !path ) continue;
 
-	  //#ifdef TEST
+	  #ifdef TEST
 	  std::cout << "Rule Found: " << path.CString( );
 	  std::cout << " is " << ( allowed ? "allowed" : "disallowed" ) << std::endl;
-	  //#endif
+	  #endif
 
 	  return { path, allowed };
 	  }
