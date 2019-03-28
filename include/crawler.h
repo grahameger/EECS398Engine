@@ -27,6 +27,8 @@
 
 namespace search {
 
+    void makeDir(const char * name);
+
     class Crawler {
     public: 
         Crawler(const std::vector<std::string> &seedUrls);
@@ -43,7 +45,7 @@ namespace search {
 
     private:
         threading::ThreadQueue<std::string> q;
-        static const size_t NUM_CRAWLER_THREADS = 1;
+        static const size_t NUM_CRAWLER_THREADS = 10000;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 3;
         pthread_t threads[NUM_CRAWLER_THREADS];
 

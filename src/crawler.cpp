@@ -11,7 +11,7 @@
 
 namespace search {
 
-    static void makeDir(const char * name) {
+    void makeDir(const char * name) {
         struct stat st = {0};
         if (stat(name, &st) == -1) {
             mkdir(name, 0700);
@@ -33,8 +33,10 @@ namespace search {
             if (!haveRobots(host)) {
                 // get the robots.txt file
                 std::string newUrl = "http://" + host + "/robots.txt";
+                // add the old url to the back of the queue until we get the robots file
+                q.push(p);
                 client.SubmitURLSync(newUrl, 0);
-                return nullptr;
+                continue;
             }
 
             // check the domain timer, we want to wait
