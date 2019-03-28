@@ -143,7 +143,11 @@ namespace search {
         return rv;
     }
 
-    void HTTPClient::SubmitURLSync(const std::string &url) {
+    void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
+        if (redirCount > 20) {
+            fprintf(stderr, "Too many redirects ending in host %s", url.c_str());
+            return;
+        }
         HTTPRequest request(url);
         std::unique_ptr<Socket> sock;
         request.method = constants::getMethod;
@@ -171,73 +175,69 @@ namespace search {
             return;
         }
 
-        size_t redirectCount = 0;
-
         rv = 0;
-        ssize_t contentLength = -1;
         int bytesReceived = 0;
-        char * fullResponse = nullptr;
         size_t totalSize = 0;
+        ssize_t contentLength = -1;
+        char * fullResponse = (char*)malloc(constants::BUFFER_SIZE);
 
-        do {
-            free(fullResponse);
-            bytesReceived = 0;
-            totalSize = 0;
-            contentLength = -1;
-            fullResponse = (char*)malloc(constants::BUFFER_SIZE);
+        // send request blocking
+        const std::string requestStr = request.requestString();
+        if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
+            fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
+        }
 
-            // send request blocking
-            const std::string requestStr = request.requestString();
-            if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-                fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
-            }
-
-            // dynamic buffering
-            // every time recv returns we'll look for "Content-Length", length of the body
-            // when we get t he length of the body then we can have a hard coded size to check for
-            // get the size of the header by searching for /r/n/r/n
-            while (true) {
-                rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
-                if (rv < 0) {
-                    // error check
-                    fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
-                    free(fullResponse);
-                    return;
-                } else if (rv == 0) {
-                    // handle EOF
-                    break;
-                    // might need to do more?
-                } else if (contentLength == -1) {
-                    // check if the header has been downloaded
-                    bytesReceived += rv;
-                    std::string_view view(fullResponse, bytesReceived);
-                    size_t header_pos = view.find("\r\n\r\n");
-                    if (header_pos != std::string_view::npos) {
-                        size_t header_size = header_pos + 4;
-                        // search for "Content-Length"
-                        contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
-                        totalSize = header_size + contentLength;
-                        ssize_t remaining = totalSize - bytesReceived;
-                        if (remaining > 0) {
-                            fullResponse = (char *)realloc(fullResponse, totalSize);
-                            char * buf_front = fullResponse + bytesReceived;
-                            rv = sock->recv(buf_front, remaining, MSG_WAITALL);
-                            if (rv >= 0) {
-                                bytesReceived += rv;
-                                break;
-                            }
-                            if (rv < 0 || bytesReceived < contentLength) {
-                                // error reading from socket
-                                break;
-                            }
+        // dynamic buffering
+        // every time recv returns we'll look for "Content-Length", length of the body
+        // when we get t he length of the body then we can have a hard coded size to check for
+        // get the size of the header by searching for /r/n/r/n
+        while (true) {
+            rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
+            if (rv < 0) {
+                // error check
+                fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                free(fullResponse);
+                return;
+            } else if (rv == 0) {
+                // handle EOF
+                break;
+                // might need to do more?
+            } else if (contentLength == -1) {
+                // check if the header has been downloaded
+                bytesReceived += rv;
+                std::string_view view(fullResponse, bytesReceived);
+                size_t header_pos = view.find("\r\n\r\n");
+                if (header_pos != std::string_view::npos) {
+                    size_t header_size = header_pos + 4;
+                    // search for "Content-Length"
+                    contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
+                    totalSize = header_size + contentLength;
+                    ssize_t remaining = totalSize - bytesReceived;
+                    if (remaining > 0) {
+                        fullResponse = (char *)realloc(fullResponse, totalSize);
+                        char * buf_front = fullResponse + bytesReceived;
+                        rv = sock->recv(buf_front, remaining, MSG_WAITALL);
+                        if (rv >= 0) {
+                            bytesReceived += rv;
+                            break;
+                        }
+                        if (rv < 0 || bytesReceived < contentLength) {
+                            // error reading from socket
+                            break;
                         }
                     }
-                } else {
-                    // no content length found?
-                    break;
                 }
+            } else {
+                // no content length found?
+                break;
             }
-        } while (checkRedirects(fullResponse, bytesReceived, request) && ++redirectCount < 10);
+        }
+
+        char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
+        if (redirectUrl) {
+            free(fullResponse);
+            return SubmitURLSync(redirectUrl, ++redirCount);
+        }
 
         process(fullResponse, bytesReceived);
 
@@ -263,22 +263,10 @@ namespace search {
 
     }
 
-    // returns true if we need to fetch another page
-    // returns false if we do not need to read another page
-    // if this function returns true, &request is overwritten
-    // and a new HTTPRequest is constructed for the new page
-    // that is going to be fetched. 
-    bool HTTPClient::checkRedirects(char * file, size_t len, HTTPRequest &request) {
-        char * result = checkRedirectsHelper(file);
-        if (result) {
-            request = HTTPRequest(std::string(result));
-            free(result);
-            return true;
+    char * HTTPClient::checkRedirectsHelper(const char * getMessage, const size_t len) {
+        if (len < 10) {
+            return nullptr;
         }
-        return false;
-    }
-
-    char * HTTPClient::checkRedirectsHelper(const char * getMessage){
         const char& redirectLeadInt = getMessage[9];
         if (redirectLeadInt == '3'){
             //Convert GET message to string for ease of access

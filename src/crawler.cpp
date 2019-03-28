@@ -33,7 +33,7 @@ namespace search {
             if (!haveRobots(host)) {
                 // get the robots.txt file
                 std::string newUrl = "http://" + host + "/robots.txt";
-                client.SubmitURLSync(newUrl);
+                client.SubmitURLSync(newUrl, 0);
                 return nullptr;
             }
 
@@ -48,7 +48,7 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // submitURLSync();
-                    client.SubmitURLSync(p);
+                    client.SubmitURLSync(p, 0);
                     // continue
                     continue;
                 } else {
@@ -65,7 +65,7 @@ namespace search {
                 // unlock mutex
                 pthread_mutex_unlock(&domainMutex);
                 // submitURLSync
-                client.SubmitURLSync(p);
+                client.SubmitURLSync(p, 0);
                 // continue
                 continue;
             }

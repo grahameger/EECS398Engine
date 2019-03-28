@@ -61,7 +61,7 @@ namespace search {
     public:
         HTTPClient();
         ~HTTPClient();
-        void SubmitURLSync(const std::string &url);
+        void SubmitURLSync(const std::string &url, size_t redirCount);
         static void * SubmitUrlSyncWrapper(void * context);
 
     private:
@@ -73,9 +73,7 @@ namespace search {
         void processResponses();
         void process(char* file, size_t len);
 
-        bool checkRedirects(char * file, size_t len, HTTPRequest &request);
-
-        char * checkRedirectsHelper(const char * getMessage);
+        char * checkRedirectsHelper(const char * getMessage, size_t len);
 
         // given a socket return the clientInfo
         std::mutex m;
