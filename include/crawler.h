@@ -23,6 +23,7 @@
 
 #include "http.h"
 #include "threading.h"
+#include "constants.h"
 
 namespace search {
 
@@ -41,10 +42,10 @@ namespace search {
         static void domainUnlock();
 
     private:
-        static const size_t NUM_THREADS = 10000;
-        static const size_t WAIT_TIME = 3;
         threading::ThreadQueue<std::string> q;
-        pthread_t threads[NUM_THREADS];
+        static const size_t NUM_CRAWLER_THREADS = 1;
+        static const size_t DOMAIN_REHIT_WAIT_TIME = 3;
+        pthread_t threads[NUM_CRAWLER_THREADS];
 
         HTTPClient client;
 

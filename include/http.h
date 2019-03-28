@@ -73,7 +73,9 @@ namespace search {
         void processResponses();
         void process(char* file, size_t len);
 
-        char * checkRedirects(const char * getMessage);
+        bool checkRedirects(char * file, size_t len, HTTPRequest &request);
+
+        char * checkRedirectsHelper(const char * getMessage);
 
         // given a socket return the clientInfo
         std::mutex m;

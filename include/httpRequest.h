@@ -16,7 +16,8 @@ namespace search {
         // can optimize this later
         std::string filename() const;
         std::string requestString() const;
-        void print();
+        bool robots() const;
+        void print() const;
         std::string   method;       // only GET implemented
         std::string   host;
         std::string   path;

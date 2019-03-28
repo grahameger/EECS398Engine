@@ -22,6 +22,7 @@ namespace search {
         } else {
             s = "pages/" + s;
         }
+        
         return s;
     }
 
@@ -35,7 +36,7 @@ namespace search {
         return ss.str();
     }
 
-    void HTTPRequest::print() {
+    void HTTPRequest::print() const {
         std::stringstream ss;
         ss << "{\n";
         ss << "\t" << "method: " << method << '\n';
@@ -75,5 +76,9 @@ namespace search {
                 path = "/";
             }
         }
+    }
+
+    bool HTTPRequest::robots() const {
+        return path == robotsTxtString;
     }
 }

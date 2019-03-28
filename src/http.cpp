@@ -170,100 +170,115 @@ namespace search {
             fprintf(stderr, "error setting file descriptor for host '%s' : %s", url.c_str(), strerror(errno));
             return;
         }
-        // send request blocking
-        const std::string requestStr = request.requestString();
-        if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-            fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
-        }
 
-        // dynamic buffering
-        // every time recv returns we'll look for "Content-Length", length of the body
-        // when we get t he length of the body then we can have a hard coded size to check for
-        // get the size of the header by searching for /r/n/r/n
+        size_t redirectCount = 0;
+
         rv = 0;
-        ssize_t content_length = -1;
-        int bytes_received = 0;
-        char * full_response = (char*)malloc(constants::BUFFER_SIZE);
-        size_t total_size = 0;
-        while (true) {
-            rv = sock->recv(full_response + bytes_received, constants::BUFFER_SIZE - bytes_received, 0);
-            if (rv < 0) {
-                // error check
-                fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
-                free(full_response);
-                return;
-            } else if (rv == 0) {
-                // handle EOF
-                break;
-                // might need to do more?
-            } else if (content_length == -1) {
-                // check if the header has been downloaded
-                bytes_received += rv;
-                std::string_view view(full_response, bytes_received);
-                size_t header_pos = view.find("\r\n\r\n");
-                if (header_pos != std::string_view::npos) {
-                    size_t header_size = header_pos + 4;
-                    // search for "Content-Length"
-                    content_length = getContentLength(std::string_view(full_response, bytes_received));
-                    total_size = header_size + content_length;
-                    ssize_t remaining = total_size - bytes_received;
-                    if (remaining > 0) {
-                        full_response = (char *)realloc(full_response, total_size);
-                        char * buf_front = full_response + bytes_received;
-                        rv = sock->recv(buf_front, remaining, MSG_WAITALL);
-                        if (rv >= 0) {
-                            bytes_received += rv;
-                            break;
-                        }
-                        if (rv < 0 || bytes_received < content_length) {
-                            // error reading from socket
-                            break;
+        ssize_t contentLength = -1;
+        int bytesReceived = 0;
+        char * fullResponse = nullptr;
+        size_t totalSize = 0;
+
+        do {
+            free(fullResponse);
+            bytesReceived = 0;
+            totalSize = 0;
+            contentLength = -1;
+            fullResponse = (char*)malloc(constants::BUFFER_SIZE);
+
+            // send request blocking
+            const std::string requestStr = request.requestString();
+            if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
+                fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
+            }
+
+            // dynamic buffering
+            // every time recv returns we'll look for "Content-Length", length of the body
+            // when we get t he length of the body then we can have a hard coded size to check for
+            // get the size of the header by searching for /r/n/r/n
+            while (true) {
+                rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
+                if (rv < 0) {
+                    // error check
+                    fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                    free(fullResponse);
+                    return;
+                } else if (rv == 0) {
+                    // handle EOF
+                    break;
+                    // might need to do more?
+                } else if (contentLength == -1) {
+                    // check if the header has been downloaded
+                    bytesReceived += rv;
+                    std::string_view view(fullResponse, bytesReceived);
+                    size_t header_pos = view.find("\r\n\r\n");
+                    if (header_pos != std::string_view::npos) {
+                        size_t header_size = header_pos + 4;
+                        // search for "Content-Length"
+                        contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
+                        totalSize = header_size + contentLength;
+                        ssize_t remaining = totalSize - bytesReceived;
+                        if (remaining > 0) {
+                            fullResponse = (char *)realloc(fullResponse, totalSize);
+                            char * buf_front = fullResponse + bytesReceived;
+                            rv = sock->recv(buf_front, remaining, MSG_WAITALL);
+                            if (rv >= 0) {
+                                bytesReceived += rv;
+                                break;
+                            }
+                            if (rv < 0 || bytesReceived < contentLength) {
+                                // error reading from socket
+                                break;
+                            }
                         }
                     }
+                } else {
+                    // no content length found?
+                    break;
                 }
-            } else {
-                // no content length found?
-                break;
             }
-        }
-        // full response is completely downloaded now we can process
-        // this should add all the links to the queue
-        process(full_response, bytes_received);
+        } while (checkRedirects(fullResponse, bytesReceived, request) && ++redirectCount < 10);
+
+        process(fullResponse, bytesReceived);
 
         // either going to write to a file or add another request to the queue
         // write it to a file
         std::string filename = request.filename();
         std::ofstream outfile(filename);
-        outfile.write(full_response, total_size);
+        outfile.write(fullResponse, totalSize);
         outfile.close();
-        free(full_response);
+        free(fullResponse);
         fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
 
-        if (request.path == "robots.txt") {
+        if (request.robots()) {
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
             robots->SubmitRobotsTxt(request.host, filename);
             robots->unlock();
         }
-
-        //handle robots.txt files
-        if (request.path.find("robots.txt") != std::string::npos)
-        {
-            //TODO (Graham and Dennis): Replace CRAWLER.robotstxt with the instance of RobotsTxt object
-            //that our crawler will have (there should only be one RobotsTxt object which contains
-            //all RobotsTxt info). Also, need to populate variable filePath, a string that contains
-            //the file path in disc that we saved our file. Consider making this filePath a part of 
-            //class HTTPrequest so I can just send the request object to submitRobotsTxt()
-            //CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
-        }
     }
 
     void HTTPClient::process(char * file, size_t len) {
-         
+
     }
 
-    char * HTTPClient::checkRedirects(const char * getMessage){
+    // returns true if we need to fetch another page
+    // returns false if we do not need to read another page
+    // if this function returns true, &request is overwritten
+    // and a new HTTPRequest is constructed for the new page
+    // that is going to be fetched. 
+    bool HTTPClient::checkRedirects(char * file, size_t len, HTTPRequest &request) {
+        char * result = checkRedirectsHelper(file);
+        if (result) {
+            request = HTTPRequest(std::string(result));
+            free(result);
+            return true;
+        }
+        return false;
+    }
+
+    char * HTTPClient::checkRedirectsHelper(const char * getMessage){
         const char& redirectLeadInt = getMessage[9];
         if (redirectLeadInt == '3'){
             //Convert GET message to string for ease of access

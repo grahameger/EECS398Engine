@@ -34,6 +34,7 @@ namespace search {
                 // get the robots.txt file
                 std::string newUrl = "http://" + host + "/robots.txt";
                 client.SubmitURLSync(newUrl);
+                return nullptr;
             }
 
             // check the domain timer, we want to wait
@@ -41,7 +42,7 @@ namespace search {
             pthread_mutex_lock(&domainMutex);
             auto it = lastHitHost.find(host);
             if (it != lastHitHost.end()) {
-                if (difftime(time(NULL), it->second) > WAIT_TIME) {
+                if (difftime(time(NULL), it->second) > DOMAIN_REHIT_WAIT_TIME) {
                     // reset the time
                     it->second = time(NULL);
                     // unlock mutex
@@ -88,14 +89,14 @@ namespace search {
         q.push(seedUrls);
 
         // when does this run?
-        for (size_t i = 0; i < NUM_THREADS; i++) {
+        for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
         }
     }
 
     // just join and never ever quit
     Crawler::~Crawler() {
-        for (size_t i = 0; i < NUM_THREADS; i++)
+        for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++)
         {
             pthread_join(threads[i], NULL);
         }
