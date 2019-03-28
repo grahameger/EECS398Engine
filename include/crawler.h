@@ -7,8 +7,9 @@
 //
 // Base Crawler Class
 
-#ifndef crawler_hpp_398
-#define crawler_hpp_398
+#pragma once
+#ifndef EECS398_CRAWLER_H
+#define EECS398_CRAWLER_H
 
 #include <string>
 #include <vector>
@@ -20,10 +21,9 @@
 #include <time.h>
 #include <mutex>
 
-#include "http.hpp"
-#include "thread_queue.hpp"
-#include "semaphore.hpp"
-#include "RobotsTxt.h"
+#include "http.h"
+#include "threading.h"
+#include "constants.h"
 
 namespace search {
 
@@ -35,16 +35,24 @@ namespace search {
         void * stub();
         static void * stubHelper(void * context);
 
-    private:
-        static const size_t NUM_THREADS = 10000;
-        static const size_t WAIT_TIME = 3;
 
+        bool haveRobots(const std::string &domain);
+
+        static void domainLock();
+        static void domainUnlock();
+
+    private:
         threading::ThreadQueue<std::string> q;
-        pthread_t threads[NUM_THREADS];
+        static const size_t NUM_CRAWLER_THREADS = 1;
+        static const size_t DOMAIN_REHIT_WAIT_TIME = 3;
+        pthread_t threads[NUM_CRAWLER_THREADS];
 
         HTTPClient client;
 
-        pthread_mutex_t domainMutex;
+        inline static pthread_mutex_t domainMutex;
+
+        RobotsTxt * robots;
+        
         std::unordered_map<std::string, time_t> lastHitHost;
     };
 }

@@ -1,5 +1,6 @@
-#ifndef LRUCACHE_H
-#define LRUCACHE_H
+#pragma once
+#ifndef LRUCACHE_H_398
+#define LRUCACHE_H_398
 
 #include <unordered_map>
 #include <list>

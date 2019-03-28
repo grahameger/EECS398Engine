@@ -6,7 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
-#include "http.hpp"
+#include "http.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -21,61 +21,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 namespace search {
-    static const std::string getMethod = "GET";
-    static const std::string endl = "\r\n";
-    static const std::string httpVersion = "HTTP/1.1";
-    static const std::string hostString = "Host: ";
-    static const std::string connClose = "Connection: close" + endl;
-    static const std::string userAgent = "User-Agent: Ceatles/1.0 (Linux)";
-    static const std::string encoding = "Accept-Encoding: identity";
-    static const std::string httpStr = "http";
-    static const std::string httpsStr = "https";
-    static const std::string port80 = "80";
-    static const std::string port443 = "443";
-
-    std::string HTTPRequest::filename() const {
-        auto s = host + path + query;
-        std::replace(s.begin(), s.end(), '/', '_');
-        if (path == "robots.txt") {
-            s = "robots/" + s;
-        } else {
-            s = "pages/" + s;
-        }
-        return s;
-    }
-
-    std::string HTTPRequest::requestString() const {
-        std::stringstream ss;
-        ss << method << ' ' << path << ' ' << httpVersion << endl;
-        ss << hostString << ' ' << host << endl;
-        ss << userAgent << endl;
-        ss << encoding << endl;
-        ss << connClose << endl;
-        return ss.str();
-    }
 
     // returns true if the given url has already been fetched
     bool alreadyFetched(const std::string &url) {
-        auto filename = parseURLStack(url).filename();
+        auto filename = HTTPRequest(url).filename();
         struct stat buffer;
         return (stat (filename.c_str(), &buffer) == 0);
-    }
-
-    void HTTPRequest::print() {
-        std::stringstream ss;
-        ss << "{\n";
-        ss << "\t" << "method: " << method << '\n';
-        ss << "\t" << "host: " << host << '\n';
-        ss << "\t" << "path: " << path << '\n';
-        ss << "\t" << "query: " << query << '\n';
-        ss << "\t" << "fragment: " << fragment << '\n';
-        ss << "\t" << "headers: " << headers << '\n';
-        ss << "\t" << "protocol: " << protocol << '\n';
-        ss << "\t" << "port: " << port << '\n';
-        ss << "}\n";
-        std::cout << ss.str() << std::flush;
     }
 
     // returns a connected socket, -1 if error
@@ -110,7 +62,7 @@ namespace search {
                 }
             }
             // timeout section of the show
-            timeval tm = {TIMEOUTSECONDS, TIMEOUTUSECONDS};
+            timeval tm = {constants::TIMEOUTSECONDS, constants::TIMEOUTUSECONDS};
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
                 fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
                 close(sockfd);
@@ -135,6 +87,8 @@ namespace search {
     }
 
     HTTPClient::HTTPClient() {
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
+
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
         SSL_library_init();
@@ -156,40 +110,6 @@ namespace search {
     void HTTPClient::destroySSL() {
         ERR_free_strings();
         EVP_cleanup();
-    }
-
-    // parse a well formed url and get the stuff within
-    // URI = scheme:[//authority]path[?query][#fragment]
-    // authority = [userinfo@]host[:port]
-    // uses the RFC 3986 regex suggestion for URL parsing
-    // Using GCC 8.2.0 on Linux the return value is moved
-    // not copied. Therefore it is faster than the heap
-    // based version. 
-    // Bad urls will copy the empty request but will not
-    // run a bunch of std::string constructors.
-    HTTPRequest parseURLStack(const std::string &url) {
-        static std::regex r(
-                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
-                std::regex::extended
-        );
-        std::smatch result;
-        if (std::regex_match(url, result, r)) {
-            HTTPRequest rv;
-            rv.protocol = result[2];
-            rv.host = result[4];
-            rv.path = result[5];
-            rv.query = result[7];
-            rv.fragment = result[9];
-            if (rv.path == "")
-                rv.path = "/";
-            return rv;
-        } else {
-            return emptyHTTPRequest;
-        }
-    }
-
-    std::string getHost(const std::string& url) {
-        return parseURLStack(url).host;
     }
 
     static ssize_t getContentLength(std::string_view response) {
@@ -223,16 +143,20 @@ namespace search {
         return rv;
     }
 
-    void HTTPClient::SubmitURLSync(const std::string &url) {
-        HTTPRequest request = parseURLStack(url);
+    void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
+        if (redirCount > REDIRECT_MAX) {
+            fprintf(stderr, "Too many redirects ending in host %s", url.c_str());
+            return;
+        }
+        HTTPRequest request(url);
         std::unique_ptr<Socket> sock;
-        request.method = getMethod;
-        request.headers = connClose;
-        if (request.protocol == httpsStr) {
+        request.method = constants::getMethod;
+        request.headers = constants::connClose;
+        if (request.protocol == constants::httpsStr) {
             request.port = 443;
             sock = std::unique_ptr<SecureSocket>(new SecureSocket);
         }
-        else if (request.protocol == httpStr) {
+        else if (request.protocol == constants::httpStr) {
             request.port = 80;
             sock = std::unique_ptr<Socket>(new Socket);
         }
@@ -250,6 +174,13 @@ namespace search {
             fprintf(stderr, "error setting file descriptor for host '%s' : %s", url.c_str(), strerror(errno));
             return;
         }
+
+        rv = 0;
+        int bytesReceived = 0;
+        size_t totalSize = 0;
+        ssize_t contentLength = -1;
+        char * fullResponse = (char*)malloc(constants::BUFFER_SIZE);
+
         // send request blocking
         const std::string requestStr = request.requestString();
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
@@ -260,42 +191,37 @@ namespace search {
         // every time recv returns we'll look for "Content-Length", length of the body
         // when we get t he length of the body then we can have a hard coded size to check for
         // get the size of the header by searching for /r/n/r/n
-        rv = 0;
-        ssize_t content_length = -1;
-        int bytes_received = 0;
-        char * full_response = (char*)malloc(BUFFER_SIZE);
-        size_t total_size = 0;
         while (true) {
-            rv = sock->recv(full_response + bytes_received, BUFFER_SIZE - bytes_received, 0);
+            rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
             if (rv < 0) {
                 // error check
                 fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
-                free(full_response);
+                free(fullResponse);
                 return;
             } else if (rv == 0) {
                 // handle EOF
                 break;
                 // might need to do more?
-            } else if (content_length == -1) {
+            } else if (contentLength == -1) {
                 // check if the header has been downloaded
-                bytes_received += rv;
-                std::string_view view(full_response, bytes_received);
+                bytesReceived += rv;
+                std::string_view view(fullResponse, bytesReceived);
                 size_t header_pos = view.find("\r\n\r\n");
                 if (header_pos != std::string_view::npos) {
                     size_t header_size = header_pos + 4;
                     // search for "Content-Length"
-                    content_length = getContentLength(std::string_view(full_response, bytes_received));
-                    total_size = header_size + content_length;
-                    ssize_t remaining = total_size - bytes_received;
+                    contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
+                    totalSize = header_size + contentLength;
+                    ssize_t remaining = totalSize - bytesReceived;
                     if (remaining > 0) {
-                        full_response = (char *)realloc(full_response, total_size);
-                        char * buf_front = full_response + bytes_received;
+                        fullResponse = (char *)realloc(fullResponse, totalSize);
+                        char * buf_front = fullResponse + bytesReceived;
                         rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                         if (rv >= 0) {
-                            bytes_received += rv;
+                            bytesReceived += rv;
                             break;
                         }
-                        if (rv < 0 || bytes_received < content_length) {
+                        if (rv < 0 || bytesReceived < contentLength) {
                             // error reading from socket
                             break;
                         }
@@ -306,68 +232,72 @@ namespace search {
                 break;
             }
         }
-        // full response is completely downloaded now we can process
-        // this should add all the links to the queue
-        process(full_response, bytes_received);
+
+        char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
+        if (redirectUrl) {
+            free(fullResponse);
+            return SubmitURLSync(redirectUrl, ++redirCount);
+        }
+
+        process(fullResponse, bytesReceived);
 
         // either going to write to a file or add another request to the queue
         // write it to a file
-        auto filename = request.filename();
+        std::string filename = request.filename();
         std::ofstream outfile(filename);
-        outfile.write(full_response, total_size);
+        outfile.write(fullResponse, totalSize);
         outfile.close();
-        free(full_response);
+        free(fullResponse);
         fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
 
-        //handle robots.txt files
-        if(request.path.find("robots.txt") != std::string::npos)
-        {
-            //TODO (Graham and Dennis): Replace CRAWLER.robotstxt with the instance of RobotsTxt object
-            //that our crawler will have (there should only be one RobotsTxt object which contains
-            //all RobotsTxt info). Also, need to populate variable filePath, a string that contains
-            //the file path in disc that we saved our file. Consider making this filePath a part of 
-            //class HTTPrequest so I can just send the request object to submitRobotsTxt()
-            //CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
+        if (request.robots()) {
+            // TODO: make the data structure itself thread safe in a
+            // more optimized way than doing this...
+            robots->lock();
+            robots->SubmitRobotsTxt(request.host, filename);
+            robots->unlock();
         }
     }
 
     void HTTPClient::process(char * file, size_t len) {
-    
+
     }
 
-    char* HTTPClient::check_redirects(char * get_message){
-        char redirect_lead_int = get_message[9];
-        char* no_redirects = (char*)"No redirects\n";
-        if (redirect_lead_int == '3'){
+    char * HTTPClient::checkRedirectsHelper(const char * getMessage, const size_t len) {
+        if (len < 10) {
+            return nullptr;
+        }
+        const char& redirectLeadInt = getMessage[9];
+        if (redirectLeadInt == '3'){
             //Convert GET message to string for ease of access
-            std::string message_copy = get_message;
-            std::string curr_line = "";
-            std::string redirected_url = "";
+            std::string messageCopy(getMessage);
+            std::string currentLine;
+            std::string redirURL;
             //Parse GET message
-            for (int i = 0; i < message_copy.length(); ++i){
+            for (size_t i = 0; i < messageCopy.length(); ++i){
                 //Found the redirected link URL
-                if (curr_line == "Location: " || curr_line == "location: "){
-                    while (message_copy[i] != '\n'){
-                        redirected_url += message_copy[i];
+                if (currentLine == "Location: " || currentLine == "location: "){
+                    while (messageCopy[i] != '\n'){
+                        redirURL += messageCopy[i];
                         i++;
                     }
                     break;
                 }
                 //Reset parsed line if newline char found
-                else if (message_copy[i] == '\n'){
-                    curr_line = "";
+                else if (messageCopy[i] == '\n'){
+                    currentLine = "";
                 }
                 //Append GET message to curr_line to scan for 'Location: ' string
                 else {
-                    curr_line += message_copy[i];
+                    currentLine += messageCopy[i];
                 }
             }
-            char* final_url = new char [redirected_url.length() + 1];
-            strcpy(final_url, redirected_url.c_str());
-            return final_url;
+            char * finalUrl = (char*)calloc(redirURL.length() + 1, sizeof(char));
+            strcpy(finalUrl, redirURL.c_str());
+            return finalUrl;
         }
         else {
-            return no_redirects;
+            return nullptr;
         }
     }
 
@@ -388,11 +318,6 @@ namespace search {
         if (!ssl) {
             // log error
         }
-        //int sslsock = ::SSL_get_fd(ssl);
-        // if (sslsock < 0) {
-        //     // the operation failed because the underlying BIO
-        //     // is not of the correct type
-        // }
         ::SSL_set_fd(ssl, sockfd);
         int rv = ::SSL_connect(ssl);
         if (rv <= 0) {
@@ -495,4 +420,5 @@ namespace search {
         }
         return 0;
     }
+    
 }

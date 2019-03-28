@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef DIRECTORYRULES_H
 #define DIRECTORYRULES_H
 

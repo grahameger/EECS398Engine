@@ -7,7 +7,7 @@
 //
 // Base Crawler Class
 
-#include "crawler.hpp"
+#include "crawler.h"
 
 namespace search {
 
@@ -18,23 +18,37 @@ namespace search {
         }
     }
 
+    inline bool Crawler::haveRobots(const std::string &host) {
+        struct stat st = {0};
+        auto path = std::string("robots/" + host);
+        return (stat(path.c_str(), &st) == 0);    
+    }
+
     void * Crawler::stub() {
         while (true) {
-            auto p = q.pop();
-            auto host = getHost(p);
+            std::string p = q.pop();
+            std::string host = HTTPRequest(p).host;
+
+            // check if we have the robots file for this domain
+            if (!haveRobots(host)) {
+                // get the robots.txt file
+                std::string newUrl = "http://" + host + "/robots.txt";
+                client.SubmitURLSync(newUrl, 0);
+                return nullptr;
+            }
 
             // check the domain timer, we want to wait
             // WAIT_TIME seconds between pages on the same host
             pthread_mutex_lock(&domainMutex);
             auto it = lastHitHost.find(host);
             if (it != lastHitHost.end()) {
-                if (difftime(time(NULL), it->second) > WAIT_TIME) {
+                if (difftime(time(NULL), it->second) > DOMAIN_REHIT_WAIT_TIME) {
                     // reset the time
                     it->second = time(NULL);
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // submitURLSync();
-                    client.SubmitURLSync(p);
+                    client.SubmitURLSync(p, 0);
                     // continue
                     continue;
                 } else {
@@ -51,7 +65,7 @@ namespace search {
                 // unlock mutex
                 pthread_mutex_unlock(&domainMutex);
                 // submitURLSync
-                client.SubmitURLSync(p);
+                client.SubmitURLSync(p, 0);
                 // continue
                 continue;
             }
@@ -65,6 +79,7 @@ namespace search {
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
 
         // make the robots and pages directory
         makeDir("robots");
@@ -74,16 +89,24 @@ namespace search {
         q.push(seedUrls);
 
         // when does this run?
-        for (size_t i = 0; i < NUM_THREADS; i++) {
+        for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
         }
     }
 
     // just join and never ever quit
     Crawler::~Crawler() {
-        for (size_t i = 0; i < NUM_THREADS; i++)
+        for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++)
         {
             pthread_join(threads[i], NULL);
         }
+    }
+
+    inline void Crawler::domainLock() {
+        pthread_mutex_lock(&domainMutex);
+    }
+
+    inline void Crawler::domainUnlock() {
+        pthread_mutex_unlock(&domainMutex);
     }
 }

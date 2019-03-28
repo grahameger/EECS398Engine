@@ -1,5 +1,6 @@
-#ifndef TOKENSTREAM_H
-#define TOKENSTREAM_H
+#pragma once
+#ifndef TOKENSTREAM_H_398
+#define TOKENSTREAM_H_398
 
 #include "String.h"
 #include "List.h"

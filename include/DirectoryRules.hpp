@@ -1,5 +1,6 @@
-#ifndef DIRECTORYRULES_H
-#define DIRECTORYRULES_H
+#pragma once
+#ifndef DIRECTORYRULES_HPP
+#define DIRECTORYRULES_HPP
 
 #include <string>
 #include <set>

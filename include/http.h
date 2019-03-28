@@ -6,6 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
+#pragma once
 #ifndef http_hpp_398
 #define http_hpp_398
 
@@ -48,46 +49,24 @@
 # include <openssl/conf.h>
 #endif
 
-#include "event.hpp"
+#include "threading.h"
+#include "httpRequest.h"
+#include "constants.h"
+#include "RobotsTxt.h"
 
-
+class RobotsTxt; 
 namespace search {
-
-    struct HTTPRequest
-    {
-        // can optimize this later
-        std::string filename() const;
-        std::string requestString() const;
-        void print();
-        std::string   method;       // only GET implemented
-        std::string   host;
-        std::string   path;
-        std::string   query;
-        std::string   fragment;
-        std::string   headers;
-        std::string   protocol;
-        int           port;         // note 0 defaults to 80
-    };
-    HTTPRequest * parseURL(const std::string &url);
-    std::string getHost(const std::string& url);
-    HTTPRequest parseURLStack(const std::string &url);
-    static const HTTPRequest emptyHTTPRequest = HTTPRequest();
 
     class HTTPClient {
     public:
         HTTPClient();
         ~HTTPClient();
-        void SubmitURLSync(const std::string &url);
+        void SubmitURLSync(const std::string &url, size_t redirCount);
         static void * SubmitUrlSyncWrapper(void * context);
+
     private:
-        static const size_t MAX_CONNECTIONS = 1000;
-        static const size_t RECV_SIZE = 8192;
-        static const size_t BUFFER_SIZE = RECV_SIZE;
-        static const size_t NUM_THREADS = 4;
-        static const uint32_t SLEEP_US = 10000;
-        static const size_t DEFAULT_FILE_SIZE = 1024000; // 1MiB or 256 pages
-        static const long int TIMEOUTSECONDS = 5;
-        static const long int TIMEOUTUSECONDS = 0;
+
+        static const size_t REDIRECT_MAX = 20;
 
         // returns connected TCP socket to host
         int getConnToHost(const std::string &host, int port, bool blocking = false);
@@ -95,6 +74,8 @@ namespace search {
         // 'main' function our worker threads run
         void processResponses();
         void process(char* file, size_t len);
+
+        char * checkRedirectsHelper(const char * getMessage, size_t len);
 
         // given a socket return the clientInfo
         std::mutex m;
@@ -106,6 +87,8 @@ namespace search {
         void destroySSL();
 
         static inline SSL_CTX * sslContext;
+
+        RobotsTxt * robots;
 
         struct Socket {
         public:
