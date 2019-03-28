@@ -66,6 +66,8 @@ namespace search {
 
     private:
 
+        static const size_t REDIRECT_MAX = 20;
+
         // returns connected TCP socket to host
         int getConnToHost(const std::string &host, int port, bool blocking = false);
 

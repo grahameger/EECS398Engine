@@ -144,7 +144,7 @@ namespace search {
     }
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
-        if (redirCount > 20) {
+        if (redirCount > REDIRECT_MAX) {
             fprintf(stderr, "Too many redirects ending in host %s", url.c_str());
             return;
         }
