@@ -7,7 +7,7 @@
 //
 // Base Crawler Class
 
-#include "crawler.hpp"
+#include "crawler.h"
 
 namespace search {
 
@@ -27,7 +27,7 @@ namespace search {
     void * Crawler::stub() {
         while (true) {
             std::string p = q.pop();
-            std::string host = getHost(p);
+            std::string host = HTTPRequest(p).host;
 
             // check if we have the robots file for this domain
             if (!haveRobots(host)) {
@@ -78,6 +78,7 @@ namespace search {
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
 
         // make the robots and pages directory
         makeDir("robots");

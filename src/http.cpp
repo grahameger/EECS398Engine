@@ -6,8 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
-#include "http.hpp"
-#include "crawler.hpp"
+#include "http.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -23,59 +22,12 @@
 #include <stdlib.h>
 
 namespace search {
-    static const std::string getMethod = "GET";
-    static const std::string endl = "\r\n";
-    static const std::string httpVersion = "HTTP/1.1";
-    static const std::string hostString = "Host: ";
-    static const std::string connClose = "Connection: close" + endl;
-    static const std::string userAgent = "User-Agent: Ceatles/1.0 (Linux)";
-    static const std::string encoding = "Accept-Encoding: identity";
-    static const std::string httpStr = "http";
-    static const std::string httpsStr = "https";
-    static const std::string port80 = "80";
-    static const std::string port443 = "443";
-
-    std::string HTTPRequest::filename() const {
-        auto s = host + path + query;
-        std::replace(s.begin(), s.end(), '/', '_');
-        if (path == "robots.txt") {
-            s = "robots/" + s;
-        } else {
-            s = "pages/" + s;
-        }
-        return s;
-    }
-
-    std::string HTTPRequest::requestString() const {
-        std::stringstream ss;
-        ss << method << ' ' << path << ' ' << httpVersion << endl;
-        ss << hostString << ' ' << host << endl;
-        ss << userAgent << endl;
-        ss << encoding << endl;
-        ss << connClose << endl;
-        return ss.str();
-    }
 
     // returns true if the given url has already been fetched
     bool alreadyFetched(const std::string &url) {
-        auto filename = parseURLStack(url).filename();
+        auto filename = HTTPRequest(url).filename();
         struct stat buffer;
         return (stat (filename.c_str(), &buffer) == 0);
-    }
-
-    void HTTPRequest::print() {
-        std::stringstream ss;
-        ss << "{\n";
-        ss << "\t" << "method: " << method << '\n';
-        ss << "\t" << "host: " << host << '\n';
-        ss << "\t" << "path: " << path << '\n';
-        ss << "\t" << "query: " << query << '\n';
-        ss << "\t" << "fragment: " << fragment << '\n';
-        ss << "\t" << "headers: " << headers << '\n';
-        ss << "\t" << "protocol: " << protocol << '\n';
-        ss << "\t" << "port: " << port << '\n';
-        ss << "}\n";
-        std::cout << ss.str() << std::flush;
     }
 
     // returns a connected socket, -1 if error
@@ -110,7 +62,7 @@ namespace search {
                 }
             }
             // timeout section of the show
-            timeval tm = {TIMEOUTSECONDS, TIMEOUTUSECONDS};
+            timeval tm = {constants::TIMEOUTSECONDS, constants::TIMEOUTUSECONDS};
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
                 fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
                 close(sockfd);
@@ -135,7 +87,7 @@ namespace search {
     }
 
     HTTPClient::HTTPClient() {
-        robotsMutex = PTHREAD_MUTEX_INITIALIZER;
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
 
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
@@ -158,40 +110,6 @@ namespace search {
     void HTTPClient::destroySSL() {
         ERR_free_strings();
         EVP_cleanup();
-    }
-
-    // parse a well formed url and get the stuff within
-    // URI = scheme:[//authority]path[?query][#fragment]
-    // authority = [userinfo@]host[:port]
-    // uses the RFC 3986 regex suggestion for URL parsing
-    // Using GCC 8.2.0 on Linux the return value is moved
-    // not copied. Therefore it is faster than the heap
-    // based version. 
-    // Bad urls will copy the empty request but will not
-    // run a bunch of std::string constructors.
-    HTTPRequest parseURLStack(const std::string &url) {
-        static std::regex r(
-                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
-                std::regex::extended
-        );
-        std::smatch result;
-        if (std::regex_match(url, result, r)) {
-            HTTPRequest rv;
-            rv.protocol = result[2];
-            rv.host = result[4];
-            rv.path = result[5];
-            rv.query = result[7];
-            rv.fragment = result[9];
-            if (rv.path == "")
-                rv.path = "/";
-            return rv;
-        } else {
-            return emptyHTTPRequest;
-        }
-    }
-
-    std::string getHost(const std::string& url) {
-        return parseURLStack(url).host;
     }
 
     static ssize_t getContentLength(std::string_view response) {
@@ -226,15 +144,15 @@ namespace search {
     }
 
     void HTTPClient::SubmitURLSync(const std::string &url) {
-        HTTPRequest request = parseURLStack(url);
+        HTTPRequest request(url);
         std::unique_ptr<Socket> sock;
-        request.method = getMethod;
-        request.headers = connClose;
-        if (request.protocol == httpsStr) {
+        request.method = constants::getMethod;
+        request.headers = constants::connClose;
+        if (request.protocol == constants::httpsStr) {
             request.port = 443;
             sock = std::unique_ptr<SecureSocket>(new SecureSocket);
         }
-        else if (request.protocol == httpStr) {
+        else if (request.protocol == constants::httpStr) {
             request.port = 80;
             sock = std::unique_ptr<Socket>(new Socket);
         }
@@ -265,10 +183,10 @@ namespace search {
         rv = 0;
         ssize_t content_length = -1;
         int bytes_received = 0;
-        char * full_response = (char*)malloc(BUFFER_SIZE);
+        char * full_response = (char*)malloc(constants::BUFFER_SIZE);
         size_t total_size = 0;
         while (true) {
-            rv = sock->recv(full_response + bytes_received, BUFFER_SIZE - bytes_received, 0);
+            rv = sock->recv(full_response + bytes_received, constants::BUFFER_SIZE - bytes_received, 0);
             if (rv < 0) {
                 // error check
                 fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
@@ -324,9 +242,9 @@ namespace search {
         if (request.path == "robots.txt") {
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
-            robotLock();
-            robots.SubmitRobotsTxt(request.host, filename);
-            robotUnlock();
+            robots->lock();
+            robots->SubmitRobotsTxt(request.host, filename);
+            robots->unlock();
         }
 
         //handle robots.txt files
@@ -498,14 +416,6 @@ namespace search {
             return rv;
         }
         return 0;
-    }
-
-    inline void HTTPClient::robotLock() {
-        pthread_mutex_lock(&robotsMutex);
-    }
-
-    inline void HTTPClient::robotUnlock() {
-        pthread_mutex_unlock(&robotsMutex);
     }
     
 }

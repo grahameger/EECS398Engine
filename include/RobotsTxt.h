@@ -1,14 +1,19 @@
+// Created by Dennis Li
+// Graham Eger added threading functions on 3/29
+
 #pragma once
 
 #ifndef ROBOTSTXT_H_398
 #define ROBOTSTXT_H_398
 
 #include <string>
-#include "http.hpp"
+#include "threading.h"
 #include "String.h"
 #include "LRUCache.hpp"
+#include "threading.h"
 #include "DomainRules.h"
 #include "DirectoryRules.h"
+#include "http.h"
 
 
 namespace search {
@@ -41,6 +46,12 @@ public:
    //that should be constructed upon getting a new file (http must be changed)
    bool GetRule(string &path, string &domain);
 
+   threading::Mutex m;
+
+   void lock();
+
+   void unlock();
+ 
 private:
    LRUCache<string, DomainRules*> domainRulesCache;
    void ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules);

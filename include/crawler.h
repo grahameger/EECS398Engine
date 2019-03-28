@@ -21,9 +21,8 @@
 #include <time.h>
 #include <mutex>
 
-#include "http.hpp"
-#include "thread_queue.hpp"
-#include "semaphore.hpp"
+#include "http.h"
+#include "threading.h"
 
 namespace search {
 
@@ -44,13 +43,14 @@ namespace search {
     private:
         static const size_t NUM_THREADS = 10000;
         static const size_t WAIT_TIME = 3;
-
         threading::ThreadQueue<std::string> q;
         pthread_t threads[NUM_THREADS];
 
         HTTPClient client;
 
         inline static pthread_mutex_t domainMutex;
+
+        RobotsTxt * robots;
         
         std::unordered_map<std::string, time_t> lastHitHost;
     };
