@@ -1,3 +1,4 @@
+#pragma once
 #ifndef DOMAINROBOTSTXTRULES_H
 #define DOMAINROBOTSTXTRULES_H
 

@@ -1,4 +1,6 @@
-#include "http.hpp"
+// Created by Dennis Li
+// Graham Eger added threading functions on 3/29
+
 #include "RobotsTxt.h"
 
 const size_t CACHE_CAPACITY = 10000;
@@ -167,3 +169,12 @@ bool RobotsTxt::GetRule(string path, string &domain)
       return domainRule->IsAllowed(tmpPath);
       }
    }
+
+void RobotsTxt::lock() {
+   m.lock();
+}
+
+void RobotsTxt::unlock() {
+   m.unlock();
+}
+

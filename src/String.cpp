@@ -1,4 +1,5 @@
 #include <cstring>
+#include <cctype>
 #include "String.h"
 
 const char* String::nullString = "";
@@ -111,13 +112,32 @@ const char String::operator[ ] ( int index ) const
 
 char& String::operator[ ] ( int index )
    {
-   if ( cstring == nullptr )
-      {
-      cstring = new char[ 1 ];
-      cstring[ 0 ] = 0;
-	  }
-   
+   if ( cstring == nullptr ) {
+      cstring = new char[1];
+      cstring[0] = 0x0;
+      return cstring[index];
+   }
    return cstring[ index ];
+   }
+
+
+String& String::operator+= ( const String& rhs )
+   {
+   if ( rhs.cstring == nullptr )
+      return *this;
+
+   int newSize = size + rhs.size;
+   char* newCString = new char[newSize + 1];
+
+   if ( cstring != nullptr )
+      strcpy( newCString, cstring );
+   strcpy( newCString + size, rhs.cstring );
+
+   delete cstring;
+   cstring = newCString;
+   size = newSize;
+
+   return *this;
    }
 
 
@@ -125,3 +145,16 @@ String::operator bool( ) const
    {
    return size > 0;
    }
+
+void String::RemoveWhitespace() 
+  {
+  char* i = cstring;
+  char* j = cstring;
+  while(*j != 0)
+  {
+    *i = *j++;
+    if(!isspace(*i))
+      i++;
+  }
+  *i = 0;
+  }

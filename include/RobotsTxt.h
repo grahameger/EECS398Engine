@@ -1,10 +1,24 @@
-#ifndef ROBOTSTXT_H
-#define ROBOTSTXT_H
+// Created by Dennis Li
+// Graham Eger added threading functions on 3/29
+
+#pragma once
+
+#ifndef ROBOTSTXT_H_398
+#define ROBOTSTXT_H_398
+
 #include <string>
+#include "threading.h"
+#include "String.h"
 #include "LRUCache.hpp"
+#include "threading.h"
 #include "DomainRules.h"
 #include "DirectoryRules.h"
-#include "http.hpp"
+#include "http.h"
+
+
+namespace search {
+   struct HTTPRequest;
+}
 
 using std::string;
 using std::vector;
@@ -34,6 +48,12 @@ public:
    //If you do this please leave a warning
    bool GetRule(string path, string &domain);
 
+   threading::Mutex m;
+
+   void lock();
+
+   void unlock();
+ 
 private:
    LRUCache<string, DomainRules*> domainRulesCache;
    void ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules);

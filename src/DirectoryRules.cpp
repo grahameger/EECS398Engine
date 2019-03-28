@@ -132,7 +132,7 @@ void DirectoryRules::GetVectorizedRules(vector<DirectoryRules*> &dstVec)
 
 void DirectoryRules::SaveRulesVector(FILE *fp)
 {
-    fprintf(fp, directoryName.c_str());
+    fprintf(fp, "%s", directoryName.c_str());
     fprintf(fp, " ");
 
     if(isAllowed)
