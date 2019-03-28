@@ -8,7 +8,7 @@ const size_t CACHE_CAPACITY = 3;
 RobotsTxt::RobotsTxt()
    : domainRulesCache(CACHE_CAPACITY) {}
 
-void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc) //given url?
+void RobotsTxt::SubmitRobotsTxt(string domain, string pathOnDisc) //given url?
    {
    DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
    domainRulesCache.put(domain, newDomainRules);
@@ -27,7 +27,7 @@ DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName,
 
 void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
    {
-   char curChar = (char)fgetc(file);
+   char curChar = fgetc(file);
    while(curChar != EOF)
        {
        //get name of directory
@@ -58,23 +58,36 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
 
        if(curChar == '1')
            {
-           isAllowed = true;
+           hasRule = true;
            }
 
        //children indices
        std::vector<int> childrenInd;
-       while(curChar != '\n' && curChar != EOF)
-           {
-           childrenInd.push_back(curChar - '0');
-           curChar = (char)fgetc(file);
-           }
+       curChar = (char)fgetc(file);
+       while(curChar != '\n' && curChar != EOF && curChar != ' ')
+          {
+          int index = curChar - '0';
+          curChar = (char)fgetc(file); //process the space
+          //handle multi digit numbers
+          while(curChar != ' ' && curChar != EOF)
+             {
+             index *= 10;
+             index += curChar - '0';
+             curChar = (char)fgetc(file); //process the space
+             }
+
+         childrenInd.push_back(index);
+         //get next index char
+         curChar = (char)fgetc(file);
+         }
+      
+      if(curChar == ' ') curChar = (char)fgetc(file);
 
        //create new DirectoryRules object
        DirectoryRules *newRule = CreateDirectoryRules(dirName, 
           childrenInd, isAllowed, hasRule); 
        rules.push_back(newRule);
-
-       //read in newLine
+       
        curChar = (char)fgetc(file);
        }
    }
@@ -97,10 +110,14 @@ void RobotsTxt::CreateDirectoryRuleTree(vector<DirectoryRules*> &rules)
 bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    {
    string fileName = domain + ".txt";
+   //string fileName = "dennisli.txt";
    FILE *file = fopen(fileName.c_str(), "r");
    //file doesn't exist
    if(!file)
+      {
+      printf("File doesn't exist!");
       return false;
+      }
 
    vector<DirectoryRules*> rules;
    ReadRulesFromDisc(file, rules);
@@ -121,7 +138,7 @@ bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    return true;
    } 
 
-bool RobotsTxt::GetRule(string &path, string &domain)
+bool RobotsTxt::GetRule(string path, string domain)
    { 
    //Look in cache
    String tmpPath(path.c_str()); //todo remove
@@ -130,8 +147,7 @@ bool RobotsTxt::GetRule(string &path, string &domain)
       DomainRules *domainRule = domainRulesCache.get(domain);
       return domainRule->IsAllowed(tmpPath);
       }
-   //search disc
-   catch(const std::exception& e)
+   catch( ... )
       {
       bool transferSuccess = TransferRulesFromDiscToCache(domain);
       if(!transferSuccess)

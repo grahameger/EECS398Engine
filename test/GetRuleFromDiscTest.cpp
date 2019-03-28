@@ -1,23 +1,8 @@
 #include "RobotsTxt.h"
-#include "http.hpp"
-#define BOOST_TEST_MODULE DirectoryRuleTest
-#include <boost/test/included/unit_test.hpp>
-
+#include <assert.h>
 using namespace std;
 
-BOOST_AUTO_TEST_CASE( SubmitRobotsTxtSimple )
-{
-    string domain = "jebu.com";
-    string path = "robotsTxt/jebu.com/robots.txt"; //todo replace with real
-    //todo finish
-}
-
-BOOST_AUTO_TEST_CASE( GetRuleFromCache )
-{
-    //todo implement once we can submit
-}
-
-BOOST_AUTO_TEST_CASE( GetRuleFromDisc )
+int main()
 {
     string directory = "/";
     DirectoryRules rules(directory);

@@ -64,7 +64,7 @@ bool FindUserAgentRules( TokenStream& tokenStream )
    {
    while ( true )
       {
-	  if ( tokenStream.MatchNextKeyword( UserAgentCommand_G ) )
+	  if ( !tokenStream.MatchNextKeyword( UserAgentCommand_G ) )
 	     return false;
 	  tokenStream.DiscardWhitespace( );
 
@@ -105,10 +105,10 @@ Rule ReadNextRule( TokenStream& tokenStream )
 
 	  if ( !path ) continue;
 
-	  #ifdef TEST
+	  //#ifdef TEST
 	  std::cout << "Rule Found: " << path.CString( );
 	  std::cout << " is " << ( allowed ? "allowed" : "disallowed" ) << std::endl;
-	  #endif
+	  //#endif
 
 	  return { path, allowed };
 	  }

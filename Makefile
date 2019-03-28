@@ -29,6 +29,9 @@ clean:
 tester:
 	$(CC) $(CPPFLAGS) test/tester.cpp $(INC) $(LIB) -o bin/tester
 
+robots:
+	$(CC) $(CFLAGS) test/RobotsTxtTest.cpp $(INC) $(LIB) -o bin/robots-test
+
 # Spikes
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
