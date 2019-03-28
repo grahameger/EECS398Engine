@@ -60,7 +60,7 @@ namespace search {
     // based version. 
     // Bad urls will copy the empty request but will not
     // run a bunch of std::string constructors.
-    HTTPRequest::HTTPRequest(const std::string &url) {
+    HTTPRequest::HTTPRequest(std::string url) {
         static std::regex r(
                 R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended

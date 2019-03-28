@@ -11,7 +11,7 @@
 namespace search {
     struct HTTPRequest {
 
-        HTTPRequest(const std::string &url);
+        HTTPRequest(std::string url);
 
         // can optimize this later
         std::string filename() const;

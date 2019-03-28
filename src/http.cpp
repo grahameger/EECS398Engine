@@ -292,6 +292,9 @@ namespace search {
                     currentLine += messageCopy[i];
                 }
             }
+            redirURL.erase(std::remove_if(redirURL.begin(), redirURL.end(), [](char ch) {
+                return std::isspace(ch);
+            }), redirURL.end());
             char * finalUrl = (char*)calloc(redirURL.length() + 1, sizeof(char));
             strcpy(finalUrl, redirURL.c_str());
             return finalUrl;

@@ -25,6 +25,7 @@
 #include <string_view>
 #include <charconv>
 #include <cctype>
+#include <algorithm>
 
 #include <fcntl.h>
 #include <sys/types.h>
