@@ -10,8 +10,6 @@ struct Rule;
 #include "RobotsTxt.h"
 #include "DirectoryRules.h"
 
-//TODO create desctructor
-// TODO: Figure out how to deal with "*" wildcards in paths
 class DomainRules
    {
 public:
