@@ -11,13 +11,15 @@ struct Rule;
 #include "RobotsTxt.h"
 #include "DirectoryRules.h"
 
+//TODO create desctructor
+// TODO: Figure out how to deal with "*" wildcards in paths
 class DomainRules
    {
 public:
    DomainRules( const char* robotsFilename );
    //construct from existing DirectoryRules tree
    DomainRules( DirectoryRules* rootIn );
-   ~DomainRules( );
+   ~DomainRules();
    bool IsAllowed( String path );
    void WriteRulesToDisc( std::string &domain );
 
