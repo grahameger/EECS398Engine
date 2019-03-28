@@ -36,16 +36,18 @@ extern const size_t CACHE_CAPACITY;
 class RobotsTxt {
 public:
    RobotsTxt();
+   ~RobotsTxt();
    //Calling this function will replace any existing robotsTxt info
    //for this domain. It will always trigger both a store-in-cache
    //and save-to-disc
-   void SubmitRobotsTxt(string domain, string pathOnDisc); 
+   void SubmitRobotsTxt(string &domain, string &pathOnDisc); 
    //return true if allowed to crawl. false otherwise
    //path is the path of the http file you are getting the rule for, e.g. "/personal/dennis/resume.http"
    //As of now, we will save and search for all robotstxt parsed rules files in the current directory
-   //TODO: the arguments of this function should be grouped into class
-   //that should be constructed upon getting a new file (http must be changed)
-   bool GetRule(string path, string domain);
+   //GRAHAM - READ : You can change path to pass by reference if you are okay with path
+   //getting changed on an edge case. As is, we copy the path string every time :(
+   //If you do this please leave a warning
+   bool GetRule(string path, string &domain);
 
    threading::Mutex m;
 

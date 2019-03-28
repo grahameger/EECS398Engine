@@ -19,6 +19,7 @@ public:
    DomainRules( const char* robotsFilename );
    //construct from existing DirectoryRules tree
    DomainRules( DirectoryRules* rootIn );
+   ~DomainRules();
    bool IsAllowed( String path );
    void WriteRulesToDisc( std::string &domain );
 

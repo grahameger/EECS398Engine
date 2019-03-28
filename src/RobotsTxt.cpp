@@ -3,16 +3,21 @@
 
 #include "RobotsTxt.h"
 
-const size_t CACHE_CAPACITY = 3;
+const size_t CACHE_CAPACITY = 10000;
 
 RobotsTxt::RobotsTxt()
-   : domainRulesCache(CACHE_CAPACITY) {}
+   : domainRulesCache(CACHE_CAPACITY, true) {}
 
-void RobotsTxt::SubmitRobotsTxt(string domain, string pathOnDisc) //given url?
+RobotsTxt::~RobotsTxt()
    {
-   DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
+   domainRulesCache.clear();
+   }
+
+void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc)
+   {
+   DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());
+
    domainRulesCache.put(domain, newDomainRules);
-   
    newDomainRules->WriteRulesToDisc(domain);
    }
 
@@ -109,7 +114,7 @@ void RobotsTxt::CreateDirectoryRuleTree(vector<DirectoryRules*> &rules)
 //returns false if file does not exist
 bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    {
-   string fileName = domain + ".txt";
+   string fileName = domain;
    //string fileName = "dennisli.txt";
    FILE *file = fopen(fileName.c_str(), "r");
    //file doesn't exist
@@ -138,8 +143,12 @@ bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    return true;
    } 
 
-bool RobotsTxt::GetRule(string path, string domain)
+bool RobotsTxt::GetRule(string path, string &domain)
    { 
+   //strip ending '/' from directory names to keep consistent
+   if(path.back() == '/' && path.size() > 1)
+      path.pop_back();
+   
    //Look in cache
    String tmpPath(path.c_str()); //todo remove
    try
