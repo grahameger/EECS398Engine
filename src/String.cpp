@@ -1,4 +1,5 @@
 #include <cstring>
+#include <cctype>
 #include "String.h"
 
 const char* String::nullString = "";
@@ -144,3 +145,16 @@ String::operator bool( ) const
    {
    return size > 0;
    }
+
+void String::RemoveWhitespace() 
+  {
+  char* i = cstring;
+  char* j = cstring;
+  while(*j != 0)
+  {
+    *i = *j++;
+    if(!isspace(*i))
+      i++;
+  }
+  *i = 0;
+  }

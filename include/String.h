@@ -13,7 +13,7 @@ public:
    String& operator=( const String& toCopy );
    String& operator=( String&& toMove );
    ~String();
-
+   void RemoveWhitespace( );
    void Swap( String& toSwap );
    bool Empty( ) const;
    int Size( ) const;
