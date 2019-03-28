@@ -13,11 +13,9 @@ using std::vector;
 
 //You must first create a root directory by calling DirectoryRules("/"). Create new children
 //using FindOrCreateChild()
-//TODO: create destructor
 class DirectoryRules
    {
 public:
-   //TODO CREATE DESTRUCTOR
    DirectoryRules( std::string name, bool allowed = true, bool hasRule = false );
    ~DirectoryRules( );
 
