@@ -25,13 +25,13 @@ public:
    //Calling this function will replace any existing robotsTxt info
    //for this domain. It will always trigger both a store-in-cache
    //and save-to-disc
-   void SubmitRobotsTxt(string &domain, string &pathOnDisc); 
+   void SubmitRobotsTxt(string domain, string pathOnDisc); 
    //return true if allowed to crawl. false otherwise
    //path is the path of the http file you are getting the rule for, e.g. "/personal/dennis/resume.http"
    //As of now, we will save and search for all robotstxt parsed rules files in the current directory
    //TODO: the arguments of this function should be grouped into class
    //that should be constructed upon getting a new file (http must be changed)
-   bool GetRule(string &path, string &domain);
+   bool GetRule(string path, string domain);
 
 private:
    LRUCache<string, DomainRules*> domainRulesCache;

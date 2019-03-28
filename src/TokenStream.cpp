@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
 #include "String.h"
@@ -128,6 +129,8 @@ bool TokenStream::MatchNextEndline( )
    {
    int next;
    while ( ( next = PeekNext( ) ) != -1 && next != '\n' ) { }
+
+   ConsumeLexeme( );
    return next != -1;
    }
 

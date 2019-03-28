@@ -12,7 +12,22 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
+	RobotsTxt robots = RobotsTxt();
+
 	for(int i = 1; i < argc; i++) {
-		RobotsTxt robots( argv[i] );
+		string domain = "";
+		domain += ('0' + i);
+		std::cout << domain << std::endl;
+		robots.SubmitRobotsTxt( domain, argv[ i ] );
+	}
+
+	while(true) {
+		string domain, path;
+		cin >> domain;
+
+		if ( domain == "0" ) break;
+		cin >> path;
+
+		cout << (robots.GetRule( path, domain ) ? "allowed\n" : "disallowed\n");
 	}
 }
