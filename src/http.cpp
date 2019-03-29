@@ -292,6 +292,7 @@ namespace search {
                     currentLine += messageCopy[i];
                 }
             }
+            // TODO: replace this with the new string class
             redirURL.erase(std::remove_if(redirURL.begin(), redirURL.end(), [](char ch) {
                 return std::isspace(ch);
             }), redirURL.end());
