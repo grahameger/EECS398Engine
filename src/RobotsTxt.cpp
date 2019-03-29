@@ -8,7 +8,7 @@ const size_t CACHE_CAPACITY = 10000;
 RobotsTxt::RobotsTxt()
    : domainRulesCache(CACHE_CAPACITY, true), SerializedRulesPath("SerializedRobotsRules")
    {
-   search::makeDir(SerializedRulesPath);
+   search::makeDir(SerializedRulesPath.c_str());
    }
 
 RobotsTxt::~RobotsTxt()
@@ -21,7 +21,7 @@ void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc)
    DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());
 
    domainRulesCache.put(domain, newDomainRules);
-   newDomainRules->WriteRulesToDisc(domain);
+   newDomainRules->WriteRulesToDisc(domain, SerializedRulesPath);
    }
 
 DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName, 

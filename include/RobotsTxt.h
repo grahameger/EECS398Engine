@@ -13,7 +13,6 @@
 #include "threading.h"
 #include "DomainRules.h"
 #include "DirectoryRules.h"
-#include "http.h"
 #include "crawler.h"
 
 

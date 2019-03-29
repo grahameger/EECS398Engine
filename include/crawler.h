@@ -21,13 +21,15 @@
 #include <time.h>
 #include <mutex>
 
+#include "constants.h"
 #include "http.h"
 #include "threading.h"
-#include "constants.h"
 
+class RobotsTxt; 
 namespace search {
 
     void makeDir(const char * name);
+    class HTTPClient;
 
     class Crawler {
     public: 
