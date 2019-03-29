@@ -5,6 +5,7 @@
 //  Created by Jake C on 3/17/19.
 //  Copyright © 2019 Jake C. All rights reserved.
 //
+#pragma once
 #ifndef __index_hpp__
 #define __index_hpp__
 
