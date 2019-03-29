@@ -1,3 +1,4 @@
+#include <algorithm>
 template<class T>
 class Vector {
     //OVERVIEW: A container that provides random access to
@@ -8,16 +9,15 @@ class Vector {
 private:
     
     T *elements; //pointer to dynamic array
-    unsigned long long numElements;  //Current capacity
-    unsigned long long numAllocated; //capacity of array
-    static const unsigned long long DefaultNumberAllocated = 100;
+    unsigned long long numElements = 0;  //Current capacity
+    unsigned long long numAllocated = 400; //capacity of array
     
 public:
     
-    //The maximum size of an IntVector.  This has to be constant
+    //The maximum size of the Vector.  This has to be constant
     //across all instances since we are using static memory to store
     //the backing array.  We declare CAPACITY as const to enforce this
-    //and also as static, meaning that all IntVectors share the same
+    //and also as static, meaning that all Vectors share the same
     //CAPACITY variable (i.e. the same memory storing the int).  We also
     //declare it as public, because users of our ADT may well want to know
     //the maximum capacity.
@@ -26,8 +26,10 @@ public:
     //global variable. But now you are thinking about it. Stop that.)
     static const unsigned long long CAPACITY = 200;
     
+    Vector();
+    
     //EFFECTS: Constructor
-    Vector(unsigned long long capacity = DefaultNumberAllocated);
+    Vector(unsigned long long num);
     
     //Custom Destructor;
     ~Vector();
@@ -79,9 +81,17 @@ public:
 
 //custom constructor
 template<class T>
-Vector<T>::Vector(unsigned long long capacity) : numElements(0), numAllocated(capacity) {
+Vector<T>::Vector() {
     elements = new T[numAllocated];
 }
+
+template<class T>
+Vector<T>::Vector(unsigned long long capacity) {
+    numAllocated = capacity;
+    elements = new T[numAllocated];
+}
+
+
 
 //copy constructor
 template<class T>
@@ -95,6 +105,7 @@ Vector<T>::Vector(const Vector<T> &other) {
     for(unsigned long long i = 0; i < other.numElements; i++) {
         elements[i] = other.elements[i];
     }
+    
     return;
 }
 
@@ -176,17 +187,11 @@ bool Vector<T>::full() const {
 //Resize
 template<class T>
 void Vector<T>::resize() {
-    reserve();
-}
-
-//needed for resize to size * 2
-template<class T>
-void Vector<T>::reserve() {
-    T * tmp_array = new T[this->numAllocated];
-    delete[] elements;
-    numAllocated *= 2;
+    T * tmp_array = new T[this->numAllocated * 2];
     for (unsigned long long i = 0; i < numElements; i++) {
         tmp_array[i] = elements[i];
     }
-    elements = tmp_array;
+    std::swap(tmp_array, elements);
+    numAllocated *= 2;
+    delete [] tmp_array;
 }
