@@ -1,4 +1,4 @@
-.vscode/*
+**/.vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -73,3 +73,4 @@ DerivedData/
 *.out
 *.app
 bin/engine
+test/parsed.urls

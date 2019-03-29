@@ -75,5 +75,17 @@
         "numeric": "cpp",
         "typeindex": "cpp"
     },
-    "cquery.cacheDirectory": "${workspaceFolder}/.vscode/cquery_cached_index/"
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/wd": true
+    },
+    "files.watcherExclude": {
+	    "**/.git/objects/**": true,
+	    "**/.git/subtree-cache/**": true,
+	    "**/wd/**": true
+    }
 }
