@@ -22,7 +22,7 @@ private:
 	unordered_map<Key, Value> Cache;
 	unordered_map<Key, typename list<Key>::iterator> LRUQueueKeyPositions;
 	list<Key> LRUQueue;
-	int Capacity;
+	unsigned Capacity;
 	bool ValueIsDynamicallyAllocated;
 };
 

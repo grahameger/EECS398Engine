@@ -8,7 +8,7 @@ const size_t CACHE_CAPACITY = 10000;
 RobotsTxt::RobotsTxt()
    : domainRulesCache(CACHE_CAPACITY, true), SerializedRulesPath("SerializedRobotsRules")
    {
-   search::makeDir(SerializedRulesPath.c_str());
+   makeDir(SerializedRulesPath.c_str());
    }
 
 RobotsTxt::~RobotsTxt()
@@ -102,10 +102,10 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
 
 void RobotsTxt::CreateDirectoryRuleTree(vector<DirectoryRules*> &rules)
    {
-   for(int i = 0; i < rules.size(); ++i)
+   for(unsigned i = 0; i < rules.size(); ++i)
       {
       vector<int> &indsInRulesVec = rules[i]->childIndicesInDstVec;
-      for(int j = 0; j < indsInRulesVec.size(); ++j)
+      for(unsigned j = 0; j < indsInRulesVec.size(); ++j)
          {
          int childInd = indsInRulesVec[j];
          DirectoryRules *childRule = rules[childInd];
@@ -181,3 +181,9 @@ void RobotsTxt::unlock() {
    m.unlock();
 }
 
+void RobotsTxt::makeDir(const char * name) {
+   struct stat st = {0};
+   if (stat(name, &st) == -1) {
+      mkdir(name, 0700);
+   }
+}

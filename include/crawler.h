@@ -29,8 +29,6 @@ class RobotsTxt;
 namespace search {
 
     void makeDir(const char * name);
-    class HTTPClient;
-
     class Crawler {
     public: 
         Crawler(const std::vector<std::string> &seedUrls);

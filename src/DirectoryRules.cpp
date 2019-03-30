@@ -8,14 +8,14 @@ DirectoryRules::DirectoryRules(string name, bool allowed, bool hasRuleIn)
 
 DirectoryRules::~DirectoryRules()
 {
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(unsigned i = 0; i < childrenRules.size(); ++i)
         delete childrenRules[i];
 }
 
 //Return index one past the last letter of the next directory name
 int DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, int directoryStartIndex)
 {
-    int tmpIndex = directoryStartIndex;
+    unsigned tmpIndex = directoryStartIndex;
     while(path[tmpIndex] != '/' && tmpIndex < path.size())
     {
         tmpIndex++;
@@ -50,7 +50,7 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
         path.pop_back();
     }
 
-    int currentDirectoryStartIndex = 1; //start at 1 to ignore '/'
+    unsigned currentDirectoryStartIndex = 1; //start at 1 to ignore '/'
     DirectoryRules *currentDirectoryRule = this;
 
     while(currentDirectoryStartIndex <= path.size())
@@ -84,7 +84,7 @@ void DirectoryRules::SetAllowedForSubtree(bool grantedPermission)
 {
     if(hasRule) return;
     isAllowed = grantedPermission;
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(unsigned i = 0; i < childrenRules.size(); ++i)
     {
         childrenRules[i]->SetAllowedForSubtree(grantedPermission);
     }
@@ -96,7 +96,7 @@ void DirectoryRules::SetAllowed(bool grantedPermission)
     isAllowed = grantedPermission;
     SetHasRule();
 
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(unsigned i = 0; i < childrenRules.size(); ++i)
     {
         childrenRules[i]->SetAllowedForSubtree(grantedPermission);
     }
@@ -119,7 +119,7 @@ void DirectoryRules::SetHasRule()
 
 void DirectoryRules::GetVectorizedRules(vector<DirectoryRules*> &dstVec)
 {
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(unsigned i = 0; i < childrenRules.size(); ++i)
     {
         dstVec.push_back(childrenRules[i]);
         
@@ -147,7 +147,7 @@ void DirectoryRules::SaveRulesVector(FILE *fp)
         fprintf(fp, "0");
     //note no space
     
-    for(int i = 0; i < childIndicesInDstVec.size(); ++i)
+    for(unsigned i = 0; i < childIndicesInDstVec.size(); ++i)
     {
         fprintf(fp, "%d ", childIndicesInDstVec[i]);
     }
@@ -161,7 +161,7 @@ void DirectoryRules::SaveToFile(FILE *fp)
     rulesVec.push_back(this);
     GetVectorizedRules(rulesVec);
 
-    for(int i = 0; i < rulesVec.size(); ++i)
+    for(unsigned i = 0; i < rulesVec.size(); ++i)
     {
         rulesVec[i]->SaveRulesVector(fp);
     }
