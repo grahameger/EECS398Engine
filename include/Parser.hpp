@@ -1,4 +1,5 @@
 //  Created by Jake C on 2/10/19.
+//  Graham Eger added a cstdlib include on 4/1 to make compile on crawler machine
 #pragma once
 #ifndef Parser_hpp_398
 #define Parser_hpp_398
@@ -11,6 +12,7 @@
 #include <unistd.h>
 #include "vector.h"
 #include <ctype.h>
+#include <cstring>
 #include <string> //WILL USE CUSTOM STRING CLASS
 
 class Index_object{
@@ -43,13 +45,13 @@ public:
     Vector<std::string> Link_vector;
     
     void print_meta_objects() {
-        for(int i = 0; i < Document_meta_data_list.size(); i++) {
+        for(size_t i = 0; i < Document_meta_data_list.size(); i++) {
             std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word << " : " << Document_meta_data_list[i].type << std::endl;
         }
     }
     
     void print_links() {
-        for(int i = 0; i < Link_vector.size(); i++) {
+        for(size_t i = 0; i < Link_vector.size(); i++) {
             std::cout << Link_vector[i] << std::endl;
         }
     }
