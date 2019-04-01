@@ -6,8 +6,19 @@ LinkFinder::LinkFinder() {}
 //destructor
 LinkFinder::~LinkFinder() {}
 
+Index_object & Index_object::operator=(const Index_object& rhs) {
+    if(this == &rhs) {
+        return *this;
+    }
+    word = rhs.word;
+    type = rhs.type;
+    position = rhs.position;
+    return *this;
+}
+
+
 int LinkFinder::parse(char* filename) {
-    int fd = open(filename, O_RDWR);
+    int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         perror("file open");
         return -1;
@@ -34,20 +45,21 @@ int LinkFinder::parse(char* filename) {
         if(html_file[*index] == '<') {
             (*index)++;
             switch(html_file[*index]) {
+                case 'A'  :
                 case 'a'  : //Link
                     if(html_file[*index+1] == ' ') {
                         char find_up[] = "HREF=";
                         char find_low[] = "href=";
                         long reset_value = *index;
                         if(find_link(html_file, find_low, find_up, index, file_length)) {
-                            std::cout << "link = ";
+                            std::string link = "";
                             while(html_file[*index] != ' ' && html_file[*index] != '>') {
                                 if(html_file[*index] != '"' && html_file[*index] != '\'') {
-                                    std::cout << html_file[*index];
+                                    link += html_file[*index];
                                 }
                                 (*index)++;
                             }
-                            std::cout << std::endl;
+                            Link_vector.push_back(link);
                         }
                         
                         //reset index in case link not found
@@ -72,6 +84,7 @@ int LinkFinder::parse(char* filename) {
                     }
                     break;
                     
+                case 'S'  :
                 case 's'  : //script/style Want to completely skip these
                     if(is_style(html_file, index, file_length)) {
                         char find_up[] = "</STYLE>";
@@ -88,11 +101,12 @@ int LinkFinder::parse(char* filename) {
                     }
                     break;
                     
+                case 'T'  :
                 case 't'  :
                     //found <t, if <title, get it
                     if(is_title(html_file, index, file_length)) {
-                        char title[] = "title";
-                        get_words(html_file, index, file_length, title);
+                        std::string type = "title";
+                        get_words(html_file, index, file_length, type);
                     }
                     else {//was not <title, treat as ordinary tag
                         goto DEFAULT;
@@ -112,26 +126,11 @@ int LinkFinder::parse(char* filename) {
         }
         //grab the body text
         else {
-            int count = 0;
-            long k = 0;
-            k = *index; //2 character text minimum
-            while(k < file_length && count < 2 && html_file[k] != '<') {
-                if(html_file[k] != ' ' && html_file[k] != '\n' && html_file[k] != '\t') {
-                    count++;
-                }
-                k++;
-            }
-            if(count > 1) {
-                while(html_file[*index] != '<') {
-                    char body[] = "body";
-                    get_words(html_file, index, file_length, body);
-                }
-            }
-            else {
-                (*index)++;
-            }
+            std::string type = "body";
+            get_words(html_file, index, file_length, type);
         }
     }
+    std::cout << "This file contains " << word_count << " words!" << std::endl;
     return 0;
 }
 
@@ -210,15 +209,23 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
     return false;
 }
 
-void LinkFinder::get_words(char *html_file, long *index, long file_length, char* word) {
+void LinkFinder::get_words(char *html_file, long *index, long file_length, std::string type) {
     while(*index < file_length && html_file[*index] != '<') {
         if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
-            std::cout << word << " = ";
+            std::string word = "";
             while(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
-                std::cout << html_file[*index];
+                word += html_file[*index];
                 (*index)++;
             }
-            std::cout << std::endl;
+            if(word.length() >= 2 || isalnum(word[0])) {
+                Index_object new_obj;
+                new_obj.word = word;
+                new_obj.type = type;//this is type
+                new_obj.position = word_count;
+                
+                Document_meta_data_list.push_back(new_obj);
+                word_count++;
+            }
         }
         else {
             (*index)++;
@@ -227,7 +234,7 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, char*
 }
 
 void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length, long stop_index) {
-    char anchor[] = "anchor";
+    std::string type = "anchor";
     //Skip over all inner tags until we hit a's closing tag
     while(*index < stop_index) {
         if(html_file[*index] == '<') {
@@ -236,7 +243,7 @@ void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length,
             }
             (*index)++;
         }
-        get_words(html_file, index, file_length, anchor);
+        get_words(html_file, index, file_length, type);
     }
     *index = stop_index;
     return;
