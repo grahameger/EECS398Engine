@@ -1,4 +1,5 @@
 // Created by Graham Eger on 3/28/2019
+// Graham Eger added ReadWriteLock on 4/1/2019
 
 #include "threading.h"
 namespace threading {
@@ -53,11 +54,32 @@ namespace threading {
         }
     }
 
-     void Semaphore::notify() {
+    void Semaphore::notify() {
         sem_post(&_s);
     }
 
-     void Semaphore::wait() {
+    void Semaphore::wait() {
         sem_wait(&_s);
+    }
+
+    ReadWriteLock::ReadWriteLock() {
+        pthread_rwlock_init(&lock, nullptr);
+    }
+
+    ReadWriteLock::~ReadWriteLock() {
+        pthread_rwlock_unlock(&lock);
+        pthread_rwlock_destroy(&lock);
+    }
+
+    void ReadWriteLock::readLock() {
+        pthread_rwlock_rdlock(&lock);
+    }
+
+    void ReadWriteLock::writeLock() {
+        pthread_rwlock_wrlock(&lock);
+    }
+
+    void ReadWriteLock::unlock() {
+        pthread_rwlock_unlock(&lock);
     }
 }

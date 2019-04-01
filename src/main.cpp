@@ -5,8 +5,11 @@
 #include <thread>
 #include <mutex>
 #include "crawler.h"
+#include "PersistentBitVector.h"
 
 int main(int argc, char *argv[]) {
+
+	std::cout << sizeof(size_t) << '\n';
 
 	std::vector<std::string> urls;
 	//urls.reserve(1000000);

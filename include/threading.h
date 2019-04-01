@@ -1,6 +1,9 @@
 // Created by Graham Eger on 3/28/2019
+// Graham Eger added ReadWriteLock on 4/1/2019
 
 #pragma once
+#ifndef THREADING_H_398
+#define THREADING_H_398
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -91,6 +94,16 @@ namespace threading {
         ConditionVariable cv;
     };
 
+    class ReadWriteLock {
+        pthread_rwlock_t lock;
+    public:
+        ReadWriteLock();
+        ~ReadWriteLock();
+        void readLock();
+        void writeLock();
+        void unlock();
+    };
+
     template <typename T> void ThreadQueue<T>::push(const T &d) {
         m.lock();
         q.push_back(d);
@@ -143,3 +156,5 @@ namespace threading {
         return rv;
     }
 }
+
+#endif
