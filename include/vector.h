@@ -10,8 +10,8 @@ class Vector {
 private:
     
     T *elements; //pointer to dynamic array
-    unsigned long long numElements = 0;  //Current capacity
-    unsigned long long numAllocated = 400; //capacity of array
+    size_t numElements = 0;  //Current capacity
+    size_t numAllocated = 400; //capacity of array
     
 public:
     
@@ -25,12 +25,12 @@ public:
     //
     //This is the preferred approach.  (Don't even think about using a
     //global variable. But now you are thinking about it. Stop that.)
-    static const unsigned long long CAPACITY = 200;
+    static const size_t CAPACITY = 200;
     
     Vector();
     
     //EFFECTS: Constructor
-    Vector(unsigned long long num);
+    Vector(size_t num);
     
     //Custom Destructor;
     ~Vector();
@@ -57,20 +57,20 @@ public:
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    unsigned long long &at(unsigned long long index);
+    size_t &at(size_t index);
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    const unsigned long long &at(unsigned long long index) const;
+    const size_t &at(size_t index) const;
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    const T& operator[](unsigned long long index);
+    const T& operator[](size_t index);
     
     //EFFECTS:  Returns the number of elements of this IntVector.
-    unsigned long long size() const;
+    size_t size() const;
     
-    unsigned long long capacity() const;
+    size_t capacity() const;
     
     //EFFECTS:  Returns true if this IntVector is empty, false otherwise.
     bool empty() const;
@@ -87,7 +87,7 @@ Vector<T>::Vector() {
 }
 
 template<class T>
-Vector<T>::Vector(unsigned long long capacity) {
+Vector<T>::Vector(size_t capacity) {
     numAllocated = capacity;
     elements = new T[numAllocated];
 }
@@ -103,7 +103,7 @@ Vector<T>::Vector(const Vector<T> &other) {
     numAllocated = other.numAllocated;
     
     //2. Copy everything over
-    for(unsigned long long i = 0; i < other.numElements; i++) {
+    for(size_t i = 0; i < other.numElements; i++) {
         elements[i] = other.elements[i];
     }
     
@@ -121,7 +121,7 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &rhs) {
     elements = new T[rhs.numAllocated];
     numElements = rhs.numElements;
     numAllocated = rhs.numAllocated;
-    for(unsigned long long i = 0; i < rhs.numElements; i++) {
+    for(size_t i = 0; i < rhs.numElements; i++) {
         elements[i] = rhs.elements[i];
     }
     return *this;
@@ -148,26 +148,26 @@ void Vector<T>::push_back(T value){
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-const unsigned long long &Vector<T>::at(unsigned long long index) const {
+const size_t &Vector<T>::at(size_t index) const {
     return elements[index];
 }
 
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-const T& Vector<T>::operator[] (unsigned long long index) {
+const T& Vector<T>::operator[] (size_t index) {
     return elements[index];
 }
 
 //EFFECTS:  Returns the number of elements of this IntVector.
 template<class T>
-unsigned long long Vector<T>::size() const {
+size_t Vector<T>::size() const {
     return numElements;
 }
 
 //EFFECTS:  Returns the number of elements of this IntVector.
 template<class T>
-unsigned long long Vector<T>::capacity() const {
+size_t Vector<T>::capacity() const {
     return numAllocated;
 }
 
@@ -189,7 +189,7 @@ bool Vector<T>::full() const {
 template<class T>
 void Vector<T>::resize() {
     T * tmp_array = new T[this->numAllocated * 2];
-    for (unsigned long long i = 0; i < numElements; i++) {
+    for (size_t i = 0; i < numElements; i++) {
         tmp_array[i] = elements[i];
     }
     std::swap(tmp_array, elements);
