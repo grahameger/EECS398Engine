@@ -41,7 +41,7 @@ namespace threading {
     Semaphore::Semaphore(size_t count_in) {
         int rv = sem_init(&_s, 0, count_in);
             if (rv != 0) {
-                fprintf(stderr, "sem_init() failed with error '%s'", strerror(errno));
+                fprintf(stderr, "sem_init() failed with error '%s'\n", strerror(errno));
                 exit(1);
         }
     }
@@ -49,7 +49,7 @@ namespace threading {
     Semaphore::~Semaphore() {
         int rv = sem_destroy(&_s);
         if (rv != 0) {
-            fprintf(stderr, "sem_destroy() failed with error '%s'", strerror(errno));
+            fprintf(stderr, "sem_destroy() failed with error '%s'\n", strerror(errno));
         }
     }
 

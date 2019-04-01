@@ -145,7 +145,7 @@ namespace search {
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
-            fprintf(stderr, "Too many redirects ending in host %s", url.c_str());
+            fprintf(stderr, "Too many redirects ending in host %s\n", url.c_str());
             return;
         }
         HTTPRequest request(url);
@@ -171,7 +171,7 @@ namespace search {
         }
         ssize_t rv = sock->setFd(sockfd);
         if (rv < 0) {
-            fprintf(stderr, "error setting file descriptor for host '%s' : %s", url.c_str(), strerror(errno));
+            fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             return;
         }
 
@@ -186,7 +186,7 @@ namespace search {
         // send request blocking
         const std::string requestStr = request.requestString();
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-            fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
+            fprintf(stderr, "error sending request to host for url '%s'\n", url.c_str());
         }
 
         // dynamic buffering
@@ -325,13 +325,23 @@ namespace search {
         ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
+            fprintf(stderr, "Error creating new SSL struct\n");
+            fflush(stderr);
+            return -1;
         }
-        ::SSL_set_fd(ssl, sockfd);
-        int rv = ::SSL_connect(ssl);
+        int rv = ::SSL_set_fd(ssl, sockfd);
+        if (rv != 1) {
+            // TODO better error handling
+            fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);
+            fflush(stderr);
+            return -1;
+        }
+        rv = ::SSL_connect(ssl);
         if (rv <= 0) {
             // TODO better error handling
-            fprintf(stderr, "Error creating SSL connection");
+            fprintf(stderr, "Error creating SSL connection\n");
             fflush(stderr);
+            return -1;
         }
         return rv;
     }
