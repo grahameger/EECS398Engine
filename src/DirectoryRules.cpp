@@ -8,7 +8,7 @@ DirectoryRules::DirectoryRules(string name, bool allowed, bool hasRuleIn)
 
 DirectoryRules::~DirectoryRules()
 {
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(size_t i = 0; i < childrenRules.size(); ++i)
         delete childrenRules[i];
 }
 
@@ -50,7 +50,7 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
         path.pop_back();
     }
 
-    int currentDirectoryStartIndex = 1; //start at 1 to ignore '/'
+    size_t currentDirectoryStartIndex = 1; //start at 1 to ignore '/'
     DirectoryRules *currentDirectoryRule = this;
 
     while(currentDirectoryStartIndex <= path.size())
@@ -84,7 +84,7 @@ void DirectoryRules::SetAllowedForSubtree(bool grantedPermission)
 {
     if(hasRule) return;
     isAllowed = grantedPermission;
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(size_t i = 0; i < childrenRules.size(); ++i)
     {
         childrenRules[i]->SetAllowedForSubtree(grantedPermission);
     }
@@ -96,7 +96,7 @@ void DirectoryRules::SetAllowed(bool grantedPermission)
     isAllowed = grantedPermission;
     SetHasRule();
 
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(size_t i = 0; i < childrenRules.size(); ++i)
     {
         childrenRules[i]->SetAllowedForSubtree(grantedPermission);
     }
@@ -119,7 +119,7 @@ void DirectoryRules::SetHasRule()
 
 void DirectoryRules::GetVectorizedRules(vector<DirectoryRules*> &dstVec)
 {
-    for(int i = 0; i < childrenRules.size(); ++i)
+    for(size_t i = 0; i < childrenRules.size(); ++i)
     {
         dstVec.push_back(childrenRules[i]);
         
@@ -161,7 +161,7 @@ void DirectoryRules::SaveToFile(FILE *fp)
     rulesVec.push_back(this);
     GetVectorizedRules(rulesVec);
 
-    for(int i = 0; i < rulesVec.size(); ++i)
+    for(size_t i = 0; i < rulesVec.size(); ++i)
     {
         rulesVec[i]->SaveRulesVector(fp);
     }
