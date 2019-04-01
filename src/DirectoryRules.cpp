@@ -13,9 +13,9 @@ DirectoryRules::~DirectoryRules()
 }
 
 //Return index one past the last letter of the next directory name
-int DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, int directoryStartIndex)
+size_t DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, size_t directoryStartIndex)
 {
-    int tmpIndex = directoryStartIndex;
+    size_t tmpIndex = directoryStartIndex;
     while(path[tmpIndex] != '/' && tmpIndex < path.size())
     {
         tmpIndex++;
@@ -23,7 +23,7 @@ int DirectoryRules::FindEndIndexOfNextDirectoryName(string &path, int directoryS
     return tmpIndex;
 }
 
-void DirectoryRules::SetChildIndices(vector<int> &childIndicesIn)
+void DirectoryRules::SetChildIndices(vector<size_t> &childIndicesIn)
 {
    childIndicesInDstVec = childIndicesIn;
 }
@@ -55,11 +55,11 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
 
     while(currentDirectoryStartIndex <= path.size())
     {
-        int currentDirectoryEndIndex = FindEndIndexOfNextDirectoryName(path, currentDirectoryStartIndex);
+        size_t currentDirectoryEndIndex = FindEndIndexOfNextDirectoryName(path, currentDirectoryStartIndex);
         bool currentIsAllowed = currentDirectoryRule->isAllowed;
         string currentDirectoryName = path.substr(currentDirectoryStartIndex, 
             currentDirectoryEndIndex - currentDirectoryStartIndex);
-        int currentDirectoryRuleIndex = -1;
+        size_t currentDirectoryRuleIndex = -1;
 
         if(currentDirectoryRule->directoryNameToChildRuleIndex.find(currentDirectoryName) == 
             currentDirectoryRule->directoryNameToChildRuleIndex.end())
@@ -123,7 +123,7 @@ void DirectoryRules::GetVectorizedRules(vector<DirectoryRules*> &dstVec)
     {
         dstVec.push_back(childrenRules[i]);
         
-        int indInDstVec = dstVec.size() - 1;
+        size_t indInDstVec = dstVec.size() - 1;
         childIndicesInDstVec.push_back(indInDstVec);
 
         childrenRules[i]->GetVectorizedRules(dstVec);
@@ -147,9 +147,9 @@ void DirectoryRules::SaveRulesVector(FILE *fp)
         fprintf(fp, "0");
     //note no space
     
-    for(int i = 0; i < childIndicesInDstVec.size(); ++i)
+    for(size_t i = 0; i < childIndicesInDstVec.size(); ++i)
     {
-        fprintf(fp, "%d ", childIndicesInDstVec[i]);
+        fprintf(fp, "%lu ", childIndicesInDstVec.at(i));
     }
 
     fprintf(fp, "\n");
