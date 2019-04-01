@@ -178,6 +178,8 @@ namespace search {
         rv = 0;
         int bytesReceived = 0;
         size_t totalSize = 0;
+        size_t headerPos = 0;
+        size_t headerSize = 0;
         ssize_t contentLength = -1;
         char * fullResponse = (char*)malloc(constants::BUFFER_SIZE);
 
@@ -206,12 +208,12 @@ namespace search {
                 // check if the header has been downloaded
                 bytesReceived += rv;
                 std::string_view view(fullResponse, bytesReceived);
-                size_t header_pos = view.find("\r\n\r\n");
-                if (header_pos != std::string_view::npos) {
-                    size_t header_size = header_pos + 4;
+                headerPos = view.find("\r\n\r\n");
+                if (headerPos != std::string_view::npos) {
+                    headerSize = headerPos + 4;
                     // search for "Content-Length"
                     contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
-                    totalSize = header_size + contentLength;
+                    totalSize = headerSize + contentLength;
                     ssize_t remaining = totalSize - bytesReceived;
                     if (remaining > 0) {
                         fullResponse = (char *)realloc(fullResponse, totalSize);
@@ -236,6 +238,7 @@ namespace search {
         char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
         if (redirectUrl) {
             free(fullResponse);
+            // TODO: https://stackoverflow.com/questions/8250259/is-a-302-redirect-to-relative-url-valid-or-invalid
             return SubmitURLSync(redirectUrl, ++redirCount);
         }
 
@@ -245,7 +248,8 @@ namespace search {
         // write it to a file
         std::string filename = request.filename();
         std::ofstream outfile(filename);
-        outfile.write(fullResponse, totalSize);
+
+        outfile.write(fullResponse + headerSize, contentLength);
         outfile.close();
         free(fullResponse);
         fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
