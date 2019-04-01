@@ -59,7 +59,7 @@ DirectoryRules* DirectoryRules::FindOrCreateChild(string path)
         bool currentIsAllowed = currentDirectoryRule->isAllowed;
         string currentDirectoryName = path.substr(currentDirectoryStartIndex, 
             currentDirectoryEndIndex - currentDirectoryStartIndex);
-        size_t currentDirectoryRuleIndex = -1;
+        size_t currentDirectoryRuleIndex = npos;
 
         if(currentDirectoryRule->directoryNameToChildRuleIndex.find(currentDirectoryName) == 
             currentDirectoryRule->directoryNameToChildRuleIndex.end())

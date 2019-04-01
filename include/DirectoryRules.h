@@ -35,6 +35,8 @@ public:
    void SaveToFile( FILE *fp );
    vector<size_t> childIndicesInDstVec; //used for saving to file
 
+   static const size_t npos = -1;
+
 private:
    void SetAllowedForSubtree(bool grantedPermission); 
    void GetVectorizedRules(vector<DirectoryRules*> &dstVec);
