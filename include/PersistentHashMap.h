@@ -5,8 +5,17 @@
 #define PERSISTENTHASHMAP_H_398
 
 #include <cstdlib>
+#include <cstdio>
+
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+
 #include "Pair.h"
 #include "String.h"
+#include "PersistentBitVector.h"
 
 template <typename Key, typename Mapped>
 class PersistentHashMap {
@@ -50,6 +59,7 @@ public:
     SizeType capacity() const;
 
 private:
+    static const SizeType INITIAL_CAPACITY = 16;
     void printState() const;
 
     // probing functions
@@ -66,12 +76,47 @@ private:
     bool rehashNeeded() const;
 
     // private data
-    SizeType numElements;
-    double loadFactor;
-
+    struct HeaderType {
+        size_t numElements;
+        size_t capacity;
+        double loadFactor;
+        threading::ReadWriteLock rwLock;
+    };
+    int fd; 
+    HeaderType * header;
     ValueType * buckets;
-    static const SizeType INITIAL_CAPACITY = 1;
+    PersistentBitVector isGhost;
+    PersistentBitVector isFilled;
 
 };
+
+
+
+template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::PersistentHashMap(String filename, double loadFactorIn) : isGhost(filename + String("_ghost")), isFilled(filename + String("_filled")) {
+    // check if the file exists
+    struct stat buffer;
+    bool fileExists = (stat(filename.CString(), &buffer) == 0);
+
+    // open file with correct flags
+    int openFlags = O_RDWR;
+    if (!fileExists) {
+        openFlags |= O_CREAT;
+    }
+    fd = open(filename.CString(), openFlags);
+    if (fd < 0) {
+        fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
+        // TODO: more error handling
+    }
+
+    // mmap and setup the header portion
+    header = (HeaderType*)mmapWrapper(fd, sizeof(HeaderType), 0);
+    header->rwLock = threading::ReadWriteLock();
+    if (!fileExists) {
+        header->capacity = INITIAL_CAPACITY;
+    }
+
+    // mmap the data portion
+    buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
+}
 
 #endif

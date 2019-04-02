@@ -2,58 +2,77 @@
 
 #include "PersistentBitVector.h"
 #include <cstdio>
-#include <sys/stat.h>
-#include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
+#include <sys/stat.h>
+#include "mmap.h"
 
+
+// TODO: reduce code duplication
 PersistentBitVector::PersistentBitVector(String filename) {
-    static const size_t SIZE_READ_SIZE = sizeof(size_t);
     // check if the file exists
     struct stat buffer;
     bool fileExists = (stat(filename.CString(), &buffer) == 0);
-
-    // different behavior here for these two
-    if (fileExists) {
-        // open up the file
-        fd = open(filename.CString(), O_RDWR);
-        if (fd < 0) {
-            fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
-            // TODO: more error handling
-        }
-        // read the size from the start of the file
-        size_t tempSize = 0;
-        ssize_t rv = pread(fd, &tempSize, SIZE_READ_SIZE, 0);
-        if (rv != SIZE_READ_SIZE) {
-            fprintf(stderr, "error initializing PersistentBitVector: pread %s\n", strerror(errno));
-            // TODO: more error handling
-        }
-        size_t realFileSize = sizeof(SizeAndLock) + tempSize;
-        // memory map the requested file size and save it as the base pointer
-        base = mmap(nullptr, realFileSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        if (base == (void *)-1) {
-            fprintf(stderr, "error initializing PersistentBitVector: mmap %s\n", strerror(errno));
-            // TODO: more error handling
-        }
-
-        // setup our pointers
-        sizeAndLock = (SizeAndLock*)base;
-        dataBase = (uint8_t*)base + sizeof(SizeAndLock);
-        
-        // reset the size and run the rw-lock constructor
-        memset((void*)sizeAndLock, 0x0, sizeof(sizeAndLock));
-        sizeAndLock->dataSize = tempSize;
-        sizeAndLock->rwLock = threading::ReadWriteLock();
-    } else {
-        fd = open(filename.CString(), O_RDWR | O_CREAT);
-        if (fd < 0) {
-            fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
-            // TODO: more error handling
-        }
-        // set the initial size
-        size_t realFileSize = sizeof(SizeAndLock) + DEFAULT_SIZE;
-        // memory map the requested file size and save it as the base pointer
-        base = mmap(nullptr, realFileSize, PROT_READ | PROT_WRITE, MAP_SHARED)
+    
+    // open file with correct flags
+    int openFlags = O_RDWR;
+    if (!fileExists) {
+        openFlags |= O_CREAT;
     }
+    fd = open(filename.CString(), openFlags);
+    if (fd < 0) {
+        fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
+        // TODO: more error handling
+    }
+
+    // mmap and setup the header portion
+    header = (Header*)mmapWrapper(fd, sizeof(Header), 0);
+    header->rwLock = threading::ReadWriteLock();
+    if (!fileExists) {
+        header->dataSize = DEFAULT_SIZE;
+    }
+
+    // mmap the data portion
+    data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
+}
+
+// close and unmap the file with a write lock
+PersistentBitVector::~PersistentBitVector() {
+    // get a write lock so that all reads and writes finish up
+    header->rwLock.writeLock();
+    // 2 unmaps
+    munmapWrapper(data, header->dataSize);
+    // we reset the lock on a reconstruction of this data structure so shouldn't be a problem
+    munmapWrapper(header, sizeof(Header));
+    close(fd);
+}
+
+bool PersistentBitVector::get(size_t idx) {
+    // no bounds checking, there's a O(1) .size() operator if the
+    // programmer wants to use it.
+    // dataBase[idx / 8] returns the byte which contains the bit we want to return
+    // we do a bitwise AND with it to just return the singular bit specified by idx
+    header->rwLock.readLock();
+    bool rv = data[idx / 8] & (SET_BITS[idx % 8]);
+    header->rwLock.unlock();
+    return rv;
+}
+
+void PersistentBitVector::set(size_t idx, bool b) {
+    // same as get() but summing instead of a bitwise AND to save the value
+    header->rwLock.writeLock();
+    data[idx / 8] += (SET_BITS[idx % 8]);
+    header->rwLock.unlock();
+}
+
+void PersistentBitVector::resize(size_t newSize) {
+    // grab the write lock
+    header->rwLock.writeLock();
+    if (newSize > header->dataSize) {
+        // unmap data
+        munmapWrapper(data, header->dataSize);
+        // remap data with the new size and sizeof(Header) offset
+        data = (uint8_t*)mmapWrapper(fd, newSize, sizeof(Header));
+    }
+    header->rwLock.unlock();
 }
