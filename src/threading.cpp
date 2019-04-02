@@ -63,23 +63,30 @@ namespace threading {
     }
 
     ReadWriteLock::ReadWriteLock() {
-        pthread_rwlock_init(&lock, nullptr);
+        //pthread_rwlock_init(&lock, nullptr);
+        lock = PTHREAD_MUTEX_INITIALIZER;
     }
 
     ReadWriteLock::~ReadWriteLock() {
-        pthread_rwlock_unlock(&lock);
-        pthread_rwlock_destroy(&lock);
+        //pthread_rwlock_unlock(&lock);
+        //pthread_rwlock_destroy(&lock);
+        pthread_mutex_unlock(&lock);
+        pthread_mutex_destroy(&lock);
     }
 
     void ReadWriteLock::readLock() {
-        pthread_rwlock_rdlock(&lock);
+        //pthread_rwlock_rdlock(&lock);
+        pthread_mutex_lock(&lock);
     }
 
     void ReadWriteLock::writeLock() {
-        pthread_rwlock_wrlock(&lock);
+        //pthread_rwlock_wrlock(&lock);
+        pthread_mutex_lock(&lock);
     }
 
     void ReadWriteLock::unlock() {
-        pthread_rwlock_unlock(&lock);
+        //pthread_rwlock_unlock(&lock);
+        pthread_mutex_unlock(&lock);
     }
+
 }
