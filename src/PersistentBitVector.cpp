@@ -76,3 +76,10 @@ void PersistentBitVector::resize(size_t newSize) {
     }
     header->rwLock.unlock();
 }
+
+size_t PersistentBitVector::size() {
+    header->rwLock.readLock();
+    size_t rv = header->dataSize;
+    header->rwLock.unlock();
+    return rv; 
+}

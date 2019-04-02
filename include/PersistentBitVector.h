@@ -21,6 +21,7 @@ public:
     bool get(size_t idx);
     void set(size_t idx, bool b);
     void resize(size_t newSize);
+    size_t size();
 private:
     int fd;
     static const size_t DEFAULT_SIZE = 16;
