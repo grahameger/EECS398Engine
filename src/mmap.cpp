@@ -41,7 +41,7 @@ size_t fileSize(int fd) {
 void extendFile(int fd, size_t newSize) {
     newSize = roundUp(newSize, PAGE_SIZE);
     if (fileSize(fd) < newSize) {
-       lseek(fd, newSize, SEEK_SET);
+       ftruncate(fd, newSize);
     }
 }
 

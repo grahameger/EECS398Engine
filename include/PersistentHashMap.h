@@ -139,7 +139,7 @@ private:
 
 
 
-template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::PersistentHashMap(String filename, double loadFactorIn) : isGhost(filename + String("_ghost")), isFilled(filename + String("_filled")) {
+template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::PersistentHashMap(String filename, double loadFactorIn) : isGhost( filename + "_ghost" ), isFilled( filename + "_filled" ) {
     // check if the file exists
     struct stat buffer;
     bool fileExists = (stat(filename.CString(), &buffer) == 0);

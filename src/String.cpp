@@ -1,3 +1,6 @@
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #include <cstring>
 #include <cctype>
 #include "String.h"
@@ -139,10 +142,11 @@ String& String::operator+= ( const String& rhs )
 
    return *this;
    }
-
-String operator+( String lhs, const String& rhs) 
+ 
+ String operator+( String lhs, const String& rhs) 
    {
-   return lhs += rhs;
+   lhs += rhs;
+   return lhs;
    }
 
 String::operator bool( ) const
@@ -162,3 +166,11 @@ void String::RemoveWhitespace()
   }
   *i = 0;
   }
+
+
+String operator+ (String lhs, const char * toCat) 
+   {
+   auto cat = String(toCat);
+   lhs += cat;
+   return lhs;
+   }
