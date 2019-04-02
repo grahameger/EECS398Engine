@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <cstring>
 
+static const size_t PAGE_SIZE = getpagesize();
+
 // just wrap mmap and do the error checking here
 void * mmapWrapper(int fd, size_t size, size_t offset) {
     extendFile(fd, size + offset);
@@ -37,7 +39,17 @@ size_t fileSize(int fd) {
 }
 
 void extendFile(int fd, size_t newSize) {
+    newSize = roundUp(newSize, PAGE_SIZE);
     if (fileSize(fd) < newSize) {
        lseek(fd, newSize, SEEK_SET);
     }
+}
+
+size_t roundUp(size_t numToRound, size_t multiple) {
+    if (multiple == 0)
+        return numToRound;
+    size_t remainder = numToRound % multiple;
+    if (remainder == 0)
+        return numToRound;
+    return numToRound + multiple - remainder;
 }

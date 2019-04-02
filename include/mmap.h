@@ -9,4 +9,7 @@ int munmapWrapper(void * addr, size_t size);
 size_t fileSize(int fd);
 void extendFile(int fd, size_t newSize);
 
+
+size_t roundUp(size_t toRound, size_t n);
+
 #endif
