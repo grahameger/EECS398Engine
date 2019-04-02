@@ -1,0 +1,6 @@
+# Classify
+*.h linguist-language=C++
+*.hpp linguist-language=C++
+*.url linguist-vendored=true
+*.urls linguist-vendored=true
+*.html linguist-generated=true
