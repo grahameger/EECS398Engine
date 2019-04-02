@@ -140,6 +140,10 @@ String& String::operator+= ( const String& rhs )
    return *this;
    }
 
+String operator+( String lhs, const String& rhs) 
+   {
+   return lhs += rhs;
+   }
 
 String::operator bool( ) const
    {

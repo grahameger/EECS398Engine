@@ -10,12 +10,12 @@ struct Pair {
     Type1 first;
     Type2 second;
 
-    explicit constexpr Pair(const Type1 &a, const Type2 & b) : first(a, b) {}
+    explicit constexpr Pair(const Type1 &a, const Type2 & b) : first(a), second(b) {}
 
     explicit constexpr Pair(const Pair<Type1, Type2>& p) : first(p.first), second(p.second) {}
 
-    // for move semantics
-    constexpr Pair(Pair&&) = default;
+    // if both types are copyable this is fine, if they're not it won't compile anyways
+    //constexpr Pair(Pair&&) = default;
 };
 
 

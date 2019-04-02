@@ -15,7 +15,7 @@
         {
             "label": "clean wd",
             "type": "shell",
-            "command": "rm -rf wd && mkdir wd",
+            "command": "rm -rf wd && mkdir wd && make clean",
             "group": {
                 "kind": "test",
                 "isDefault": true

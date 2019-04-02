@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "mmap.h"
 #include "Pair.h"
 #include "String.h"
 #include "PersistentBitVector.h"
@@ -62,8 +63,8 @@ private:
     static const SizeType INITIAL_CAPACITY = 16;
 
     // probing functions
-    SizeType probeForExistingKey(const KeyType& key ) const;
-    SizeType probeEmptySpotForKey(const KeyType& key ) const;
+    SizeType probeForExistingKey(const KeyType& key );
+    SizeType probeEmptySpotForKey(const KeyType& key );
 
     // insert funcitons
     void insertKeyValue(const ValueType& value);
@@ -72,7 +73,7 @@ private:
     // TODO: make this work
     void rehashAndGrow();
 
-    bool rehashNeeded() const;
+    bool rehashNeeded();
 
     void writeLock();
     void readLock();
@@ -109,9 +110,9 @@ public:
     // No need for locks here as we already have the index
     // it's on the programmer to know if their iterator has been invalidated
     Pair<Key, Mapped>& operator*() {
-        assert(!this->persistentHashMap->isGhost[this->index]);
-        assert(!this->persistentHashMap->isFilled[this->index]);
-        return &this->persistentHashMap->buckets[this->index];
+        assert(!this->persistentHashMap->isGhost.get(this->index));
+        assert(!this->persistentHashMap->isFilled.get(this->index));
+        return this->persistentHashMap->buckets[this->index];
     }
 
     // We'll read lock here just because we're iterating through the Hash Map
@@ -119,8 +120,8 @@ public:
         this->persistentHashMap->readLock();
         ++this->index;
         for (; (this->index != this->persistentHashMap->size() &&
-                    (this->persistentHashMap->isGhost[this->index] ||
-                    !this->persistentHashMap->isFilled[this->index]));
+                    (this->persistentHashMap->isGhost.get(this->index) ||
+                    !this->persistentHashMap->isFilled.get(this->index)));
                 ++this->index);
         this->persistentHashMap->unlock();
         return *this;
@@ -177,12 +178,12 @@ void PersistentHashMap<Key, Mapped>::
 noProbeNoRehashInsertKeyValueAtIndex(const ValueType &value, SizeType index) {
     // insert into the buckets and then update the other members
     this->buckets[index] = value;
-    this->isFilled[index] = true;
-    this->isGhost[index] = false;
+    this->isFilled.set(index, true);
+    this->isGhost.set(index, false);
 }
 
 template<typename Key, typename Mapped>
-bool PersistentHashMap<Key, Mapped>::rehashNeeded() const {
+bool PersistentHashMap<Key, Mapped>::rehashNeeded() {
     return (static_cast<double>(this->header->numElements) /
             static_cast<double>(this->header->capacity));
 }
@@ -206,17 +207,17 @@ void PersistentHashMap<Key, Mapped>::insertKeyValue(const ValueType& value) {
 }
 
 template<typename Key, typename Mapped>
-size_t PersistentHashMap<Key, Mapped>::probeEmptySpotForKey(const Key& key) const {
+size_t PersistentHashMap<Key, Mapped>::probeEmptySpotForKey(const Key& key) {
     size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
     size_t start = i;
     // when we find one return index, if it already exists, return that index
     for (; i < this->header->capacity; ++i) {
-        if (!isFilled || isGhost) {
+        if (!isFilled.get(i) || isGhost.get(i)) {
             return i;
         }
     }
     for (i = 0; i < start; ++i) {
-        if (!isFilled[i] || isGhost[i]) {
+        if (!isFilled.get(i) || isGhost.get(i)) {
             return i;
         }
     }
@@ -226,20 +227,20 @@ size_t PersistentHashMap<Key, Mapped>::probeEmptySpotForKey(const Key& key) cons
 // const functions need a read lock
 // non-const functions need a write lock
 template<typename Key, typename Mapped>
-size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) const {
+size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
     // if it's there then we return the index
     // otherwise return one past the end
     size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
     size_t start = i;
-    for (; (isGhost[i] || isFilled[i]) && i < this->header->capacity; ++i ) {
+    for (; (isGhost.get(i) || isFilled.get(i)) && i < this->header->capacity; ++i ) {
         if (buckets[i].first == key) {
             return i;
         }
     }
-    if (!isGhost[i] && isFilled[i]) {
+    if (!isGhost.get(i) && isFilled.get(i)) {
         return this->header->capacity;
     } else {
-        for (i = 0; (isGhost[i] || isFilled[i]) && i < start; ++i) {
+        for (i = 0; (isGhost.get(i) || isFilled.get(i)) && i < start; ++i) {
             if (buckets[i].first == key) {
                 return i;
             }
@@ -284,7 +285,7 @@ Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::rehashAndGrow() {
     // double the size of the mapped buckets portion
-    ValueType * newBuckets = (ValueType*)mmapWrapper(fd,
+    buckets = (ValueType*)mmapWrapper(fd,
                                                      this->header->capacity * sizeof(ValueType) * 2,
                                                      sizeof(HeaderType));
     // double the size of the isFilled and isGhost bit vectors
@@ -296,7 +297,7 @@ void PersistentHashMap<Key, Mapped>::rehashAndGrow() {
 
     // rehash
     for (size_t i = 0; i < this->header->capacity / 2; ++i) {
-        if (!isGhost[i] && isFilled[i]) {
+        if (!isGhost.get(i) && isFilled.get(i)) {
             size_t emptySpot = probeEmptySpotForKey(buckets[i].first);
             isFilled.set(i, false);
             isGhost.set(i, true);
@@ -333,7 +334,7 @@ PersistentHashMap<Key, Mapped>::begin() {
     assert(this->header->capacity == isFilled.size());
     assert(this->header->capacity == isGhost.size());
     size_t firstIndex;
-    for (firstIndex = 0; firstIndex != this->header->capacity(); ++firstIndex) {
+    for (firstIndex = 0; firstIndex != this->header->capacity; ++firstIndex) {
         if (this->isFilled.get(firstIndex) && !this->isGhost.get(firstIndex)) {
             this->unlock();
             return Iterator(firstIndex, this);

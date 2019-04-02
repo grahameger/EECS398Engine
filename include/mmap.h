@@ -6,5 +6,7 @@
 
 void * mmapWrapper(int fd, size_t size, size_t offset);
 int munmapWrapper(void * addr, size_t size);
+size_t fileSize(int fd);
+void extendFile(int fd, size_t newSize);
 
 #endif
