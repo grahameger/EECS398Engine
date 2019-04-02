@@ -94,7 +94,14 @@ namespace search {
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
-        static const SSL_METHOD * meth = TLSv1_2_client_method();
+
+	
+	static const SSL_METHOD * meth = nullptr;
+	#if defined(LWS_HAVE_TLS_CLIENT_METHOD)
+		meth = (SSL_METHOD *)TLS_client_method();
+	#else
+		meth = (SSL_METHOD *)TLSv1_2_client_method();
+	#endif
 
         search::HTTPClient::sslContext = SSL_CTX_new(meth);
 
