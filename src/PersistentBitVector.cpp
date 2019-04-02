@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <cassert>
 #include "mmap.h"
 
 
@@ -27,13 +28,17 @@ PersistentBitVector::PersistentBitVector(String filename) {
 
     // mmap and setup the header portion
     header = (Header*)mmapWrapper(fd, sizeof(Header), 0);
-    header->rwLock = threading::ReadWriteLock();
+    if (header->dataSize == 0) {
+        header->rwLock = threading::ReadWriteLock();
+    }
+    header->rwLock.writeLock();
     if (!fileExists) {
         header->dataSize = DEFAULT_SIZE;
     }
 
     // mmap the data portion
-    data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
+    // the data size should be the number of bits specified, not bytes
+    data = (uint8_t*)mmapWrapper(fd, header->dataSize / 8, sizeof(Header));
 }
 
 // close and unmap the file with a write lock

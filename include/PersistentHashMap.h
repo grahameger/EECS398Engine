@@ -158,7 +158,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     // mmap and setup the header portion
     header = (HeaderType*)mmapWrapper(fd, sizeof(HeaderType), 0);
     // memory mapped files should be initialized to 0
-    if (header->capacity != 0) {
+    if (header->capacity == 0) {
         header->rwLock = threading::ReadWriteLock();
     }
     // TODO: this feels deadlocky, putting this comment here just in case
@@ -166,7 +166,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     if (!fileExists) {
         header->capacity = INITIAL_CAPACITY;
     }
-
+    header->loadFactor = loadFactorIn;
     // mmap the data portion
     buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
     header->rwLock.unlock();
@@ -184,8 +184,9 @@ noProbeNoRehashInsertKeyValueAtIndex(const ValueType &value, SizeType index) {
 
 template<typename Key, typename Mapped>
 bool PersistentHashMap<Key, Mapped>::rehashNeeded() {
-    return (static_cast<double>(this->header->numElements) /
-            static_cast<double>(this->header->capacity));
+    double currentLoadFactor = static_cast<double>(this->header->numElements) /
+            static_cast<double>(this->header->capacity);
+    return currentLoadFactor > this->header->loadFactor;
 }
 
 // private insert function
@@ -246,7 +247,8 @@ size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
             }
         }
     }
-    return i;
+    // if we get here we should be setting 
+    return this->header->capacity;
 }
 
 
@@ -277,7 +279,7 @@ Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
         // TODO: is this what we really want to do here?
         throw std::out_of_range("Key does not exist in hash map");
     }
-    auto rv = this->buckets[indexForKey].second;
+    auto& rv = this->buckets[indexForKey].second;
     this->unlock();
     return rv;
 }
@@ -289,11 +291,11 @@ void PersistentHashMap<Key, Mapped>::rehashAndGrow() {
                                                      this->header->capacity * sizeof(ValueType) * 2,
                                                      sizeof(HeaderType));
     // double the size of the isFilled and isGhost bit vectors
-    isGhost.resize(this->header->capacity * 2);
-    isFilled.resize(this->header->capacity * 2);
+    isGhost.resize(this->header->capacity * 2 / 8);
+    isFilled.resize(this->header->capacity * 2 / 8);
 
     // adjust the capacity to reflect the changes above
-    this->header->capacity *= 2;
+    this->header->capacity = this->header->capacity * 2;
 
     // rehash
     for (size_t i = 0; i < this->header->capacity / 2; ++i) {

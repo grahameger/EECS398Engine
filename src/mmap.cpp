@@ -14,8 +14,9 @@ static const size_t PAGE_SIZE = getpagesize();
 
 // just wrap mmap and do the error checking here
 void * mmapWrapper(int fd, size_t size, size_t offset) {
+    offset = roundUp(offset, PAGE_SIZE);
     extendFile(fd, size + offset);
-    void * rv = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    void * rv = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
     if (rv == (void*)-1) {
         fprintf(stderr, "error mmap'ing %zu bytes at offset %zu - mmap %s", size, offset, strerror(errno));
         exit(1);
@@ -40,6 +41,9 @@ size_t fileSize(int fd) {
 
 void extendFile(int fd, size_t newSize) {
     newSize = roundUp(newSize, PAGE_SIZE);
+    if (newSize == 0) {
+        newSize = PAGE_SIZE;
+    }
     if (fileSize(fd) < newSize) {
        ftruncate(fd, newSize);
     }

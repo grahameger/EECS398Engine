@@ -22,11 +22,17 @@ int main(int argc, char *argv[]) {
 	// search::Crawler crawler(urls);
 	const ssize_t maxVal = 1000000;
 	PersistentHashMap<ssize_t, ssize_t> map(String("test"));
+	Pair<ssize_t, ssize_t> insert;
 	for (ssize_t i = 0; i < maxVal; i++) {
-		map.insert(Pair(i, i * -1));
+		insert.first = i;
+		insert.second = i * -1;
+		map.insert(insert);
+		if (i % 50000 == 0) {
+			std::cout << i << std::endl;
+		}
 	}
 	// run it back
-	for (auto &i : map) {
-		std::cout << '{' << i.first << ", " << i.second << "}\n";
+	for (ssize_t i = 0; i < maxVal; i++) {
+		std::cout << map.at(i) << '\n';
 	}
 }

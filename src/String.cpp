@@ -65,7 +65,7 @@ String& String::operator = ( String&& toMove )
 
 String::~String( )
    {
-   delete[ ] cstring;
+   delete[] cstring;
    cstring = nullptr;
    }
 
@@ -136,7 +136,7 @@ String& String::operator+= ( const String& rhs )
       strcpy( newCString, cstring );
    strcpy( newCString + size, rhs.cstring );
 
-   delete cstring;
+   delete[] cstring;
    cstring = newCString;
    size = newSize;
 
