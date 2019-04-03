@@ -89,6 +89,7 @@ namespace hash {
     };
 
     // specialization for any buffer, size at runtime
+    // doesn't need to be a null terminated string like djb2
     // use T for compile time lengths
     template <> struct Hash<uint8_t*> {
         static uint64_t get(const uint8_t* ptr, const size_t len)
