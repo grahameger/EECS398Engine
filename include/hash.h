@@ -8,8 +8,9 @@
 #include <cstddef>
 #include "String.h"
 
-// templated Murmur64A
+
 namespace hash {
+    // templated Murmur64A
     template <typename T> struct Hash {
         static uint64_t get(const T& t)
         {
@@ -52,6 +53,10 @@ namespace hash {
             
             return h;
         }
+        uint64_t operator()(const T& t) 
+        {
+            return get(t);
+        }
     };
     template <> struct Hash<char*> {
         // double hashing the string with
@@ -67,10 +72,18 @@ namespace hash {
             }
             return (((uint64_t)h1) << 32) + h2;
         }
+        uint64_t operator()(const char * s)
+        {
+            return get(s);
+        }
     };
 
     template <> struct Hash<String> {
         static uint64_t get(const String& str) {
+            return Hash<char*>{}.get(str.CString());
+        }
+        uint64_t operator()(const String& str)
+        {
             return Hash<char*>{}.get(str.CString());
         }
     };
