@@ -9,17 +9,17 @@
 
 int main(int argc, char *argv[]) {
 
-	// std::cout << sizeof(size_t) << '\n';
+	std::cout << sizeof(size_t) << '\n';
 
-	// std::vector<std::string> urls;
-	// urls.reserve(1000000);
-	// std::ifstream start_list("../test/bigTest.url");
-	// std::string line;
+	std::vector<std::string> urls;
+	urls.reserve(1000000);
+	std::ifstream start_list("../test/bigTest.url");
+	std::string line;
 
-	// while (std::getline(start_list, line)) {
-	// 	urls.push_back(line);
-	// }
-	// search::Crawler crawler(urls);
+	while (std::getline(start_list, line)) {
+		urls.push_back(line);
+	}
+	search::Crawler crawler(urls);
 
 	PersistentBitVector v("testVector");
 	v.set(0, true);
