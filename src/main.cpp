@@ -20,19 +20,27 @@ int main(int argc, char *argv[]) {
 	// 	urls.push_back(line);
 	// }
 	// search::Crawler crawler(urls);
-	const ssize_t maxVal = 1000000;
+
+	PersistentBitVector v("testVector");
+	v.set(0, true);
+	v.set(15, true);
+	assert(v.at(0) && v.at(15));
+	bool fifteen = v.at(15);
+	bool zero = v.at(0);
+	bool ten = v.at(10);
+	assert(fifteen && zero && !ten);
+
+	const ssize_t maxVal = 32;
 	PersistentHashMap<ssize_t, ssize_t> map(String("test"));
 	Pair<ssize_t, ssize_t> insert;
 	for (ssize_t i = 0; i < maxVal; i++) {
 		insert.first = i;
 		insert.second = i * -1;
 		map.insert(insert);
-		if (i % 50000 == 0) {
-			std::cout << i << std::endl;
-		}
 	}
 	// run it back
 	for (ssize_t i = 0; i < maxVal; i++) {
-		std::cout << map.at(i) << '\n';
+		auto datum = map.at(i);
+		std::cout << datum << '\n';
 	}
 }

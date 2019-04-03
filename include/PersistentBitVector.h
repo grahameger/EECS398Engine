@@ -18,13 +18,13 @@ public:
     PersistentBitVector(String filename);
     ~PersistentBitVector();
     PersistentBitVector(const PersistentBitVector&) = delete;
-    bool get(size_t idx);
+    bool at(size_t idx);
     void set(size_t idx, bool b);
     void resize(size_t newSize);
     size_t size();
 private:
     int fd;
-    static const size_t DEFAULT_SIZE = 16;
+    static const size_t DEFAULT_SIZE_BYTES = 8;
     // byte order shouldn't matter here?
     static constexpr const uint8_t SET_BITS[] = {
         0b10000000,

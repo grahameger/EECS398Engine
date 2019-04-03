@@ -33,12 +33,13 @@ PersistentBitVector::PersistentBitVector(String filename) {
     }
     header->rwLock.writeLock();
     if (!fileExists) {
-        header->dataSize = DEFAULT_SIZE;
+        header->dataSize = DEFAULT_SIZE_BYTES;
     }
 
     // mmap the data portion
     // the data size should be the number of bits specified, not bytes
     data = (uint8_t*)mmapWrapper(fd, header->dataSize / 8, sizeof(Header));
+    header->rwLock.unlock();
 }
 
 // close and unmap the file with a write lock
@@ -52,7 +53,7 @@ PersistentBitVector::~PersistentBitVector() {
     close(fd);
 }
 
-bool PersistentBitVector::get(size_t idx) {
+bool PersistentBitVector::at(size_t idx) {
     // no bounds checking, there's a O(1) .size() operator if the
     // programmer wants to use it.
     // dataBase[idx / 8] returns the byte which contains the bit we want to return
@@ -73,18 +74,24 @@ void PersistentBitVector::set(size_t idx, bool b) {
 void PersistentBitVector::resize(size_t newSize) {
     // grab the write lock
     header->rwLock.writeLock();
-    if (newSize > header->dataSize) {
+    if (newSize * 8 > header->dataSize * 8) {
         // unmap data
         munmapWrapper(data, header->dataSize);
         // remap data with the new size and sizeof(Header) offset
-        data = (uint8_t*)mmapWrapper(fd, newSize, sizeof(Header));
+        data = (uint8_t*)mmapWrapper(fd, newSize / 8, sizeof(Header));
+
+        // zero out the newly mapped region
+        size_t half = header->dataSize;
+        memset(this->data + half, 0x0, half);
+
+        header->dataSize = newSize / 8;
     }
     header->rwLock.unlock();
 }
 
 size_t PersistentBitVector::size() {
     header->rwLock.readLock();
-    size_t rv = header->dataSize;
+    size_t rv = header->dataSize * 8;
     header->rwLock.unlock();
     return rv; 
 }

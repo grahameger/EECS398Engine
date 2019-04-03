@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "hash.h"
 #include "mmap.h"
 #include "Pair.h"
 #include "String.h"
@@ -60,7 +61,7 @@ public:
     SizeType capacity();
 
 private:
-    static const SizeType INITIAL_CAPACITY = 16;
+    static const SizeType INITIAL_CAPACITY = 64;
 
     // probing functions
     SizeType probeForExistingKey(const KeyType& key );
@@ -110,8 +111,8 @@ public:
     // No need for locks here as we already have the index
     // it's on the programmer to know if their iterator has been invalidated
     Pair<Key, Mapped>& operator*() {
-        assert(!this->persistentHashMap->isGhost.get(this->index));
-        assert(!this->persistentHashMap->isFilled.get(this->index));
+        assert(!this->persistentHashMap->isGhost.at(this->index));
+        assert(!this->persistentHashMap->isFilled.at(this->index));
         return this->persistentHashMap->buckets[this->index];
     }
 
@@ -120,8 +121,8 @@ public:
         this->persistentHashMap->readLock();
         ++this->index;
         for (; (this->index != this->persistentHashMap->size() &&
-                    (this->persistentHashMap->isGhost.get(this->index) ||
-                    !this->persistentHashMap->isFilled.get(this->index)));
+                    (this->persistentHashMap->isGhost.at(this->index) ||
+                    !this->persistentHashMap->isFilled.at(this->index)));
                 ++this->index);
         this->persistentHashMap->unlock();
         return *this;
@@ -209,16 +210,17 @@ void PersistentHashMap<Key, Mapped>::insertKeyValue(const ValueType& value) {
 
 template<typename Key, typename Mapped>
 size_t PersistentHashMap<Key, Mapped>::probeEmptySpotForKey(const Key& key) {
-    size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
+    //size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
+    size_t i = hash::Hash<KeyType>{}.get(key) % this->header->capacity;
     size_t start = i;
     // when we find one return index, if it already exists, return that index
     for (; i < this->header->capacity; ++i) {
-        if (!isFilled.get(i) || isGhost.get(i)) {
+        if (!isFilled.at(i) || isGhost.at(i)) {
             return i;
         }
     }
     for (i = 0; i < start; ++i) {
-        if (!isFilled.get(i) || isGhost.get(i)) {
+        if (!isFilled.at(i) || isGhost.at(i)) {
             return i;
         }
     }
@@ -231,17 +233,18 @@ template<typename Key, typename Mapped>
 size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
     // if it's there then we return the index
     // otherwise return one past the end
-    size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
+    // size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
+    size_t i = hash::Hash<KeyType>{}.get(key) % this->header->capacity;
     size_t start = i;
-    for (; (isGhost.get(i) || isFilled.get(i)) && i < this->header->capacity; ++i ) {
+    for (; (isGhost.at(i) || isFilled.at(i)) && i < this->header->capacity; ++i ) {
         if (buckets[i].first == key) {
             return i;
         }
     }
-    if (!isGhost.get(i) && isFilled.get(i)) {
+    if (!isGhost.at(i) && isFilled.at(i)) {
         return this->header->capacity;
     } else {
-        for (i = 0; (isGhost.get(i) || isFilled.get(i)) && i < start; ++i) {
+        for (i = 0; (isGhost.at(i) || isFilled.at(i)) && i < start; ++i) {
             if (buckets[i].first == key) {
                 return i;
             }
@@ -272,7 +275,7 @@ Mapped& PersistentHashMap<Key, Mapped>::operator[] (const KeyType& key) {
 template<typename Key, typename Mapped>
 Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
     // probe for key
-    this->writeLock();
+    this->readLock();
     auto indexForKey = this->probeForExistingKey(key);
     if (indexForKey == this->header->capacity) {
         this->unlock();
@@ -287,19 +290,29 @@ Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::rehashAndGrow() {
     // double the size of the mapped buckets portion
-    buckets = (ValueType*)mmapWrapper(fd,
-                                                     this->header->capacity * sizeof(ValueType) * 2,
-                                                     sizeof(HeaderType));
+    size_t newCapacity = this->header->capacity * 2;
+    size_t newBucketSize = newCapacity * sizeof(ValueType);
+
+    // unmap old region
+    munmapWrapper(buckets, newBucketSize / 2);
+
+    // map the new region
+    buckets = (ValueType*)mmapWrapper(fd, newBucketSize, sizeof(HeaderType));
+    
+    // zero only the new region of memory
+    size_t half = sizeof(ValueType) * this->header->capacity;
+    memset((void*)((uint8_t*)buckets + half), 0x0, half);
+
     // double the size of the isFilled and isGhost bit vectors
-    isGhost.resize(this->header->capacity * 2 / 8);
-    isFilled.resize(this->header->capacity * 2 / 8);
+    isGhost.resize(newCapacity);
+    isFilled.resize(newCapacity);
 
     // adjust the capacity to reflect the changes above
-    this->header->capacity = this->header->capacity * 2;
+    this->header->capacity = newCapacity;
 
     // rehash
-    for (size_t i = 0; i < this->header->capacity / 2; ++i) {
-        if (!isGhost.get(i) && isFilled.get(i)) {
+    for (size_t i = 0; i < newCapacity / 2; ++i) {
+        if (!isGhost.at(i) && isFilled.at(i)) {
             size_t emptySpot = probeEmptySpotForKey(buckets[i].first);
             isFilled.set(i, false);
             isGhost.set(i, true);
@@ -337,7 +350,7 @@ PersistentHashMap<Key, Mapped>::begin() {
     assert(this->header->capacity == isGhost.size());
     size_t firstIndex;
     for (firstIndex = 0; firstIndex != this->header->capacity; ++firstIndex) {
-        if (this->isFilled.get(firstIndex) && !this->isGhost.get(firstIndex)) {
+        if (this->isFilled.at(firstIndex) && !this->isGhost.at(firstIndex)) {
             this->unlock();
             return Iterator(firstIndex, this);
         }
