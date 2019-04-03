@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cassert>
 #include "thread_queue.hpp"
 #include "hash_table.hpp"
@@ -14,4 +15,29 @@ int main(int argc, char *argv[]) {
 
   *(h[s]) = "123";
   std::cout<<(*h[s]).CString()<<std::endl;
+
+	String a = "am";
+	*h[a] = "pola";
+	std::cout<<"asdfasg"<<std::endl;
+  std::cout<<(*h[a]).CString()<<std::endl;
+
+	hash_table<int> h2;
+	*(h2[a]) = 0;
+	std::cout<<(*h2[a])<<std::endl;
+
+	String in = "index.txt";
+	String table = "table.txt";
+	
+	h.saveIndex(in, table);
+  hash_table<String> h3;
+	h3.load(in, table);
+
+	std::ifstream i(in.CString());
+	//usage
+	char* input = new char[1000];
+	i >> input;
+	std::cout<<input<<std::endl;
+	char* v = input + (long)h3["abc"];
+	std::cout<<*v<<std::endl;
+	delete[] input;
 }
