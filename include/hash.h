@@ -87,6 +87,23 @@ namespace hash {
             return Hash<char*>{}.get(str.CString());
         }
     };
+
+    // specialization for any buffer, size at runtime
+    // use T for compile time lengths
+    template <> struct Hash<uint8_t*> {
+        static uint64_t get(const uint8_t* ptr, const size_t len)
+        {
+            uint32_t h1 = 5831;
+            uint32_t h2 = 5831;
+            const uint8_t * end = ptr + len;
+            for (; ptr != end; ++ptr) 
+            {
+                h1 = ((h1 << 5) + h1) + (*ptr);
+                h2 = (((h2) << 5) + h2) ^ (*ptr);
+            }
+            return (((uint64_t)h1) << 32) + h2;
+        }
+    };
 }
 
 #endif
