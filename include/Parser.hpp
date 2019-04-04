@@ -11,15 +11,14 @@
 #include <unistd.h>
 #include "vector.h"
 #include <ctype.h>
-#include <string> //WILL USE CUSTOM STRING CLASS
+#include "String.h"
 
 class Index_object{
 public:
-    std::string word;
-    std::string type;//body/anchor/title
+    String word;
+    String type;//body/anchor/title
     int position;//word 0,1,2,3 in in document
     //Assignment operator
-    
     Index_object &operator=(const Index_object& rhs);
     
 };
@@ -40,17 +39,17 @@ public:
     
     Vector<Index_object> Document_meta_data_list;
     
-    Vector<std::string> Link_vector;
+    Vector<String> Link_vector;
     
     void print_meta_objects() {
         for(int i = 0; i < Document_meta_data_list.size(); i++) {
-            std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word << " : " << Document_meta_data_list[i].type << std::endl;
+            std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word.CString() << " : " << Document_meta_data_list[i].type << std::endl;
         }
     }
     
     void print_links() {
         for(int i = 0; i < Link_vector.size(); i++) {
-            std::cout << Link_vector[i] << std::endl;
+            std::cout << Link_vector[i].CString() << std::endl;
         }
     }
     
@@ -70,7 +69,7 @@ private:
     bool is_title(char *html_file, long *index, long file_length);
     
     //Prints out words line by line and which tag(word) they belong to
-    void get_words(char *html_file, long *index, long file_length, std::string word);
+    void get_words(char *html_file, long *index, long file_length, String word);
     
     //resets the file pointer to reset_value. Good to use after find_string.
     void reset_index(long *index, long reset_value);
@@ -96,25 +95,4 @@ private:
     long parent_tag_distance(char *html_file, char* tag, long *index, long file_length);
 };
 
-#endif /* Parser_hpp */
-// -----------------------------------------------------------------------------
-//TESTING + HOW TO USE
-/*
- #include "Parser.hpp"
- #include <ctime>
- using namespace std;
- 
- **takes a filename as an argument**
- 
- int main(int argc, const char * argv[]) {
- std::clock_t start;
- double duration = 0;
- start = std::clock();
- LinkFinder L;
- string word;
- L.parse((char*)argv[1]);
- duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
- std::cout<<"printf: "<< duration <<'\n';
- std::cout << "end";
- return 0;
- }*/
+#endif /* Parser_hpp_398 */
