@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <iterator>
 
+#include <iostream>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -59,6 +60,7 @@ public:
     SizeType size();
     bool empty();
     SizeType capacity();
+    void printState();
 
 private:
     static const SizeType INITIAL_CAPACITY = 64;
@@ -79,7 +81,7 @@ private:
     void writeLock();
     void readLock();
     void unlock();
-
+    private:
     // private data
     struct HeaderType {
         size_t numElements;
@@ -159,6 +161,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     // mmap and setup the header portion
     header = (HeaderType*)mmapWrapper(fd, sizeof(HeaderType), 0);
     // memory mapped files should be initialized to 0
+    // jokes on me they're not in practice
     if (header->capacity == 0) {
         header->rwLock = threading::ReadWriteLock();
     }
@@ -169,8 +172,13 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     }
     header->loadFactor = loadFactorIn;
     // mmap the data portion
-    buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
-    header->rwLock.unlock();
+    this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
+    // zero out the this stuff
+    for (size_t i = 0; i < this->header->capacity; ++i) {
+        buckets[i] = ValueType();
+    }
+    // we shouldn't memset we should default construct the objects?
+    this->header->rwLock.unlock();
 }
 
 // Inserts the value into the hash table at a given indice.
@@ -180,7 +188,9 @@ noProbeNoRehashInsertKeyValueAtIndex(const ValueType &value, SizeType index) {
     // insert into the buckets and then update the other members
     this->buckets[index] = value;
     this->isFilled.set(index, true);
+    assert(isFilled.at(index));
     this->isGhost.set(index, false);
+    assert(!isGhost.at(index));
 }
 
 template<typename Key, typename Mapped>
@@ -425,6 +435,23 @@ void PersistentHashMap<Key, Mapped>::writeLock() {
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::unlock() {
     header->rwLock.unlock();
+}
+
+template<typename Key, typename Mapped>
+void PersistentHashMap<Key, Mapped>::printState() {
+    std::cout << "-----" << std::endl;
+    for (size_t i = 0; i < this->header->capacity; ++i) {
+        if (this->isGhost.at(i)) {
+            fprintf(stdout, "%s", "[--]\n");
+            continue;
+        } else if (!this->isFilled.at(i)) {
+            fprintf(stdout, "%s", "[]\n");
+            continue;
+        }
+        // if an element is present then print the element
+        std::cout << "[" << this->buckets[i].first << "] " << this->buckets[i].second << std::endl;
+    }
+    std::cout << "-----" << std::endl; 
 }
 
 

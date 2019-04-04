@@ -38,7 +38,9 @@ PersistentBitVector::PersistentBitVector(String filename) {
 
     // mmap the data portion
     // the data size should be the number of bits specified, not bytes
-    data = (uint8_t*)mmapWrapper(fd, header->dataSize / 8, sizeof(Header));
+    data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
+    // zero out the page? seriously why is this not working?
+    memset(data, 0x0, header->dataSize);
     header->rwLock.unlock();
 }
 
@@ -67,7 +69,11 @@ bool PersistentBitVector::at(size_t idx) {
 void PersistentBitVector::set(size_t idx, bool b) {
     // same as get() but summing instead of a bitwise AND to save the value
     header->rwLock.writeLock();
-    data[idx / 8] += (SET_BITS[idx % 8]);
+    size_t byteToAccess = idx / 8;
+    size_t bitToAccess = idx % 8;
+    uint8_t byteToAdd = SET_BITS[bitToAccess];
+    
+    data[byteToAccess] += byteToAdd;
     header->rwLock.unlock();
 }
 

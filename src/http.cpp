@@ -38,7 +38,7 @@ namespace search {
         int sockfd = 0;
         int rv = 0;
         // load up address structs with getaddrinfo();
-        memset(&hints, 0, sizeof hints);
+        memset(&hints, 0x0, sizeof hints);
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
