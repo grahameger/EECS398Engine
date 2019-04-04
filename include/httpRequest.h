@@ -24,7 +24,7 @@ namespace search {
         std::string   query;
         std::string   fragment;
         std::string   headers;
-        std::string   protocol;
+        std::string   scheme;
         int           port;         // note 0 defaults to 80
     };
 }

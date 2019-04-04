@@ -152,11 +152,11 @@ namespace search {
         std::unique_ptr<Socket> sock;
         request.method = constants::getMethod;
         request.headers = constants::connClose;
-        if (request.protocol == constants::httpsStr) {
+        if (request.scheme == constants::httpsStr) {
             request.port = 443;
             sock = std::unique_ptr<SecureSocket>(new SecureSocket);
         }
-        else if (request.protocol == constants::httpStr) {
+        else if (request.scheme == constants::httpStr) {
             request.port = 80;
             sock = std::unique_ptr<Socket>(new Socket);
         }
@@ -238,6 +238,7 @@ namespace search {
         char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
         if (redirectUrl) {
             free(fullResponse);
+            // make a non relative url from this 
             // TODO: https://stackoverflow.com/questions/8250259/is-a-302-redirect-to-relative-url-valid-or-invalid
             return SubmitURLSync(redirectUrl, ++redirCount);
         }
@@ -264,6 +265,49 @@ namespace search {
     }
 
     void HTTPClient::process(char * file, size_t len) {
+
+    }
+
+    char * HTTPClient::resolveRelativeUrl(const HTTPRequest& currentRequest, const char * newUrl) {
+        // RFC 2396
+        // 5.2. Resolving Relative References to Absolute Form
+
+        // This section describes an example algorithm for resolving URI
+        // references that might be relative to a given base URI.
+
+        // The base URI is established according to the rules of Section 5.1 and
+        // parsed into the four main components as described in Section 3.  Note
+        // that only the scheme component is required to be present in the base
+        // URI; the other components may be empty or undefined.  A component is
+        // undefined if its preceding separator does not appear in the URI
+        // reference; the path component is never undefined, though it may be
+        // empty.  The base URI's query component is not used by the resolution
+        // algorithm and may be discarded.
+
+        // For each URI reference, the following steps are performed in order:
+
+        // 1) The URI reference is parsed into the potential four components and
+        //     fragment identifier, as described in Section 4.3.
+
+        // 2) If the path component is empty and the scheme, authority, and
+        //     query components are undefined, then it is a reference to the
+        //     current document and we are done.  Otherwise, the reference URI's
+        //     query and fragment components are defined as found (or not found)
+        //     within the URI reference and not inherited from the base URI.
+
+        // 3) If the scheme component is defined, indicating that the reference
+        //     starts with a scheme name, then the reference is interpreted as an
+        //     absolute URI and we are done.  Otherwise, the reference URI's
+        //     scheme is inherited from the base URI's scheme component.
+
+        //     Due to a loophole in prior specifications [RFC1630], some parsers
+        //     allow the scheme name to be present in a relative URI if it is the
+        //     same as the base URI scheme.  Unfortunately, this can conflict
+        //     with the correct parsing of non-hierarchical URI.  For backwards
+        //     compatibility, an implementation may work around such references
+        //     by removing the scheme if it matches that of the base URI and the
+        //     scheme is known to always use the <hier_part> syntax.  The parser
+
 
     }
 

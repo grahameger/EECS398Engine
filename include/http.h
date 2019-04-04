@@ -29,7 +29,6 @@
 
 #include <fcntl.h>
 #include <sys/types.h>
-#include <unordered_set>
 #include <sys/socket.h> 
 #include <signal.h>
 #include <netinet/in.h> 
@@ -77,6 +76,8 @@ namespace search {
         void process(char* file, size_t len);
 
         char * checkRedirectsHelper(const char * getMessage, size_t len);
+
+        char * resolveRelativeUrl(const HTTPRequest& currentRequest, const char * newUrl);
 
         // given a socket return the clientInfo
         std::mutex m;

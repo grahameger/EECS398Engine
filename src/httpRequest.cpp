@@ -26,7 +26,7 @@ namespace search {
         );
         std::smatch result;
         if (std::regex_match(url, result, r)) {
-            protocol = result[2];
+            scheme = result[2];
             host = result[4];
             path = result[5];
             query = result[7];
@@ -75,7 +75,7 @@ namespace search {
         ss << "\t" << "query: " << query << '\n';
         ss << "\t" << "fragment: " << fragment << '\n';
         ss << "\t" << "headers: " << headers << '\n';
-        ss << "\t" << "protocol: " << protocol << '\n';
+        ss << "\t" << "scheme: " << scheme << '\n';
         ss << "\t" << "port: " << port << '\n';
         ss << "}\n";
         std::cout << ss.str() << std::flush;
