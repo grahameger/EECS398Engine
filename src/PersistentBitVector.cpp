@@ -61,7 +61,7 @@ bool PersistentBitVector::at(size_t idx) {
     // dataBase[idx / 8] returns the byte which contains the bit we want to return
     // we do a bitwise AND with it to just return the singular bit specified by idx
     header->rwLock.readLock();
-    bool rv = data[idx / 8] & (SET_BITS[idx % 8]);
+    bool rv = (data[idx / 8] >> (idx % 8) & 1U);
     header->rwLock.unlock();
     return rv;
 }
@@ -69,11 +69,11 @@ bool PersistentBitVector::at(size_t idx) {
 void PersistentBitVector::set(size_t idx, bool b) {
     // same as get() but summing instead of a bitwise AND to save the value
     header->rwLock.writeLock();
-    size_t byteToAccess = idx / 8;
-    size_t bitToAccess = idx % 8;
-    uint8_t byteToAdd = SET_BITS[bitToAccess];
-    
-    data[byteToAccess] += byteToAdd;
+    if (b)
+        data[idx / 8] |= 1UL << (idx % 8);
+    else
+        data[idx / 8] &= ~(1UL << (idx % 8));
+    // set (idx % 8) bit of byte (idx / 8)
     header->rwLock.unlock();
 }
 

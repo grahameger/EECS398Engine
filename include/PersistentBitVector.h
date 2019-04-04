@@ -26,16 +26,6 @@ private:
     int fd;
     static const size_t DEFAULT_SIZE_BYTES = 8;
     // byte order shouldn't matter here?
-    static constexpr const uint8_t SET_BITS[] = {
-        0b00000001,
-        0b00000010,
-        0b00000100,
-        0b00001000,
-        0b00010000,
-        0b00100000,
-        0b01000000,
-        0b10000000,
-    };
     struct Header {
         size_t dataSize;
         threading::ReadWriteLock rwLock;
