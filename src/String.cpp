@@ -1,3 +1,6 @@
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #include <cstring>
 #include <cctype>
 #include "String.h"
@@ -62,7 +65,7 @@ String& String::operator = ( String&& toMove )
 
 String::~String( )
    {
-   delete[ ] cstring;
+   delete[] cstring;
    cstring = nullptr;
    }
 
@@ -133,13 +136,18 @@ String& String::operator+= ( const String& rhs )
       strcpy( newCString, cstring );
    strcpy( newCString + size, rhs.cstring );
 
-   delete cstring;
+   delete[] cstring;
    cstring = newCString;
    size = newSize;
 
    return *this;
    }
-
+ 
+ String operator+( String lhs, const String& rhs) 
+   {
+   lhs += rhs;
+   return lhs;
+   }
 
 String::operator bool( ) const
    {
@@ -158,3 +166,11 @@ void String::RemoveWhitespace()
   }
   *i = 0;
   }
+
+
+String operator+ (String lhs, const char * toCat) 
+   {
+   auto cat = String(toCat);
+   lhs += cat;
+   return lhs;
+   }

@@ -1,3 +1,6 @@
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #pragma once
 #ifndef STRING_H_398
 #define STRING_H_398
@@ -24,6 +27,7 @@ public:
 
    String& operator+= ( const String& rhs );
    friend String operator+ ( String lhs, const String& rhs );
+   friend String operator+ ( String lhs, const char * toCat );
 
    operator bool( ) const;
 

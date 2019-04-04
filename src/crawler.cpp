@@ -27,13 +27,15 @@ namespace search {
     void * Crawler::stub() {
         while (true) {
             std::string p = q.pop();
-            std::string host = HTTPRequest(p).host;
+            auto req = HTTPRequest(p);
 
             // check if we have the robots file for this domain
-            if (!haveRobots(host)) {
+            if (!haveRobots(req.host)) {
                 // get the robots.txt file
-                std::string newUrl = "http://" + host + "/robots.txt";
+                std::string newUrl = req.protocol + "://" + req.host + "/robots.txt";
                 // add the old url to the back of the queue until we get the robots file
+
+                // failed url's will begin to pile up at the back we need some method to fix that.
                 q.push(p);
                 client.SubmitURLSync(newUrl, 0);
                 continue;
@@ -42,7 +44,7 @@ namespace search {
             // check the domain timer, we want to wait
             // WAIT_TIME seconds between pages on the same host
             pthread_mutex_lock(&domainMutex);
-            auto it = lastHitHost.find(host);
+            auto it = lastHitHost.find(req.host);
             if (it != lastHitHost.end()) {
                 if (difftime(time(NULL), it->second) > DOMAIN_REHIT_WAIT_TIME) {
                     // reset the time
@@ -63,7 +65,7 @@ namespace search {
                 }
             } else {
                 // insert page to the hash table
-                lastHitHost.insert({host, time(NULL)});
+                lastHitHost.insert({req.host, time(NULL)});
                 // unlock mutex
                 pthread_mutex_unlock(&domainMutex);
                 // submitURLSync

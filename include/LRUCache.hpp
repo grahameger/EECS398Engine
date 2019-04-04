@@ -11,7 +11,7 @@ template <class Key, class Value>
 class LRUCache
 {
 public:
-	LRUCache(int capacityIn, bool valueIsDynamicallyAllocated= false);
+	LRUCache(size_t capacityIn, bool valueIsDynamicallyAllocated= false);
 	Value get(Key &key);
 	void put(Key &key, Value &val);
 	void clear();
@@ -22,7 +22,7 @@ private:
 	unordered_map<Key, Value> Cache;
 	unordered_map<Key, typename list<Key>::iterator> LRUQueueKeyPositions;
 	list<Key> LRUQueue;
-	int Capacity;
+	size_t Capacity;
 	bool ValueIsDynamicallyAllocated;
 };
 
@@ -35,7 +35,7 @@ void LRUCache<Key, Value>::clear()
 }
 
 template <class Key, class Value>
-LRUCache<Key, Value>::LRUCache(int capacity, bool valueIsDynamicallyAllocated)
+LRUCache<Key, Value>::LRUCache(size_t capacity, bool valueIsDynamicallyAllocated)
 	: Capacity(capacity), ValueIsDynamicallyAllocated(valueIsDynamicallyAllocated) {}
 
 template <class Key, class Value>

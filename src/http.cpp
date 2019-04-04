@@ -38,7 +38,7 @@ namespace search {
         int sockfd = 0;
         int rv = 0;
         // load up address structs with getaddrinfo();
-        memset(&hints, 0, sizeof hints);
+        memset(&hints, 0x0, sizeof hints);
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
@@ -145,7 +145,7 @@ namespace search {
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
-            fprintf(stderr, "Too many redirects ending in host %s", url.c_str());
+            fprintf(stderr, "Too many redirects ending in host %s\n", url.c_str());
             return;
         }
         HTTPRequest request(url);
@@ -171,20 +171,22 @@ namespace search {
         }
         ssize_t rv = sock->setFd(sockfd);
         if (rv < 0) {
-            fprintf(stderr, "error setting file descriptor for host '%s' : %s", url.c_str(), strerror(errno));
+            fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             return;
         }
 
         rv = 0;
         int bytesReceived = 0;
         size_t totalSize = 0;
+        size_t headerPos = 0;
+        size_t headerSize = 0;
         ssize_t contentLength = -1;
         char * fullResponse = (char*)malloc(constants::BUFFER_SIZE);
 
         // send request blocking
         const std::string requestStr = request.requestString();
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-            fprintf(stderr, "error sending request to host for url '%s'", url.c_str());
+            fprintf(stderr, "error sending request to host for url '%s'\n", url.c_str());
         }
 
         // dynamic buffering
@@ -206,12 +208,12 @@ namespace search {
                 // check if the header has been downloaded
                 bytesReceived += rv;
                 std::string_view view(fullResponse, bytesReceived);
-                size_t header_pos = view.find("\r\n\r\n");
-                if (header_pos != std::string_view::npos) {
-                    size_t header_size = header_pos + 4;
+                headerPos = view.find("\r\n\r\n");
+                if (headerPos != std::string_view::npos) {
+                    headerSize = headerPos + 4;
                     // search for "Content-Length"
                     contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
-                    totalSize = header_size + contentLength;
+                    totalSize = headerSize + contentLength;
                     ssize_t remaining = totalSize - bytesReceived;
                     if (remaining > 0) {
                         fullResponse = (char *)realloc(fullResponse, totalSize);
@@ -236,6 +238,7 @@ namespace search {
         char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
         if (redirectUrl) {
             free(fullResponse);
+            // TODO: https://stackoverflow.com/questions/8250259/is-a-302-redirect-to-relative-url-valid-or-invalid
             return SubmitURLSync(redirectUrl, ++redirCount);
         }
 
@@ -245,7 +248,8 @@ namespace search {
         // write it to a file
         std::string filename = request.filename();
         std::ofstream outfile(filename);
-        outfile.write(fullResponse, totalSize);
+
+        outfile.write(fullResponse + headerSize, contentLength);
         outfile.close();
         free(fullResponse);
         fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
@@ -321,13 +325,23 @@ namespace search {
         ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
+            fprintf(stderr, "Error creating new SSL struct\n");
+            fflush(stderr);
+            return -1;
         }
-        ::SSL_set_fd(ssl, sockfd);
-        int rv = ::SSL_connect(ssl);
+        int rv = ::SSL_set_fd(ssl, sockfd);
+        if (rv != 1) {
+            // TODO better error handling
+            fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);
+            fflush(stderr);
+            return -1;
+        }
+        rv = ::SSL_connect(ssl);
         if (rv <= 0) {
             // TODO better error handling
-            fprintf(stderr, "Error creating SSL connection");
+            fprintf(stderr, "Error creating SSL connection\n");
             fflush(stderr);
+            return -1;
         }
         return rv;
     }
