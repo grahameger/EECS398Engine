@@ -1,3 +1,6 @@
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #include <cstring>
 #include <cctype>
 #include "String.h"
@@ -67,10 +70,10 @@ String& String::operator = ( String&& toMove )
 
 
 String::~String( )
-{
-    delete[ ] cstring;
-    cstring = nullptr;
-}
+   {
+   delete[] cstring;
+   cstring = nullptr;
+   }
 
 
 void String::Swap( String& toSwap )
@@ -128,38 +131,51 @@ char& String::operator[ ] ( int index )
 
 
 String& String::operator+= ( const String& rhs )
-{
-    if ( rhs.cstring == nullptr )
-        return *this;
-    
-    int newSize = size + rhs.size;
-    char* newCString = new char[newSize + 1];
-    
-    if ( cstring != nullptr )
-        strcpy( newCString, cstring );
-    strcpy( newCString + size, rhs.cstring );
-    
-    delete cstring;
-    cstring = newCString;
-    size = newSize;
-    
-    return *this;
-}
+   {
+   if ( rhs.cstring == nullptr )
+      return *this;
+
+   int newSize = size + rhs.size;
+   char* newCString = new char[newSize + 1];
+
+   if ( cstring != nullptr )
+      strcpy( newCString, cstring );
+   strcpy( newCString + size, rhs.cstring );
+
+   delete[] cstring;
+   cstring = newCString;
+   size = newSize;
+
+   return *this;
+   }
+ 
+ String operator+( String lhs, const String& rhs) 
+   {
+   lhs += rhs;
+   return lhs;
+   }
 
 String::operator bool( ) const
-{
-    return size > 0;
-}
+   {
+   return size > 0;
+   }
 
-void String::RemoveWhitespace()
-{
-    char* i = cstring;
-    char* j = cstring;
-    while(*j != 0)
-    {
-        *i = *j++;
-        if(!isspace(*i))
-            i++;
-    }
-    *i = 0;
-}
+void String::RemoveWhitespace() 
+  {
+  char* i = cstring;
+  char* j = cstring;
+  while(*j != 0)
+  {
+    *i = *j++;
+    if(!isspace(*i))
+      i++;
+  }
+  *i = 0;
+  }
+
+String operator+ (String lhs, const char * toCat) 
+   {
+   auto cat = String(toCat);
+   lhs += cat;
+   return lhs;
+   }
