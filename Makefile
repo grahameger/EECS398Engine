@@ -9,7 +9,7 @@ TARGET := bin/engine
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CPPFLAGS := -O3 -Wall -std=c++17 -march=native
+CPPFLAGS := -g3 -Wall -std=c++17 -march=native
 LIB := -pthread -lssl -lcrypto
 INC := -I include
 
