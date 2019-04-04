@@ -1,4 +1,6 @@
+#include <iostream>
 #include <cstring>
+#include <cctype>
 #include "String.h"
 
 const char* String::nullString = "";
@@ -7,17 +9,21 @@ const char* String::nullString = "";
 String::String( ) : cstring( nullptr ), size( 0 ) { }
 
 
-String::String( const char* toCopy ) : size( strlen( toCopy ) )
+String::String( const char* toCopy, int length ) : size( length )
    {
+   if ( length == -1 )
+      size = strlen( toCopy );
    cstring = new char[ size + 1 ];
-   strcpy( cstring, toCopy );
+   memcpy( cstring, toCopy, size );
    }
 
 
-String::String( char*&& toMove ) : cstring( toMove ), 
-      size( strlen( toMove ) )
+String::String( char*&& toMove, int length ) : cstring( toMove ), 
+      size( length )
    {
    toMove = nullptr;
+   if ( length == -1 )
+      size = strlen( cstring );
    }
 
 
@@ -32,7 +38,7 @@ String::String( const String& toCopy )
 	  }
    
    cstring = new char[ size + 1 ];
-   strcpy( cstring, toCopy.cstring );
+   memcpy( cstring, toCopy.cstring, size );
    }
 
 
@@ -111,14 +117,16 @@ const char String::operator[ ] ( int index ) const
 
 char& String::operator[ ] ( int index )
    {
-   if ( cstring == nullptr )
-      return nullString[ index ];
-   
+   if ( cstring == nullptr ) {
+      cstring = new char[1];
+      cstring[0] = 0x0;
+      return cstring[index];
+   }
    return cstring[ index ];
    }
 
 
-String& operator+= ( const String& rhs )
+String& String::operator+= ( const String& rhs )
    {
    if ( rhs.cstring == nullptr )
       return *this;
@@ -127,8 +135,8 @@ String& operator+= ( const String& rhs )
    char* newCString = new char[newSize + 1];
 
    if ( cstring != nullptr )
-      strcpy( newCString, cstring );
-   strcpy( newCString + size, rhs.cstring );
+      memcpy( newCString, cstring, size );
+   memcpy( newCString + size, rhs.cstring, rhs.size );
 
    delete cstring;
    cstring = newCString;
@@ -142,3 +150,19 @@ String::operator bool( ) const
    {
    return size > 0;
    }
+
+void String::RemoveWhitespace() 
+  {
+  if ( cstring == nullptr )
+     return;
+
+  char* i = cstring;
+  char* j = cstring;
+  while(*j != 0)
+  {
+    *i = *j++;
+    if(!isspace(*i))
+      i++;
+  }
+  *i = 0;
+  }

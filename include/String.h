@@ -1,36 +1,40 @@
-#ifndef STRING_H
-#define STRING_H
+#pragma once
+#ifndef STRING_H_398
+#define STRING_H_398
 
 class String
    {
-public:
-   String( );
-   String( const char* toCopy );
-   String( char*&& toMove );
-   String( const String& toCopy );
-   String( String&& toMove );
-   String& operator=( const String& toCopy );
-   String& operator=( String&& toMove );
-   ~String();
+   public:
+      String( );
+      String( const char* toCopy, int length = -1 );
+      String( char*&& toMove, int length = -1 );
+      String( const String& toCopy );
+      String( String&& toMove );
+      String& operator=( const String& toCopy );
+      String& operator=( String&& toMove );
+      ~String();
 
-   void Swap( String& toSwap );
-   bool Empty( ) const;
-   int Size( ) const;
-   const char* CString( ) const;
-   bool Compare( const String& other ) const;
+      bool Empty( ) const;
+      int Size( ) const;
+      const char* CString( ) const;
 
-   const char operator[ ] ( int index ) const;
-   char& operator[ ] ( int index );
+      void RemoveWhitespace( );
+      void Swap( String& toSwap );
+      bool Compare( const String& other ) const;
 
-   String& operator+= ( const String& rhs );
-   friend String operator+ ( String lhs, const String& rhs );
+      const char operator[ ] ( int index ) const;
+      char& operator[ ] ( int index );
 
-   operator bool( ) const;
+      String& operator+= ( const String& rhs );
+      friend String operator+ ( String lhs, const String& rhs );
 
-private:
-   const static char* nullString;
-   char* cstring;
-   int size;
+      operator bool( ) const;
+
+   private:
+      const static char* nullString;
+      char* cstring;
+      int size;
+
    };
 
 #endif
