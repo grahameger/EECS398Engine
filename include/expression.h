@@ -69,7 +69,7 @@ public:
     {
         string phrase = terms[ 0 ]->stringEval( );
         for ( size_t i = 1;  i < terms.size( );  ++i ) {
-            phrase += "&" + terms[ i ]->stringEval( );
+            phrase += " " + terms[ i ]->stringEval( );
         }
         return phrase;
     }
