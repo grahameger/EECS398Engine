@@ -25,10 +25,11 @@ public:
 private:
     int fd;
     static const size_t DEFAULT_SIZE_BYTES = 8;
+
     // byte order shouldn't matter here?
     struct Header {
         size_t dataSize;
-        threading::ReadWriteLock rwLock;
+        pthread_mutex_t mutex;
     };
     uint8_t * data;
     Header * header;

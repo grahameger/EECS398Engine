@@ -1,11 +1,13 @@
 // Created by Graham Eger on 4/1/2019
 
-#include "PersistentBitVector.h"
 #include <cstdio>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <cassert>
+#include <pthread.h>
+
+#include "PersistentBitVector.h"
 #include "mmap.h"
 
 
@@ -29,9 +31,9 @@ PersistentBitVector::PersistentBitVector(String filename) {
     // mmap and setup the header portion
     header = (Header*)mmapWrapper(fd, sizeof(Header), 0);
     if (header->dataSize == 0) {
-        header->rwLock = threading::ReadWriteLock();
+        // just run the mutex constructor ourselves, I'm sorry C++ gods. 
+        header->mutex = PTHREAD_MUTEX_INITIALIZER;
     }
-    header->rwLock.writeLock();
     if (!fileExists) {
         header->dataSize = DEFAULT_SIZE_BYTES;
     }
@@ -41,13 +43,11 @@ PersistentBitVector::PersistentBitVector(String filename) {
     data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
     // zero out the page? seriously why is this not working?
     memset(data, 0x0, header->dataSize);
-    header->rwLock.unlock();
 }
 
 // close and unmap the file with a write lock
 PersistentBitVector::~PersistentBitVector() {
     // get a write lock so that all reads and writes finish up
-    header->rwLock.writeLock();
     // 2 unmaps
     munmapWrapper(data, header->dataSize);
     // we reset the lock on a reconstruction of this data structure so shouldn't be a problem
@@ -60,26 +60,20 @@ bool PersistentBitVector::at(size_t idx) {
     // programmer wants to use it.
     // dataBase[idx / 8] returns the byte which contains the bit we want to return
     // we do a bitwise AND with it to just return the singular bit specified by idx
-    header->rwLock.readLock();
     bool rv = (data[idx / 8] >> (idx % 8) & 1U);
-    header->rwLock.unlock();
     return rv;
 }
 
 void PersistentBitVector::set(size_t idx, bool b) {
     // same as get() but summing instead of a bitwise AND to save the value
-    header->rwLock.writeLock();
     if (b)
         data[idx / 8] |= 1UL << (idx % 8);
     else
         data[idx / 8] &= ~(1UL << (idx % 8));
-    // set (idx % 8) bit of byte (idx / 8)
-    header->rwLock.unlock();
 }
 
 void PersistentBitVector::resize(size_t newSize) {
     // grab the write lock
-    header->rwLock.writeLock();
     if (newSize * 8 > header->dataSize * 8) {
         // unmap data
         munmapWrapper(data, header->dataSize);
@@ -92,12 +86,9 @@ void PersistentBitVector::resize(size_t newSize) {
 
         header->dataSize = newSize / 8;
     }
-    header->rwLock.unlock();
 }
 
 size_t PersistentBitVector::size() {
-    header->rwLock.readLock();
     size_t rv = header->dataSize * 8;
-    header->rwLock.unlock();
     return rv; 
 }

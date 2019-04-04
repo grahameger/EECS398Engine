@@ -15,13 +15,12 @@
 #include <vector>
 
 namespace threading {
-    class Mutex  {
+    struct Mutex  {
     public:
         Mutex();
         ~Mutex();
         void lock();
         void unlock();
-    private:
         friend class ConditionVariable;
         Mutex(const Mutex&) = delete;
         Mutex& operator=(const Mutex&) = delete;

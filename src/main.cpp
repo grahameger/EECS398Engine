@@ -30,18 +30,20 @@ int main(int argc, char *argv[]) {
 	bool ten = v.at(10);
 	assert(fifteen && zero && !ten);
 
-	const ssize_t maxVal = 8;
+	const ssize_t maxVal = 100000;
 	PersistentHashMap<ssize_t, ssize_t> map(String("test"));
 	Pair<ssize_t, ssize_t> insert;
 	for (ssize_t i = 0; i < maxVal; i++) {
 		insert.first = i;
 		insert.second = i * -1;
 		map.insert(insert);
+		if ( i % 10000 == 0 ) {
+			std::cout << i << std::endl;
+		}
 	}
-	map.printState();
 	// run it back
 	for (ssize_t i = 0; i < maxVal; i++) {
 		auto datum = map.at(i);
-		std::cout << datum << '\n';
+		assert(datum == -1 * i);
 	}
 }

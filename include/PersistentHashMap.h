@@ -173,10 +173,6 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     header->loadFactor = loadFactorIn;
     // mmap the data portion
     this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
-    // zero out the this stuff
-    for (size_t i = 0; i < this->header->capacity; ++i) {
-        buckets[i] = ValueType();
-    }
     // we shouldn't memset we should default construct the objects?
     this->header->rwLock.unlock();
 }
