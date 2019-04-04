@@ -18,6 +18,10 @@ bool CharIsRelevant( char c )
 {
     switch ( c )
     {
+        case '@':
+        case '#':
+        case '$':
+        case '&':
         case '(':
         case ')':
         case '|':
@@ -30,16 +34,16 @@ bool CharIsRelevant( char c )
 }
 
 bool CharIsIrrelevant( char c )
-   {
-   return !CharIsRelevant( c );
-   }
+{
+    return !CharIsRelevant( c );
+}
 
 TokenStream::TokenStream( const std::string &in ) :
-      input( in )
-   {
-   // Erase irrelevant chars using algorithm
-   input.erase( std::remove_if( input.begin( ), input.end( ), CharIsIrrelevant ), input.end( ) );
-   }
+input( in )
+{
+    // Erase irrelevant chars using algorithm
+    input.erase( std::remove_if( input.begin( ), input.end( ), CharIsIrrelevant ), input.end( ) );
+}
 
 bool TokenStream::Match( char c )
 {
@@ -59,9 +63,9 @@ bool TokenStream::Match( char c )
 }
 
 bool TokenStream::AllConsumed( ) const
-   {
-   return location == input.size( );
-   }
+{
+    return location == input.size( );
+}
 
 Phrase *TokenStream::parseWord( )
 {
@@ -71,8 +75,13 @@ Phrase *TokenStream::parseWord( )
     }
     string val = "";
     size_t start = location;
-    while(is_char(input[location]) || isdigit(input[location])) {
-        val += input[location];
+    while(is_char(input[location]) || isdigit(input[location]) || input[location] == '@' || input[location] == '#' || input[location] == '$') {
+        if(input[location] != '@' && input[location] != '#' && input[location] != '$') {
+            val += tolower(input[location]);
+        }
+        else {
+            val += input[location];
+        }
         location++;
     }
     
@@ -87,7 +96,7 @@ Phrase *TokenStream::parseWord( )
 }
 
 bool is_char(const char c) {
-    return (((int)c >= 65 && (int)c <= 90) || ((int)c >= 97 && (int)c <= 122) || c == '@' || c == '#' || c == '$') ? true : false;
+    return (((int)c >= 65 && (int)c <= 90) || ((int)c >= 97 && (int)c <= 122)) ? true : false;
 }
 
 void help_message() {
