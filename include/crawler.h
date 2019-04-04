@@ -44,7 +44,7 @@ namespace search {
         static void domainUnlock();
 
     private:
-        threading::ThreadQueue<std::string> q;
+        threading::ThreadQueue<std::string> readyQueue;
         static const size_t NUM_CRAWLER_THREADS = 1;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 3;
         pthread_t threads[NUM_CRAWLER_THREADS];

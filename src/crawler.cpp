@@ -11,6 +11,30 @@
 
 namespace search {
 
+    Crawler::Crawler(const std::vector<std::string> &seedUrls) {
+        // initialize mutex
+        domainMutex = PTHREAD_MUTEX_INITIALIZER;
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
+
+        // make the robots and pages directory
+        makeDir("robots");
+        makeDir("pages");
+
+        // initialize our directory hierarchy for pages
+        // !nah we're not doing this we're going to use ext4
+        // specifically so we don't have to do this
+        // O(1) file access, creation in a directory 
+        // with an unbounded number of files (2^32-1 really)
+         
+        // add the seed urls to the queue
+        readyQueue.push(seedUrls);
+
+        // when does this run?
+        for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
+            pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
+        }
+    }
+
     void makeDir(const char * name) {
         struct stat st = {0};
         if (stat(name, &st) == -1) {
@@ -26,7 +50,7 @@ namespace search {
 
     void * Crawler::stub() {
         while (true) {
-            std::string p = q.pop();
+            std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
 
             // check if we have the robots file for this domain
@@ -36,7 +60,7 @@ namespace search {
                 // add the old url to the back of the queue until we get the robots file
 
                 // failed url's will begin to pile up at the back we need some method to fix that.
-                q.push(p);
+                readyQueue.push(p);
                 client.SubmitURLSync(newUrl, 0);
                 continue;
             }
@@ -59,7 +83,7 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // add the page to the back of the Queue
-                    q.push(p);
+                    readyQueue.push(p);
                     // continue
                     continue;
                 }
@@ -78,24 +102,6 @@ namespace search {
 
     void * Crawler::stubHelper(void * context) {
         return (((Crawler *)context)->stub());
-    }
-
-    Crawler::Crawler(const std::vector<std::string> &seedUrls) {
-        // initialize mutex
-        domainMutex = PTHREAD_MUTEX_INITIALIZER;
-        robots = &threading::Singleton<RobotsTxt>::getInstance();
-
-        // make the robots and pages directory
-        makeDir("robots");
-        makeDir("pages");
-         
-        // add the seed urls to the queue
-        q.push(seedUrls);
-
-        // when does this run?
-        for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
-            pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
-        }
     }
 
     // just join and never ever quit

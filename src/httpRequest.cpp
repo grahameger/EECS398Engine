@@ -83,7 +83,7 @@ namespace search {
     }
 
     std::string HTTPRequest::uri() const {
-        // Pseudocode directly from RFC 2396
+        // Pseudocode from RFC 2396
         // result = ""
         //  if scheme is defined then
         //      append scheme to result
