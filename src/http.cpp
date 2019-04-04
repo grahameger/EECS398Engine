@@ -239,8 +239,9 @@ namespace search {
         if (redirectUrl) {
             free(fullResponse);
             // make a non relative url from this 
-            // TODO: https://stackoverflow.com/questions/8250259/is-a-302-redirect-to-relative-url-valid-or-invalid
-            return SubmitURLSync(redirectUrl, ++redirCount);
+            std::string newUrl = resolveRelativeUrl(url.c_str(), redirectUrl);
+            free(redirectUrl);
+            return SubmitURLSync(newUrl, ++redirCount);
         }
 
         process(fullResponse, bytesReceived);
@@ -268,47 +269,115 @@ namespace search {
 
     }
 
-    char * HTTPClient::resolveRelativeUrl(const HTTPRequest& currentRequest, const char * newUrl) {
-        // RFC 2396
-        // 5.2. Resolving Relative References to Absolute Form
+    std::string HTTPClient::resolveRelativeUrl(const char * baseUri, const char * newUri) {
+        // RFC 2396 Section 5.2 Resolving Relative References to Absolute Form
+        // 1) Start 
+        // Parse the URI reference into the potential four components and fragment identifier
+        HTTPRequest newParsed = HTTPRequest(newUri);
+        HTTPRequest baseParsed = HTTPRequest(baseUri);
 
-        // This section describes an example algorithm for resolving URI
-        // references that might be relative to a given base URI.
+        // 2)                                                   
+        if (newParsed.path == "" && 
+            newParsed.scheme == "" &&
+            newParsed.host == "" && // authority == host + port
+            newParsed.query == "") {
+            
+            // it is a reference to the current document and we are done
+            // we should clear the query and fragment
+            baseParsed.fragment = "";
+            baseParsed.query = "";
+            return baseParsed.uri();
+        }
 
-        // The base URI is established according to the rules of Section 5.1 and
-        // parsed into the four main components as described in Section 3.  Note
-        // that only the scheme component is required to be present in the base
-        // URI; the other components may be empty or undefined.  A component is
-        // undefined if its preceding separator does not appear in the URI
-        // reference; the path component is never undefined, though it may be
-        // empty.  The base URI's query component is not used by the resolution
-        // algorithm and may be discarded.
+        // 3)
+        if (newParsed.scheme != "") {
+            // The URL is an absolute URL and we are done, return the 
+            // parsed version 
+            return std::string(newUri);
+        }
 
-        // For each URI reference, the following steps are performed in order:
+        // 4) if host+port is defined then reference is a network path and skip to step 7
+        // In our crawler we're not going to crawl network paths outside of :80 or :443
+        // so we're just going to return the base URL and let the caller handle it
+        if (newParsed.host != "") {
+            // skip to step 7
+            return std::string(baseUri);
+        }
 
-        // 1) The URI reference is parsed into the potential four components and
-        //     fragment identifier, as described in Section 4.3.
+        // 5) if path begins with '/' then the reference is an absolute path, skip to step 7
+        if (newParsed.path.begin() != newParsed.path.end() && newParsed.path[0] == '/') {
+            // skip to step 7
+            return newParsed.uri();
+        }
+        
+        // 6) actually resolve the relative-path reference 
+        //    the relative path needs to be merged with the base 
+        // "Although there are many ways to to this, 
+        // we will describe a simple method using a separate string buffer"
+        // - Tim Berners Lee
+        
+        // a) all but the last segment of the base URI's path is copied to the buffer
+        // In other words, any characters after the last (right-most) slash character,
+        // if any, are excluded.
+        std::string base(baseUri);
+        std::string timBernersLeeBuffer = std::string(base.begin(), base.begin() + base.rfind('/'));
+        // Is it PascalCase because it's a man's name or camelCase because it's local????
+        
+        // b) The reference's path component is appended to the buffer string
+        timBernersLeeBuffer += newParsed.path;
 
-        // 2) If the path component is empty and the scheme, authority, and
-        //     query components are undefined, then it is a reference to the
-        //     current document and we are done.  Otherwise, the reference URI's
-        //     query and fragment components are defined as found (or not found)
-        //     within the URI reference and not inherited from the base URI.
+        // everything else is just path normalization so we can parse
+        // here and then do the remaining portions on the path string
+        HTTPRequest requestToNormalize = HTTPRequest(timBernersLeeBuffer);
+        std::string& path = requestToNormalize.path;
 
-        // 3) If the scheme component is defined, indicating that the reference
-        //     starts with a scheme name, then the reference is interpreted as an
-        //     absolute URI and we are done.  Otherwise, the reference URI's
-        //     scheme is inherited from the base URI's scheme component.
+        // c) All occurrences of "./", where "." is a complete path segment,
+        // are removed from the buffer string.
+        for (size_t pos = path.find("/./"); 
+             pos != std::string::npos; 
+             pos = path.find("/./")) 
+        {
+            // remove "./", not the first slash
+            path.erase(pos + 1, 2);
+        }
+        
+        // d) if the buffer ends with a "." as a complete path segment, 
+        // that "." is removed
+        if (path.back() == '.' && *(path.rbegin()++) == '/') {
+            path.pop_back();
+        }
 
-        //     Due to a loophole in prior specifications [RFC1630], some parsers
-        //     allow the scheme name to be present in a relative URI if it is the
-        //     same as the base URI scheme.  Unfortunately, this can conflict
-        //     with the correct parsing of non-hierarchical URI.  For backwards
-        //     compatibility, an implementation may work around such references
-        //     by removing the scheme if it matches that of the base URI and the
-        //     scheme is known to always use the <hier_part> syntax.  The parser
-
-
+        // e) All occurrences of "<segment>/../", where <segment> is a
+        //    complete path segment not equal to "..", are removed from the
+        //    buffer string.  Removal of these path segments is performed
+        //    iteratively, removing the leftmost matching pattern on each
+        //    iteration, until no matching pattern remains.
+        // f) If the buffer string ends with "<segment>/..", where <segment>
+        //    is a complete path segment not equal to "..", that
+        //    "<segment>/.." is removed.
+        size_t segment;
+        while ((segment = path.find("/../")) != std::string::npos) {
+            std::string tmp = path.substr(0, segment);
+            size_t slash = tmp.find('/');
+            if (slash == std::string::npos) {
+                continue;
+            }
+            if (tmp.substr(0, slash) != "..") {
+                path = path.substr(0, slash + 1) + path.substr(segment + 4);
+            }
+        }
+        // g) If the resulting buffer string still begins with one or more
+        //  complete path segments of "..", then the reference is
+        //  considered to be in error.  Implementations may handle this
+        //  error by retaining these components in the resolved path (i.e.,
+        //  treating them as part of the final URI), by removing them from
+        //  the resolved path (i.e., discarding relative levels above the
+        //  root), or by avoiding traversal of the reference.
+        while (path.size() >= 3 && path[0] == '/' && path[1] == '.' && path[2] == '.') {
+            // remove the first three characters of the URI.
+            path.erase(0, 3);
+        }
+        return requestToNormalize.uri();
     }
 
     char * HTTPClient::checkRedirectsHelper(const char * getMessage, const size_t len) {

@@ -31,9 +31,6 @@ namespace search {
             path = result[5];
             query = result[7];
             fragment = result[9];
-            if (path == "") {
-                path = "/";
-            }
         }
     }
 
@@ -58,7 +55,7 @@ namespace search {
 
     std::string HTTPRequest::requestString() const {
         std::stringstream ss;
-        ss << method << ' ' << path << ' ' << httpVersion << endl;
+        ss << method << ' ' << '/' << path << ' ' << httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << userAgents << endl;
         ss << encoding << endl;
@@ -83,5 +80,40 @@ namespace search {
 
     bool HTTPRequest::robots() const {
         return path == robotsTxtString;
+    }
+
+    std::string HTTPRequest::uri() const {
+        // Pseudocode directly from RFC 2396
+        // result = ""
+        //  if scheme is defined then
+        //      append scheme to result
+        //      append ":" to result
+        //  if authority is defined then
+        //      append "//" to result
+        //      append authority to result
+        //  append path to result
+        //  if query is defined then
+        //      append "?" to result
+        //      append query to result
+        //  if fragment is defined then
+        //      append "#" to result
+        //      append fragment to result
+        //  return result
+        std::string result = "";
+        if (scheme != "") {
+            result += scheme;
+            result += ":";
+        }
+        result += host;
+        result += path;
+        if (query != "") {
+            result += "?";
+            result += "query";
+        }
+        if (fragment != "") {
+            result += "#";
+            result += fragment;
+        }
+        return result;
     }
 }

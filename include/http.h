@@ -77,7 +77,9 @@ namespace search {
 
         char * checkRedirectsHelper(const char * getMessage, size_t len);
 
-        char * resolveRelativeUrl(const HTTPRequest& currentRequest, const char * newUrl);
+        // Resolves a relative URL into an absolute path relative to the current request.
+        // Returns a nullptr on errors and if the request is to the current document
+        std::string resolveRelativeUrl(const char * baseURi, const char * newUri);
 
         // given a socket return the clientInfo
         std::mutex m;

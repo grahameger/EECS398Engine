@@ -32,7 +32,7 @@ namespace search {
             // check if we have the robots file for this domain
             if (!haveRobots(req.host)) {
                 // get the robots.txt file
-                std::string newUrl = req.protocol + "://" + req.host + "/robots.txt";
+                std::string newUrl = req.scheme + "://" + req.host + "/robots.txt";
                 // add the old url to the back of the queue until we get the robots file
 
                 // failed url's will begin to pile up at the back we need some method to fix that.

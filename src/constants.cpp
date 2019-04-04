@@ -13,6 +13,7 @@ namespace constants {
     const std::string port80 = "80";
     const std::string port443 = "443";
     const std::string robotsTxtString = "/robots.txt";
+    const std::string doBackSlash = "./";
 
     const size_t MAX_CONNECTIONS = 1000;
     const size_t RECV_SIZE = 8192;
