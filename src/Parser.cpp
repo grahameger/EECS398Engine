@@ -17,27 +17,7 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
 }
 
 
-int LinkFinder::parse(char* filename) {
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-        perror("file open");
-        return -1;
-    };
-    struct stat mystat = {};
-    if (fstat(fd, &mystat)) {
-        perror("fstat");
-        return -1;
-    };
-    off_t file_size = mystat.st_size;
-    char *html_file = (char*)mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (html_file == MAP_FAILED){
-        printf("mmap error\n");
-        return -1;
-    }
-    if (close(fd)==-1) {
-        printf("failed to close file (errno=%d)",errno);
-        return -1;
-    }
+int LinkFinder::parse(char* html_file) {
     long file_length = strlen(html_file);
     long num = 0;
     long *index = &num;
