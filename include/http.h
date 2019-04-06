@@ -53,18 +53,23 @@
 #include "httpRequest.h"
 #include "constants.h"
 #include "RobotsTxt.h"
+#include "crawler.h"
+#include "Parser.hpp"
 
 class RobotsTxt; 
+
 namespace search {
+    class Crawler;
 
     class HTTPClient {
     public:
-        HTTPClient();
+        HTTPClient(search::Crawler * crawlerIn);
         ~HTTPClient();
         void SubmitURLSync(const std::string &url, size_t redirCount);
         static void * SubmitUrlSyncWrapper(void * context);
 
     private:
+        friend class Crawler; 
 
         static const size_t REDIRECT_MAX = 20;
 
@@ -93,6 +98,7 @@ namespace search {
         static inline SSL_CTX * sslContext;
 
         RobotsTxt * robots;
+        Crawler * crawler;
 
         struct Socket {
         public:

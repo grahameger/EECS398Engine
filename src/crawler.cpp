@@ -12,6 +12,10 @@
 namespace search {
 
     Crawler::Crawler(const std::vector<std::string> &seedUrls) {
+
+        // get our HTTP client
+        client = new HTTPClient(this);
+
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
         robots = &threading::Singleton<RobotsTxt>::getInstance();
@@ -61,7 +65,7 @@ namespace search {
 
                 // failed url's will begin to pile up at the back we need some method to fix that.
                 readyQueue.push(p);
-                client.SubmitURLSync(newUrl, 0);
+                client->SubmitURLSync(newUrl, 0);
                 continue;
             }
 
@@ -76,7 +80,7 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // submitURLSync();
-                    client.SubmitURLSync(p, 0);
+                    client->SubmitURLSync(p, 0);
                     // continue
                     continue;
                 } else {
@@ -93,7 +97,7 @@ namespace search {
                 // unlock mutex
                 pthread_mutex_unlock(&domainMutex);
                 // submitURLSync
-                client.SubmitURLSync(p, 0);
+                client->SubmitURLSync(p, 0);
                 // continue
                 continue;
             }

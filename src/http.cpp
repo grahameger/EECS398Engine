@@ -20,8 +20,26 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "Parser.hpp"
 
 namespace search {
+
+    HTTPClient::HTTPClient(search::Crawler * crawlerIn) {
+        crawler = crawlerIn;
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
+
+        // this will become a bug if there is ever more than
+        // one instance of HTTP client.
+        SSL_library_init();
+        SSL_load_error_strings();
+        OpenSSL_add_all_algorithms();
+        static const SSL_METHOD * meth = TLS_client_method();
+
+        search::HTTPClient::sslContext = SSL_CTX_new(meth);
+
+        // cross platform stuff
+        signal(SIGPIPE, SIG_IGN);
+    }
 
     // returns true if the given url has already been fetched
     bool alreadyFetched(const std::string &url) {
@@ -84,22 +102,6 @@ namespace search {
         }
         freeaddrinfo(servinfo);
         return sockfd;
-    }
-
-    HTTPClient::HTTPClient() {
-        robots = &threading::Singleton<RobotsTxt>::getInstance();
-
-        // this will become a bug if there is ever more than
-        // one instance of HTTP client.
-        SSL_library_init();
-        SSL_load_error_strings();
-        OpenSSL_add_all_algorithms();
-        static const SSL_METHOD * meth = TLS_client_method();
-
-        search::HTTPClient::sslContext = SSL_CTX_new(meth);
-
-        // cross platform stuff
-        signal(SIGPIPE, SIG_IGN);
     }
 
     HTTPClient::~HTTPClient() {
@@ -265,8 +267,19 @@ namespace search {
         }
     }
 
-    void HTTPClient::process(char * file, size_t len) {
 
+    // this function would fit better in crawler.cpp
+    void HTTPClient::process(char * file, size_t len) {
+        LinkFinder linkFinder; // each thread should probably just have they're own one of these
+        linkFinder.parse(file, len);
+        // TODO: refactor this, probably slow as shit.
+        // convert the Strings to std::string
+        std::vector<std::string> toPush;
+        toPush.reserve(linkFinder.Link_vector.size());
+        for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
+            toPush.push_back(std::string(linkFinder.Link_vector[i].CString()));
+        }
+        crawler->readyQueue.push(toPush);
     }
 
     std::string HTTPClient::resolveRelativeUrl(const char * baseUri, const char * newUri) {
