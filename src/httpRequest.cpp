@@ -102,10 +102,14 @@ namespace search {
         std::string result = "";
         if (scheme != "") {
             result += scheme;
-            result += ":";
+            result += "://";
         }
         result += host;
-        result += path;
+        if (path != "") {
+            result += path;
+        } else {
+            result += "/";
+        }
         if (query != "") {
             result += "?";
             result += "query";
@@ -114,6 +118,7 @@ namespace search {
             result += "#";
             result += fragment;
         }
+
         return result;
     }
 }

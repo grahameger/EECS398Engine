@@ -7,9 +7,10 @@
 #include "crawler.h"
 #include "PersistentHashMap.h"
 
-static const char startFile[] = "/home/coder/EECS398Engine/test/parsed.urls";
+static const char startFile[] = "/home/coder/EECS398Engine/test/so.url";
 
 int main(int argc, char *argv[]) {
+
 	std::vector<std::string> urls;
 	std::ifstream start_list(startFile);
 	std::string line;

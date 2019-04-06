@@ -53,9 +53,14 @@ namespace hash {
             
             return h;
         }
-        uint64_t operator()(const T& t) 
-        {
-            return get(t);
+        // we're okay with overflow here
+        // just a simple summing hash function
+        static uint64_t sum(const T& t) {
+            size_t sum = 0;
+            for (size_t i = 0; i < sizeof(T); i++) {
+                sum += ((uint8_t*)&t)[i];
+            }
+            return sum;
         }
     };
     template <> struct Hash<char*> {
@@ -91,6 +96,8 @@ namespace hash {
     // specialization for any buffer, size at runtime
     // doesn't need to be a null terminated string like djb2
     // use T for compile time lengths
+    // this isn't really useful for use in any data structures
+    // that follow STL paradigms but could be useful for something else
     template <> struct Hash<uint8_t*> {
         static uint64_t get(const uint8_t* ptr, const size_t len)
         {
@@ -103,6 +110,11 @@ namespace hash {
                 h2 = (((h2) << 5) + h2) ^ (*ptr);
             }
             return (((uint64_t)h1) << 32) + h2;
+        }
+    };
+    template <> struct Hash<std::string> {
+        static uint64_t get(const std::string& str) {
+            return Hash<char*>{}.get(str.c_string());
         }
     };
 }

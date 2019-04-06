@@ -6,6 +6,7 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 // Base Crawler Class
+// Updated by Graham Eger a lot. 
 
 #include "crawler.h"
 
@@ -15,6 +16,11 @@ namespace search {
 
         // get our HTTP client
         client = new HTTPClient(this);
+
+        // bloom filter, 1GB
+        pageFilter = BloomFilter<std::string>(1000000000);
+        // we should probably initialize it
+        initializePageFilter();
 
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -39,6 +45,20 @@ namespace search {
         }
     }
 
+    // only do it for non robots pages
+    void Crawler::initializePageFilter() {
+        DIR * d;
+        struct dirent * dir;
+        d = opendir("pages/");
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                std::string fileName = std::string(d->d_name);
+                pageFilter.add(filName);
+            }
+            closedir(d);
+        }
+    }
+
     void makeDir(const char * name) {
         struct stat st = {0};
         if (stat(name, &st) == -1) {
@@ -52,6 +72,26 @@ namespace search {
         return (stat(path.c_str(), &st) == 0);    
     }
 
+    // only go to the filesystem if we really have to
+    bool Crawler::havePage(const HTTPRequest &req) {
+        // parse the page into a request and get a filename
+        auto filename = HTTPRequest(url).filename();
+        if (pageFilter.exists(filename)) {
+            // check the filesystem only if the bloom filter says we shouldn't
+            // TODO: performance measurement on filesystem access vs. the cache
+            // thrashing of using the bloom filter.
+            struct stat st = {0};
+            return (stat(path.c_str(), &st) == 0);
+        } else {
+            return false;
+        }
+    }
+
+    void Crawler::addPageToFilter(const HTTPRequest &req) {
+        auto filename = req.filename();
+        pageFilter.add(filename);
+    }
+
     void * Crawler::stub() {
         while (true) {
             std::string p = readyQueue.pop();
@@ -59,11 +99,12 @@ namespace search {
 
             // check if we have the robots file for this domain
             if (!haveRobots(req.host)) {
-                // get the robots.txt file
-                std::string newUrl = req.scheme + "://" + req.host + "/robots.txt";
+                // change the path to get the robots.txt file
+                req.path = "/robots.txt";
                 // add the old url to the back of the queue until we get the robots file
-
-                // failed url's will begin to pile up at the back we need some method to fix that.
+                auto newUrl = req.uri();
+                // TODO: URLs that fail to get a robots.txt file may pile up at the back of the
+                // queue, we need to have a method to get rid of those. Perhaps a separate queue.
                 readyQueue.push(p);
                 client->SubmitURLSync(newUrl, 0);
                 continue;

@@ -156,6 +156,9 @@ namespace search {
             return;
         }
         HTTPRequest request(url);
+        if (request.host == "") {
+            return;
+        }
         std::unique_ptr<Socket> sock;
         request.method = constants::getMethod;
         request.headers = constants::connClose;
@@ -251,7 +254,10 @@ namespace search {
             return SubmitURLSync(newUrl, ++redirCount);
         }
 
-        process(fullResponse, bytesReceived);
+        bool isARobotsRequest = request.robots();
+        if (!isARobotsRequest) {
+            process(fullResponse, bytesReceived);
+        }
 
         // either going to write to a file or add another request to the queue
         // write it to a file
@@ -263,7 +269,7 @@ namespace search {
         free(fullResponse);
         fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
 
-        if (request.robots()) {
+        if (isARobotsRequest) {
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();

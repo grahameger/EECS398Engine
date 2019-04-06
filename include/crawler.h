@@ -14,33 +14,35 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <time.h>
-#include <mutex>
+#include <dirent.h>
+#include <stdio.h>
 
 #include "RobotsTxt.h"
 #include "http.h"
 #include "threading.h"
+#include "BloomFilter.h"
 
 class RobotsTxt;
 
 namespace search {
     class HTTPClient;
-
     void makeDir(const char * name);
     class Crawler {
     public: 
         Crawler(const std::vector<std::string> &seedUrls);
         ~Crawler();
-
         void * stub();
         static void * stubHelper(void * context);
 
-
         bool haveRobots(const std::string &domain);
+        bool havePage(const std::string &url);
+        void addPageToFilter(const HTTPRequest &req);
 
         static void domainLock();
         static void domainUnlock();
@@ -51,14 +53,13 @@ namespace search {
         friend class HTTPClient;
         threading::ThreadQueue<std::string> readyQueue;
         pthread_t threads[NUM_CRAWLER_THREADS];
-
         HTTPClient * client;
-
         inline static pthread_mutex_t domainMutex;
-
         RobotsTxt * robots;
-        
         std::unordered_map<std::string, time_t> lastHitHost;
+
+        BloomFilter<std::string> pageFilter;
+        void initializePageFilter();
     };
 }
 
