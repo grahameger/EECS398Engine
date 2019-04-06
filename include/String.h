@@ -6,9 +6,10 @@
 #define STRING_H_398
 
 class String
-   {
+{
 public:
    String( );
+   String( const char single_char );
    String( const char* toCopy );
    String( char*&& toMove );
    String( const String& toCopy );
@@ -32,9 +33,9 @@ public:
    operator bool( ) const;
 
 private:
-   const static char* nullString;
-   char* cstring;
-   int size;
-   };
+    const static char* nullString;
+    char* cstring;
+    int size;
+};
 
 #endif
