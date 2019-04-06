@@ -24,16 +24,13 @@
 #include "RobotsTxt.h"
 #include "http.h"
 #include "threading.h"
-#include "constants.h"
 
 class RobotsTxt;
 
-class HTTPClient;
-
 namespace search {
+    class HTTPClient;
 
     void makeDir(const char * name);
-
     class Crawler {
     public: 
         Crawler(const std::vector<std::string> &seedUrls);
