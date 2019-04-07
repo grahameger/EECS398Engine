@@ -31,16 +31,35 @@ class OutputByteStream
    public:
       OutputByteStream(bool forwards = true);
 
-      const String& GetString();
+      const String& GetString( );
 
-      void AddByte(const unsigned char byte);
+      void AddByte( const unsigned char byte );
       OutputByteStream& operator<< ( const unsigned char character );
       OutputByteStream& operator<< ( const int number );
 
+      class BitIterator
+         {
+         public:
+            void AddBit( bool bit );
+
+         private: 
+            unsigned char curByte;
+            unsigned char bitMask;
+            OutputByteStream* output;
+
+            BitIterator( OutputByteStream* out );
+
+            friend OutputByteStream;
+
+         };
+
+      BitIterator& GetBitIterator( );
+
    private:
-      const String writing;
+      String writing;
       int byteNum;
       bool forwardStream;
+      BitIterator* currentIterator;
 
    };
 

@@ -6,7 +6,14 @@
 const char* String::nullString = "";
 
 
-String::String( ) : cstring( nullptr ), size( 0 ) { }
+String::String( const int length ) : cstring( nullptr ), size( length )
+   {
+   if ( size > 0 )
+      {
+      cstring = new char[ size + 1 ];
+      cstring[ size ] = 0;
+      }
+   }
 
 
 String::String( const char* toCopy, int length ) : size( length )
@@ -150,6 +157,24 @@ String::operator bool( ) const
    {
    return size > 0;
    }
+
+
+void String::Allocate( const int length, bool after )
+   {
+   if ( length < 1 )
+      return;
+
+   int newSize = size + length;
+   char* newCString = new char[ newSize + 1 ];
+
+   if ( cstring != nullptr )
+      memcpy( newCString, cstring, size );
+
+   delete cstring;
+   cstring = newCString;
+   size = newSize;
+   }
+
 
 void String::RemoveWhitespace() 
   {

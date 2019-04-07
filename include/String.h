@@ -5,7 +5,7 @@
 class String
    {
    public:
-      String( );
+      String( const int length = 0 );
       String( const char* toCopy, int length = -1 );
       String( char*&& toMove, int length = -1 );
       String( const String& toCopy );
@@ -18,6 +18,7 @@ class String
       int Size( ) const;
       const char* CString( ) const;
 
+      void Allocate( const int size, bool after = true );
       void RemoveWhitespace( );
       void Swap( String& toSwap );
       bool Compare( const String& other ) const;

@@ -2,6 +2,8 @@
 #include "PairUtf8Uint.h"
 #include "ByteStream.h"
 
+void PrintPreambleBytes( OutputByteStream& byteStream, 
+      const unsigned long long& number );
 bool GetIsPair( InputByteStream& byteStream, unsigned long long& postPreamble,
       int& numBytesLeft );
 unsigned long long GetNumber( InputByteStream& byteStream, 
@@ -93,6 +95,7 @@ InputByteStream& operator>> ( InputByteStream& byteStream, PairUtf8Uint& number 
 
 OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number )
    {
+   PrintPreambleBytes( byteStream, number.value );
    return byteStream;
    }
 
@@ -106,6 +109,25 @@ OutputByteStream& operator<< ( OutputByteStream& byteStream, PairUtf8Uint& numbe
 // ########################
 // ### HELPER FUNCTIONS ###
 // ########################
+
+
+void PrintPreambleBytes( OutputByteStream& byteStream, 
+      const unsigned long long& number )
+   {
+   // Add preamble 1s
+   auto bitIterator = byteStream.GetBitIterator( );
+   unsigned long long curNumber = number;
+   while ( curNumber > 127 )
+      {
+      // Add a 1
+      bitIterator.AddBit( 1 );
+      // Shift the number to check
+      curNumber >>= 8;
+      }
+
+   // Add preamble 0
+   bitIterator.AddBit( 0 );
+   }
 
 
 // Return whether the data for this PairUtf8Uint is for just one or two numbers.
