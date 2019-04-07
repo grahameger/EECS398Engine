@@ -120,7 +120,7 @@ bool GetIsPair( InputByteStream& byteStream, unsigned long long& postPreamble,
    unsigned char byte = byteStream.GetNextByte( );
    bool isPair = byte > 127;
 
-   switch ( ( byte << 1 ) >> 1 )
+   switch ( byte & 127 )
       {
       // All 1s after bool
       case 127:
