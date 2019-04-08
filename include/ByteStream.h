@@ -13,8 +13,6 @@ class InputByteStream
       InputByteStream(const String& toRead, bool forwards = true);
 
       const unsigned char GetNextByte();
-      InputByteStream& operator>> ( const unsigned char& character );
-      InputByteStream& operator>> ( int& number );
 
    private:
       const String reading;
@@ -31,16 +29,20 @@ class OutputByteStream
    public:
       OutputByteStream(bool forwards = true);
 
-      const String& GetString( );
+      // TODO: Allocate new? What about backwards? Etc.
+      const String& GetString( ) const;
+      // For Debugging
+      const String HexString( ) const;
 
       void AddByte( const unsigned char byte );
-      OutputByteStream& operator<< ( const unsigned char character );
-      OutputByteStream& operator<< ( const int number );
 
       class BitIterator
          {
          public:
             void AddBit( bool bit );
+            void Flush( );
+
+            unsigned char BitsLeft( );
 
          private: 
             unsigned char curByte;

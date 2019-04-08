@@ -29,8 +29,31 @@ OutputByteStream::OutputByteStream( bool forwards )
    }
 
 
+const String& OutputByteStream::GetString( ) const
+   {
+   return writing;
+   }
+
+
+const String OutputByteStream::HexString( ) const
+   {
+   int size = byteNum - 1;
+   String hexString( size * 2 );
+
+   for ( int i = 0; i < size * 2; i++ )
+      {
+
+      }
+
+   return hexString;
+   }
+
+
 void OutputByteStream::AddByte( const unsigned char byte )
    {
+   if ( currentIterator )  
+      currentIterator->Flush( );
+
    writing[ byteNum ] = byte;
 
    if ( forwardStream && ++byteNum == writing.Size( ) )
@@ -62,11 +85,43 @@ void OutputByteStream::BitIterator::AddBit( bool bit )
    bitMask >>= 1;
 
    if ( bitMask == 0 )
+      Flush( );
+   }
+
+
+void OutputByteStream::BitIterator::Flush( )
+   {
+   if ( bitMask == 128 )
+      return;
+
+   bitMask = 128;
+   output->AddByte( curByte );
+   curByte = 0;
+   }
+
+
+unsigned char OutputByteStream::BitIterator::BitsLeft( )
+   {
+   switch ( bitMask )
       {
-      bitMask = 128;
-      output->AddByte( curByte );
-      curByte = 0;
+      case 128:
+         return 8;
+      case 64:
+         return 7;
+      case 32:
+         return 6;
+      case 16:
+         return 5;
+      case 8:
+         return 4;
+      case 4:
+         return 3;
+      case 2:
+         return 2;
+      case 1:
+         return 1;
       }
+   return 0;
    }
 
 

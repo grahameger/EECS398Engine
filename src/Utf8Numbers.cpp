@@ -1,9 +1,12 @@
+#include <iostream>
 #include "Utf8Uint.h"
 #include "PairUtf8Uint.h"
 #include "ByteStream.h"
 
-void PrintPreambleBytes( OutputByteStream& byteStream, 
-      const unsigned long long& number );
+void PrintNumberBytes( OutputByteStream& byteStream, unsigned long long number, 
+      int nonPreambleBytes );
+int PrintPreambleBytes( OutputByteStream& byteStream, 
+      unsigned long long number );
 bool GetIsPair( InputByteStream& byteStream, unsigned long long& postPreamble,
       int& numBytesLeft );
 unsigned long long GetNumber( InputByteStream& byteStream, 
@@ -95,7 +98,8 @@ InputByteStream& operator>> ( InputByteStream& byteStream, PairUtf8Uint& number 
 
 OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number )
    {
-   PrintPreambleBytes( byteStream, number.value );
+   unsigned nonPreambleBytes = PrintPreambleBytes( byteStream, number.GetValue( ) );
+   PrintNumberBytes( byteStream, number.GetValue( ), nonPreambleBytes );
    return byteStream;
    }
 
@@ -111,22 +115,76 @@ OutputByteStream& operator<< ( OutputByteStream& byteStream, PairUtf8Uint& numbe
 // ########################
 
 
-void PrintPreambleBytes( OutputByteStream& byteStream, 
-      const unsigned long long& number )
+void PrintNumberBytes( OutputByteStream& byteStream, unsigned long long number, 
+      int nonPreambleBytes )
    {
+   unsigned char remainder = number >> ( 8 * nonPreambleBytes-- );
+   auto bitIterator = byteStream.GetBitIterator( );
+
+   // If the rest of the preamble byte is just padding, flush it
+   if ( remainder == 0 )
+      bitIterator.Flush( );
+   // Otherwise, put the remainder into the current byte
+   else
+      {
+      while ( remainder != 0 )
+         {
+         unsigned char currentDivisor = 1 << ( bitIterator.BitsLeft( ) - 1 );
+         if ( currentDivisor <= remainder )
+            {
+            remainder -= currentDivisor;
+            bitIterator.AddBit( 1 );
+            }
+         else
+            bitIterator.AddBit( 0 );
+         }
+      }
+
+   // Add the rest of the number, byte by byte
+   for ( ; nonPreambleBytes >= 0; nonPreambleBytes-- )
+      {
+      unsigned char curByte = ( number >> ( 8 * nonPreambleBytes ) ) % 256;
+      byteStream.AddByte( curByte );
+      }
+   }
+
+
+// "Print" to byteStream just the unary preamble bits of this number. Ensure that upon
+//  completion, the bitIterator for byteStream will begin writing after the preamble.
+//
+int PrintPreambleBytes( OutputByteStream& byteStream, unsigned long long number )
+   {
+   int nonPreambleBytes = 0;
+
    // Add preamble 1s
    auto bitIterator = byteStream.GetBitIterator( );
-   unsigned long long curNumber = number;
-   while ( curNumber > 127 )
+   while ( number > 127 )
       {
       // Add a 1
       bitIterator.AddBit( 1 );
       // Shift the number to check
-      curNumber >>= 8;
+      number >>= 8;
+      // Increment the number of nonPreambleBytes
+      nonPreambleBytes++;
+      }
+
+   // Get bitsLeft in curNumber
+   int bitsLeft = 7;
+   while ( ( ( unsigned )1 << --bitsLeft ) > number && bitsLeft > 0 ) { }
+
+   // If it can't fit in the current byte, add another 1
+   if ( bitIterator.BitsLeft( ) - 1 < bitsLeft + 1 )
+      {
+      // Add a 1
+      bitIterator.AddBit( 1 );
+      // Increment the number of nonPreambleBytes
+      nonPreambleBytes++;
       }
 
    // Add preamble 0
    bitIterator.AddBit( 0 );
+
+   return nonPreambleBytes;
    }
 
 
