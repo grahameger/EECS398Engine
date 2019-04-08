@@ -21,7 +21,7 @@ int main( )
       bs >> int1;
       cout << int1.GetValue() << endl;
       bs3 << int1;
-      // cout << hex << bs3.GetString( ).CString( ) << endl;
+      cout << bs3.HexString( ).CString( ) << endl << endl;
       }
 
    for ( int i = 0; i < 3; i++ )

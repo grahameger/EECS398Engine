@@ -1,4 +1,3 @@
-#include <iostream>
 #include "Utf8Uint.h"
 #include "PairUtf8Uint.h"
 #include "ByteStream.h"
@@ -118,8 +117,13 @@ OutputByteStream& operator<< ( OutputByteStream& byteStream, PairUtf8Uint& numbe
 void PrintNumberBytes( OutputByteStream& byteStream, unsigned long long number, 
       int nonPreambleBytes )
    {
-   unsigned char remainder = number >> ( 8 * nonPreambleBytes-- );
-   auto bitIterator = byteStream.GetBitIterator( );
+   // If nonPreambleBytes is 8, there is weird behavior with bit shifting?
+   unsigned char remainder = 0;
+   if ( nonPreambleBytes < 8 )
+      remainder = number >> ( 8 * nonPreambleBytes-- );
+   else
+      nonPreambleBytes--;
+   auto& bitIterator = byteStream.GetBitIterator( );
 
    // If the rest of the preamble byte is just padding, flush it
    if ( remainder == 0 )
@@ -138,6 +142,7 @@ void PrintNumberBytes( OutputByteStream& byteStream, unsigned long long number,
          else
             bitIterator.AddBit( 0 );
          }
+      bitIterator.Flush( );
       }
 
    // Add the rest of the number, byte by byte
@@ -157,7 +162,7 @@ int PrintPreambleBytes( OutputByteStream& byteStream, unsigned long long number 
    int nonPreambleBytes = 0;
 
    // Add preamble 1s
-   auto bitIterator = byteStream.GetBitIterator( );
+   auto& bitIterator = byteStream.GetBitIterator( );
    while ( number > 127 )
       {
       // Add a 1
