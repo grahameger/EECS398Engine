@@ -119,9 +119,28 @@ namespace search {
         EVP_cleanup();
     }
 
+    static size_t caseInsensitiveStringFind(const std::string_view& str, const std::string& toFind) {
+        auto it = std::search(str.begin(), str.end(), toFind.begin(), toFind.end(), [](char a, char b) { return std::toupper(a) == std::toupper(b);});
+        if (it != str.end()) {
+            return it - str.begin();
+        } else {
+            return std::basic_string_view<char>::npos; 
+        }
+    }
+
     static ssize_t getContentLength(std::string_view response) {
+
+        // we need to check for "Transfer Encoding: Chunked" first
+        // if there's no transfer encoding: chunked then we can look for content-length
+        // https://greenbytes.de/tech/webdav/rfc7230.html#header.content-length
+        static const std::string TRANSFER_ENCODING_STR = "chunked";
+        if (caseInsensitiveStringFind(response, TRANSFER_ENCODING_STR) != std::basic_string_view<char>::npos) {
+            return HTTPClient::CHUNKED;
+        }
+
         static const std::string CONTENT_LENGTH_STR = "Content-Length: ";
-        size_t contentLenStart = response.find(CONTENT_LENGTH_STR);
+        size_t contentLenStart = caseInsensitiveStringFind(response, CONTENT_LENGTH_STR);
+        // size_t contentLenStart = response.find(CONTENT_LENGTH_STR);
         if (contentLenStart == std::basic_string_view<char>::npos)
             return -1;
         size_t intStart = std::string_view::npos;
@@ -149,6 +168,8 @@ namespace search {
                                       rv);
         return rv;
     }
+
+
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
@@ -223,20 +244,47 @@ namespace search {
                     headerSize = headerPos + 4;
                     // search for "Content-Length"
                     contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
-                    totalSize = headerSize + contentLength;
-                    ssize_t remaining = totalSize - bytesReceived;
-                    if (remaining > 0) {
-                        fullResponse = (char *)realloc(fullResponse, totalSize);
-                        char * buf_front = fullResponse + bytesReceived;
-                        rv = sock->recv(buf_front, remaining, MSG_WAITALL);
-                        if (rv >= 0) {
+                    if (contentLength == CHUNKED) {
+                        fprintf(stdout, "received a chunked encoding\n");
+                    }
+                    if (contentLength != (size_t)-1) {
+                        totalSize = headerSize + contentLength;
+                        ssize_t remaining = totalSize - bytesReceived;
+                        if (remaining > 0) {
+                            fullResponse = (char *)realloc(fullResponse, totalSize);
+                            char * buf_front = fullResponse + bytesReceived;
+                            rv = sock->recv(buf_front, remaining, MSG_WAITALL);
+                            if (rv >= 0) {
+                                bytesReceived += rv;
+                                break;
+                            }
+                            if (rv < 0 || bytesReceived < contentLength) {
+                                // error reading from socket
+                                break;
+                            }
+                        }
+                    } else {
+                        // recv until EOF, we request HTTP 1.0 so no need for chunked encoding anymore
+                        rv = 0;
+                        size_t currentBufferSize = constants::BUFFER_SIZE;
+                        do {
                             bytesReceived += rv;
-                            break;
+                            if (bytesReceived == currentBufferSize) {
+                                // do a realloc and double the buffer size
+                                fullResponse = (char*)realloc(fullResponse, currentBufferSize * 2);
+                                currentBufferSize *= 2;
+                            }
+                            // we'll do a receive of the total amount of memory remaining in the buffer
+                            // we're also not going to do a MSG_WAITALL because this is most likely
+                            // going to loop, but it IS still a BLOCKING operation
+                            rv = sock->recv(fullResponse, currentBufferSize - bytesReceived, 0);
+                        } while (rv > 0);
+                        if (rv < 0) {
+                            free(fullResponse);
+                            fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                            return;
                         }
-                        if (rv < 0 || bytesReceived < contentLength) {
-                            // error reading from socket
-                            break;
-                        }
+                        break;
                     }
                 }
             } else {
@@ -264,7 +312,7 @@ namespace search {
         std::string filename = request.filename();
         if (isARobotsRequest) {
             std::ofstream outfile(filename);
-            outfile.write(fullResponse + headerSize, contentLength);
+            outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
             outfile.close();
             free(fullResponse);
             fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
@@ -275,7 +323,7 @@ namespace search {
             robots->unlock();
         } else {
             // let's try out the file abstraction
-            File(filename.c_str(), fullResponse + headerSize, contentLength);
+            File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);
         }
     }
 

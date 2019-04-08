@@ -48,9 +48,8 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 10000;
+        static const size_t NUM_CRAWLER_THREADS = 1;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 3;
-        static const size_t PAGE_FILTER_SIZE = 1000000000;
     private:
         friend class HTTPClient;
         threading::ThreadQueue<std::string> readyQueue;

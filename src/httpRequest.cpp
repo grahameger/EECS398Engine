@@ -79,7 +79,7 @@ namespace search {
     }
 
     bool HTTPRequest::robots() const {
-        return path == robotsTxtString;
+        return path == constants::robotsTxtString || path == constants::robotsTxtString2;
     }
 
     std::string HTTPRequest::uri() const {

@@ -38,7 +38,8 @@ public:
 
     size_t size();
     size_t capacity();
-    static const size_t BACKING_FILE_SIZE = 1024 * 1024 * 1024; // 10 GiB
+    //static const size_t BACKING_FILE_SIZE = 1024 * 1024 * 1024; // 10 GiB
+    static const size_t BACKING_FILE_SIZE = 4096 * 16 * 16 * 16; // 16 MiB 
 
 private:
     friend struct FileSystem;

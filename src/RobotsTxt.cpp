@@ -3,7 +3,7 @@
 
 #include "RobotsTxt.h"
 
-const size_t CACHE_CAPACITY = 10000;
+const size_t CACHE_CAPACITY = 100000;
 
 RobotsTxt::RobotsTxt()
    : domainRulesCache(CACHE_CAPACITY, true), SerializedRulesPath("SerializedRobotsRules")
@@ -184,6 +184,12 @@ void RobotsTxt::unlock() {
 void RobotsTxt::makeDir(const char * name) {
    struct stat st = {0};
    if (stat(name, &st) == -1) {
-      mkdir(name, 0666);
+      int rv = mkdir(name, 0755);
+      if (rv == -1) {
+         fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));
+         exit(1);
+      } else {
+         fprintf(stdout, "created directory %s\n", name);
+      }
    }
 }

@@ -5,42 +5,37 @@
 
 #include "File.h"
 #include <cstring>
+#include <cassert>
 
 // load unaligned uint64_t from the pointer V
 static uint64_t load64LittleEndian(char const* V)
 {
-   uint64_t Ret = 0;
-   Ret |= (uint64_t) V[0];
-   Ret |= ((uint64_t) V[1]) << 8;
-   Ret |= ((uint64_t) V[2]) << 16;
-   Ret |= ((uint64_t) V[3]) << 24;
-   Ret |= ((uint64_t) V[4]) << 32;
-   Ret |= ((uint64_t) V[5]) << 40;
-   Ret |= ((uint64_t) V[6]) << 48;
-   Ret |= ((uint64_t) V[7]) << 56;
-   return Ret;
+    size_t rv;
+    std::memcpy(&rv, V, sizeof(uint64_t));
+    return rv;
 }
 // TODO: finish replacing the alignment stuff
 
 // disk will have already been initialized at this point
 FileSystem::FileSystem() {
-    m = PTHREAD_MUTEX_INITIALIZER;
-    // Iterate through each backing file
-    for (size_t i = 0; i < disk.backingFiles.size(); ++i) {
-        char * basePtr = (char*)disk.backingFiles[i] + sizeof(Stream::BackingFile);
+    // iterate through each backing file
+    std::map<size_t, Stream::BackingFile*>::iterator i;
+    for ( i = disk.backingFiles.begin(); i != disk.backingFiles.end(); i++) {
+        char * basePtr = ((char*)i->second + sizeof(Stream::BackingFile));
         char * c = basePtr;
-        while (disk.inArena(c, i)) {
+        while (disk.inArena(c, i->first) && (c - basePtr) < i->second->fileSize) {
             String filename;
             if (*c != '\0') {
                 filename = String(c);
                 c += filename.Size() + 1;
             }
-            size_t fileSize = *((size_t*)c);
-            size_t offset = c - basePtr + i * Stream::BACKING_FILE_SIZE;
+            size_t fileSize = load64LittleEndian(c);
+            size_t offset = c - basePtr + (i->first - 1) * Stream::BACKING_FILE_SIZE;
             mapping.insert({filename, offset});
             c += fileSize + sizeof(size_t);
         }
     }
+    m = PTHREAD_MUTEX_INITIALIZER;
 }
 
 // File stuff
@@ -51,9 +46,10 @@ File::File(const char * filename, void * src, size_t len) {
     const size_t totalSize = filenameSize + len + sizeof(size_t);
     char * temp = (char*)malloc(totalSize);
     // copy everything over
-    std::memcpy(temp, filename, filenameSize);
-    std::memcpy(temp + filenameSize, &len, sizeof(size_t));
-    std::memcpy(temp + filenameSize + sizeof(size_t), src, len);
+    memcpy(temp, filename, filenameSize);
+    memcpy(temp + filenameSize, (void*)&len, sizeof(size_t));
+    memcpy(temp + filenameSize + sizeof(size_t), src, len);
+
     // write it to the stream
     offset = fs.disk.write(temp, totalSize);
     lenOffset = offset + filenameSize;
@@ -62,38 +58,52 @@ File::File(const char * filename, void * src, size_t len) {
     // insert the mapping
     if (offset != -1) {
         fs.mapping.insert({filename, offset});
+        fprintf(stdout, "created file %s at offset %zu\n", filename, offset);
     }
     // add it to our hash table
     pthread_mutex_unlock(&fs.m);
 }
 
 File File::find(const char * filename) {
-    auto i = fs.mapping.find(filename);
+    pthread_mutex_lock(&fs.m);
+    std::unordered_map<String, size_t>::iterator i = fs.mapping.find(filename);
     File f;
     if (i == fs.mapping.end()) {
+        pthread_mutex_unlock(&fs.m);
         f.offset = npos;
         f.lenOffset = npos;
     } else {
         f.offset = i->second;
-        f.lenOffset = strlen(fs.disk.read(f.offset)) + 1;
+        const char * filenamePtr = fs.disk.read(f.offset);
+        pthread_mutex_unlock(&fs.m);
+        size_t filenameLength = strlen(filenamePtr);
+        f.lenOffset = f.offset + filenameLength + 1;
     }
     return f;
 }
 
 size_t File::size() {
-    return load64LittleEndian(fs.disk.read(lenOffset));
+    pthread_mutex_lock(&fs.m);
+    size_t rv = load64LittleEndian(fs.disk.read(lenOffset));
+    pthread_mutex_unlock(&fs.m);
+    return rv;
 }
 
 FileRead File::read() {
     FileRead rv;
+    pthread_mutex_lock(&fs.m);
     char * lenPtr = fs.disk.read(lenOffset);
+    pthread_mutex_unlock(&fs.m);
     rv.len = load64LittleEndian(lenPtr);
     rv.ptr = lenPtr + sizeof(size_t);
     return rv;
 }
 
 String File::name() {
-    return fs.disk.read(offset);
+    pthread_mutex_lock(&fs.m);
+    String rv(fs.disk.read(offset));
+    pthread_mutex_unlock(&fs.m);
+    return rv;
 }
 
 File::File() : offset(npos), lenOffset(npos) {}

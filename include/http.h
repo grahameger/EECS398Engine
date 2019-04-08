@@ -24,8 +24,10 @@
 #include <algorithm>
 #include <string_view>
 #include <charconv>
+#include <locale>
 #include <cctype>
 #include <algorithm>
+#include <utility>
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -67,6 +69,7 @@ namespace search {
         ~HTTPClient();
         void SubmitURLSync(const std::string &url, size_t redirCount);
         static void * SubmitUrlSyncWrapper(void * context);
+        static const size_t CHUNKED = -10;
 
     private:
         friend class Crawler; 

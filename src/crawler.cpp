@@ -44,7 +44,13 @@ namespace search {
     void makeDir(const char * name) {
         struct stat st = {0};
         if (stat(name, &st) == -1) {
-            mkdir(name, 0700);
+            int rv = mkdir(name, 0755);
+            if (rv == -1) {
+                fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));
+                exit(1);
+            } else {
+                fprintf(stdout, "created directory %s\n", name);
+            }
         }
     }
 
@@ -55,7 +61,8 @@ namespace search {
     }
 
     bool Crawler::havePage(const HTTPRequest& req) {
-        return File::find(req.filename().c_str()).exists();
+        std::string filename = req.filename();
+        return File::find(filename.c_str()).exists();
     }
 
     void * Crawler::stub() {

@@ -10,9 +10,24 @@
 #include <fcntl.h>
 #include <string.h>
 #include <cstring>
+#include <errno.h>
+#include <cstdio>
 
 #include "Stream.h"
 #include "mmap.h"
+
+static void makeDir(const char * name) {
+    struct stat st = {0};
+    if (stat(name, &st) == -1) {
+        int rv = mkdir(name, 0755);
+        if (rv == -1) {
+            fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));
+            exit(1);
+        } else {
+            fprintf(stdout, "created directory %s\n", name);
+        }
+    }
+}
 
 // constructor
 // Creates directory and first backing file if one does not exist
@@ -37,6 +52,9 @@ Stream::Stream() {
                     sprintf(pathname, "%s/%s", STREAM_DIRECTORY_NAME, entry->d_name);
                     // open the file with read write permissions
                     fd = open(pathname, O_RDWR);
+                    if (fd < 0) {
+                        fprintf(stderr, "error opening file %s - %s\n", pathname, strerror(errno));
+                    }
                     // map the file
                     BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
                     totalSize += mapping->fileSize;
@@ -53,9 +71,13 @@ Stream::Stream() {
         }
 
     } else {
+        makeDir(STREAM_DIRECTORY_NAME);
         // create and open a new file in the directory
         sprintf(pathname, "%s/%c", STREAM_DIRECTORY_NAME, '1');
-        int fd = open(pathname, O_RDWR | O_CREAT);
+        int fd = open(pathname, O_RDWR | O_CREAT, 0755);
+        if (fd < 0) {
+            fprintf(stderr, "error opening file %s - %s\n", pathname, strerror(errno));
+        }
         // map the file
         BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
         // add it to the map
@@ -79,22 +101,27 @@ ssize_t Stream::write(char * src, size_t len) {
         allocateNewFile();
     }
     // do the copy
-    BackingFile * lastFile = backingFiles.rbegin()->second;
-    void * nextAvailableSpot = lastFile + lastFile->fileSize;
+    auto i = backingFiles.rbegin();
+    BackingFile * lastFile = i->second;
+    void * nextAvailableSpot = ((char*)lastFile + lastFile->fileSize);
     std::memcpy(nextAvailableSpot, src, len); 
     // increment fileSize 
+    size_t rv = lastFile->fileSize + (i->first - 1) * BACKING_FILE_SIZE;
     lastFile->fileSize += len;
     totalSize += len;
-    return 0;
+    return rv;
 }
 
 char * Stream::read(size_t offset) {
-    size_t fileNumber = offset / BACKING_FILE_SIZE;
-    if (fileNumber > backingFiles.size() - 1) {
+    // we one indexed the file numbers
+    // TODO: CHANGE THAT OH MY
+    size_t fileNumber = offset / BACKING_FILE_SIZE + 1;
+    auto i = backingFiles.find(fileNumber);
+    if (i == backingFiles.end()) {
         return nullptr;
     }
-    void * basePtr = backingFiles[fileNumber];
-    size_t locationWithinFile = (offset % BACKING_FILE_SIZE) + sizeof(BackingFile);
+    void * basePtr = i->second;
+    size_t locationWithinFile = offset % BACKING_FILE_SIZE;
     char * rv = (char*)basePtr + locationWithinFile;
     return rv;
 }
@@ -112,7 +139,7 @@ void Stream::allocateNewFile() {
     // open a new file
     std::string filename = std::to_string(backingFiles.size() + 1);
     sprintf(pathname, "%s/%s", STREAM_DIRECTORY_NAME, filename.c_str());
-    int fd = open(pathname, O_RDWR | O_CREAT);
+    int fd = open(pathname, O_RDWR | O_CREAT, 0755);
     // map it
     BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
     // add to vector

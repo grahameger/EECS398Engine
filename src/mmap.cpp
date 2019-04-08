@@ -20,7 +20,7 @@ void * mmapWrapper(int fd, size_t size, size_t offset) {
     extendFile(fd, size + offset);
     void * rv = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
     if (rv == (void*)-1) {
-        fprintf(stderr, "error mmap'ing %zu bytes at offset %zu - mmap %s", size, offset, strerror(errno));
+        fprintf(stderr, "error mmap'ing %zu bytes at offset %zu - mmap %s\n", size, offset, strerror(errno));
         exit(1);
     }
     return rv;
@@ -42,7 +42,7 @@ void * streamMmapWrapper(int fd, size_t size) {
     }
     void * rv = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (rv == (void*) -1) {
-        fprintf(stderr, "error mmap'ing %zu bytes in stream wrapper - mmap %s", size, strerror(errno));
+        fprintf(stderr, "error mmap'ing %zu bytes for fd %d in stream wrapper - mmap %s\n", size, fd, strerror(errno));
         exit(1);
     }
     close(fd);
