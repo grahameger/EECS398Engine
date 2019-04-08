@@ -48,6 +48,7 @@ public:
     size_t size();
     FileRead read();
     String name();
+    bool exists();
 private:
     ssize_t offset; // the start of the filename
     ssize_t lenOffset;

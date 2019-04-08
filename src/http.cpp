@@ -262,19 +262,20 @@ namespace search {
         // either going to write to a file or add another request to the queue
         // write it to a file
         std::string filename = request.filename();
-        std::ofstream outfile(filename);
-
-        outfile.write(fullResponse + headerSize, contentLength);
-        outfile.close();
-        free(fullResponse);
-        fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
-
         if (isARobotsRequest) {
+            std::ofstream outfile(filename);
+            outfile.write(fullResponse + headerSize, contentLength);
+            outfile.close();
+            free(fullResponse);
+            fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
             robots->SubmitRobotsTxt(request.host, filename);
             robots->unlock();
+        } else {
+            // let's try out the file abstraction
+            File(filename.c_str(), fullResponse + headerSize, contentLength);
         }
     }
 

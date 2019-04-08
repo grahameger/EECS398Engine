@@ -97,3 +97,7 @@ String File::name() {
 }
 
 File::File() : offset(npos), lenOffset(npos) {}
+
+bool File::exists() {
+    return offset != npos && lenOffset != npos;
+}

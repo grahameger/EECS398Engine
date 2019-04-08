@@ -27,7 +27,7 @@
 #include "http.h"
 #include "threading.h"
 #include "BloomFilter.h"
-// #include "File.h"
+#include "File.h"
 
 class RobotsTxt;
 
@@ -59,10 +59,6 @@ namespace search {
         inline static pthread_mutex_t domainMutex;
         RobotsTxt * robots;
         std::unordered_map<std::string, time_t> lastHitHost;
-
-        BloomFilter<std::string> pageFilter;
-
-        void initializePageFilter();
     };
 }
 

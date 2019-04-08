@@ -13,13 +13,10 @@
 
 namespace search {
 
-    Crawler::Crawler(const std::vector<std::string> &seedUrls) : pageFilter(PAGE_FILTER_SIZE) {
+    Crawler::Crawler(const std::vector<std::string> &seedUrls) {
 
         // get our HTTP client
         client = new HTTPClient(this);
-
-        // we should probably initialize it
-        initializePageFilter();
 
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -44,20 +41,6 @@ namespace search {
         }
     }
 
-    // only do it for non robots pages
-    void Crawler::initializePageFilter() {
-        DIR * d;
-        struct dirent * dir;
-        d = opendir("pages/");
-        if (d) {
-            while ((dir = readdir(d)) != NULL) {
-                std::string fileName = std::string(dir->d_name);
-                pageFilter.add(fileName);
-            }
-            closedir(d);
-        }
-    }
-
     void makeDir(const char * name) {
         struct stat st = {0};
         if (stat(name, &st) == -1) {
@@ -71,24 +54,8 @@ namespace search {
         return (stat(path.c_str(), &st) == 0);    
     }
 
-    // only go to the filesystem if we really have to
-    bool Crawler::havePage(const HTTPRequest &req) {
-        // parse the page into a request and get a filename
-        auto filename = req.filename();
-        if (pageFilter.exists(filename)) {
-            // check the filesystem only if the bloom filter says we should
-            // TODO: performance measurement on filesystem access vs. the cache
-            // thrashing of using the bloom filter.
-            struct stat st = {0};
-            return (stat(filename.c_str(), &st) == 0);
-        } else {
-            return false;
-        }
-    }
-
-    void Crawler::addPageToFilter(const HTTPRequest &req) {
-        auto filename = req.filename();
-        pageFilter.add(filename);
+    bool Crawler::havePage(const HTTPRequest& req) {
+        return File::find(req.filename().c_str()).exists();
     }
 
     void * Crawler::stub() {
