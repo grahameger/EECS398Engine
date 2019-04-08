@@ -1,3 +1,5 @@
+// Graham Eger added a resize() function that takes an argument on 04/08/2019
+
 #pragma once
 #include <algorithm>
 template<class T>
@@ -15,18 +17,6 @@ private:
     
 public:
     
-    //The maximum size of the Vector.  This has to be constant
-    //across all instances since we are using static memory to store
-    //the backing array.  We declare CAPACITY as const to enforce this
-    //and also as static, meaning that all Vectors share the same
-    //CAPACITY variable (i.e. the same memory storing the int).  We also
-    //declare it as public, because users of our ADT may well want to know
-    //the maximum capacity.
-    //
-    //This is the preferred approach.  (Don't even think about using a
-    //global variable. But now you are thinking about it. Stop that.)
-    static const size_t CAPACITY = 200;
-    
     Vector();
     
     //EFFECTS: Constructor
@@ -41,9 +31,10 @@ public:
     //Assignment operator
     Vector<T> &operator=(const Vector<T> &rhs);
     
-    void reserve();
-    
+    void reserve(size_t n);
     void resize();
+    
+    void resize(size_t n);
     
     //REQUIRES: this IntVector is not full
     //MODIFIES: this IntVector

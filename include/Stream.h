@@ -8,8 +8,7 @@
 #include <cstddef>
 #include <unistd.h>
 #include <string>
-
-#include "vector.h"
+#include <map>
 
 struct FileSystem;
 
@@ -48,7 +47,7 @@ private:
     };
     void allocateNewFile();
     bool inArena(char* ptr, size_t fileNo);
-    Vector<BackingFile*> backingFiles; // mapped pointers to the files which back the stream.
+    std::map<size_t, BackingFile*> backingFiles; // sorted map
     size_t totalSize;
     inline static const char STREAM_DIRECTORY_NAME[] = "backingFiles";
 };

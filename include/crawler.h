@@ -27,6 +27,7 @@
 #include "http.h"
 #include "threading.h"
 #include "BloomFilter.h"
+// #include "File.h"
 
 class RobotsTxt;
 
@@ -60,6 +61,7 @@ namespace search {
         std::unordered_map<std::string, time_t> lastHitHost;
 
         BloomFilter<std::string> pageFilter;
+
         void initializePageFilter();
     };
 }

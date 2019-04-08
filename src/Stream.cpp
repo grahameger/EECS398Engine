@@ -40,22 +40,26 @@ Stream::Stream() {
                     // map the file
                     BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
                     totalSize += mapping->fileSize;
-                    backingFiles.push_back(mapping);
+                    // instead of pushing back we're going to make it the index of atoi(filename)
+                    // all of the filenames 
+                    size_t fileNumber = std::atoi(entry->d_name);
+                    backingFiles.insert({fileNumber, mapping});
                 }
             }
         }
         // if all files are full
-        if (backingFiles.back()->fileSize == BACKING_FILE_SIZE) {
+        if (backingFiles.rbegin()->second->fileSize == BACKING_FILE_SIZE) {
             allocateNewFile();
         }
+
     } else {
         // create and open a new file in the directory
         sprintf(pathname, "%s/%c", STREAM_DIRECTORY_NAME, '1');
         int fd = open(pathname, O_RDWR | O_CREAT);
         // map the file
         BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
-        // add it to the vector
-        backingFiles.push_back(mapping);
+        // add it to the map
+        backingFiles.insert({1, mapping});
         mapping->fileSize = sizeof(BackingFile);
         totalSize += sizeof(BackingFile);
     }
@@ -70,15 +74,16 @@ Stream::~Stream() {
 }
 
 ssize_t Stream::write(char * src, size_t len) {
-    size_t spaceLeftOnLast = BACKING_FILE_SIZE - backingFiles.back()->fileSize;
+    size_t spaceLeftOnLast = BACKING_FILE_SIZE - backingFiles.rbegin()->second->fileSize;
     if (spaceLeftOnLast < len) {
         allocateNewFile();
     }
     // do the copy
-    void * nextAvailableSpot = backingFiles.back() + backingFiles.back()->fileSize;
+    BackingFile * lastFile = backingFiles.rbegin()->second;
+    void * nextAvailableSpot = lastFile + lastFile->fileSize;
     std::memcpy(nextAvailableSpot, src, len); 
     // increment fileSize 
-    backingFiles.back()->fileSize += len;
+    lastFile->fileSize += len;
     totalSize += len;
     return 0;
 }
@@ -111,7 +116,7 @@ void Stream::allocateNewFile() {
     // map it
     BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
     // add to vector
-    backingFiles.push_back(mapping);
+    backingFiles.insert({backingFiles.size() + 1, mapping});
     // set filesize
     mapping->fileSize = sizeof(BackingFile);
 }
