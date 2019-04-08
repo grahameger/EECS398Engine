@@ -184,6 +184,6 @@ void RobotsTxt::unlock() {
 void RobotsTxt::makeDir(const char * name) {
    struct stat st = {0};
    if (stat(name, &st) == -1) {
-      mkdir(name, 0700);
+      mkdir(name, 0666);
    }
 }

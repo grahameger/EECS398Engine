@@ -1,4 +1,6 @@
+
 // Created by Graham Eger on 4/1/2019
+// Graham Eger added wrappers for Stream on 4/7/2019
 
 #include "mmap.h"
 #include <cstdio>
@@ -33,7 +35,30 @@ int munmapWrapper(void * addr, size_t size) {
     return rv;
 }
 
-size_t fileSize(int fd) {
+void * streamMmapWrapper(int fd, size_t size) {
+    if (getFileSize(fd) < size) {
+        // no need for rounding here, always going to be the same size
+        ftruncate(fd, size);
+    }
+    void * rv = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (rv == (void*) -1) {
+        fprintf(stderr, "error mmap'ing %zu bytes in stream wrapper - mmap %s", size, strerror(errno));
+        exit(1);
+    }
+    close(fd);
+    return rv;
+}
+
+int streamMunmapWrapper(void * addr, size_t size) {
+    int rv = munmap(addr, size);
+    if (rv == -1) {
+        fprintf(stderr, "error destructing Stream: munmap %s\n", strerror(errno));
+        exit(1);
+    }
+    return rv;
+}
+
+size_t getFileSize(int fd) {
     struct stat buffer;
     fstat(fd, &buffer);
     return buffer.st_size;
@@ -44,7 +69,7 @@ void extendFile(int fd, size_t newSize) {
     if (newSize == 0) {
         newSize = PAGE_SIZE;
     }
-    if (fileSize(fd) < newSize) {
+    if (getFileSize(fd) < newSize) {
        ftruncate(fd, newSize);
     }
 }

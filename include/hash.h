@@ -114,7 +114,7 @@ namespace hash {
     };
     template <> struct Hash<std::string> {
         static uint64_t get(const std::string& str) {
-            return Hash<char*>{}.get(str.c_string());
+            return Hash<char*>{}.get(str.c_str());
         }
     };
 }

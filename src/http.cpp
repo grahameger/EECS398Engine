@@ -279,12 +279,11 @@ namespace search {
     }
 
 
-    // this function would fit better in crawler.cpp
+    // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len) {
         LinkFinder linkFinder; // each thread should probably just have they're own one of these
         linkFinder.parse(file, len);
-        // TODO: refactor this, probably slow as shit.
-        // convert the Strings to std::string
+        // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
         std::vector<std::string> toPush;
         toPush.reserve(linkFinder.Link_vector.size());
         for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {

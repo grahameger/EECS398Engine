@@ -9,16 +9,15 @@
 // Updated by Graham Eger a lot. 
 
 #include "crawler.h"
+#include <dirent.h>
 
 namespace search {
 
-    Crawler::Crawler(const std::vector<std::string> &seedUrls) {
+    Crawler::Crawler(const std::vector<std::string> &seedUrls) : pageFilter(PAGE_FILTER_SIZE) {
 
         // get our HTTP client
         client = new HTTPClient(this);
 
-        // bloom filter, 1GB
-        pageFilter = BloomFilter<std::string>(1000000000);
         // we should probably initialize it
         initializePageFilter();
 
@@ -52,8 +51,8 @@ namespace search {
         d = opendir("pages/");
         if (d) {
             while ((dir = readdir(d)) != NULL) {
-                std::string fileName = std::string(d->d_name);
-                pageFilter.add(filName);
+                std::string fileName = std::string(dir->d_name);
+                pageFilter.add(fileName);
             }
             closedir(d);
         }
@@ -75,13 +74,13 @@ namespace search {
     // only go to the filesystem if we really have to
     bool Crawler::havePage(const HTTPRequest &req) {
         // parse the page into a request and get a filename
-        auto filename = HTTPRequest(url).filename();
+        auto filename = req.filename();
         if (pageFilter.exists(filename)) {
-            // check the filesystem only if the bloom filter says we shouldn't
+            // check the filesystem only if the bloom filter says we should
             // TODO: performance measurement on filesystem access vs. the cache
             // thrashing of using the bloom filter.
             struct stat st = {0};
-            return (stat(path.c_str(), &st) == 0);
+            return (stat(filename.c_str(), &st) == 0);
         } else {
             return false;
         }
@@ -96,6 +95,13 @@ namespace search {
         while (true) {
             std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
+
+            // no duplicates, we're only going to be checking this here to
+            // prevent going to the filesystem twice.
+            // Once we we add it to the queue and once when we pop from the queue
+            if (havePage(req)) {
+                continue;
+            }
 
             // check if we have the robots file for this domain
             if (!haveRobots(req.host)) {
