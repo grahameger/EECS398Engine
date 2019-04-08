@@ -21,6 +21,7 @@ String::String( const char* toCopy, int length ) : size( length )
    if ( length == -1 )
       size = strlen( toCopy );
    cstring = new char[ size + 1 ];
+   cstring[ size ] = 0;
    memcpy( cstring, toCopy, size );
    }
 

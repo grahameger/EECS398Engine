@@ -1,3 +1,4 @@
+#include <iostream>
 #include "ByteStream.h"
 
 
@@ -44,11 +45,17 @@ const String& OutputByteStream::GetString( ) const
 // Warning: Here there be sketchy math
 const String OutputByteStream::HexString( ) const
    {
-   // Size is bytenum * 2 
-   //    (2 characters in hex per byte)
-   // Plus bytenum / 2
-   //    (one space every two bytes)
-   int size = byteNum * 2 + byteNum / 2;
+   int size;
+
+   // (2 characters in hex per byte, bytes = byteNum)
+   if ( forwardStream )
+      size = byteNum * 2;
+   // (bytes = size - byteNum)
+   else
+      size = ( writing.Size( ) - byteNum ) * 2;
+   // (one space every two bytes)
+   size += size / 4;
+
    String hexString( size );
 
    for ( int i = 0; i < size; i++ )
@@ -62,6 +69,8 @@ const String OutputByteStream::HexString( ) const
 
       // The adjusted index into writing (curIndex - seen spaces)
       int j = i - (i / 5);
+      if ( !forwardStream )
+         j = ( byteNum + 1 ) * 2 + j;
 
       // Used to get the current nybble of the String writing
       //    writing[ j / 2 ] gives us the current byte
@@ -92,9 +101,12 @@ void OutputByteStream::AddByte( const unsigned char byte )
    writing[ byteNum ] = byte;
 
    if ( forwardStream && ++byteNum == writing.Size( ) )
-      writing.Allocate( writing.Size( ) + 1 );
+      writing.Allocate( writing.Size( ) );
    else if ( !forwardStream && --byteNum == -1 )
-      writing.Allocate( writing.Size( ) + 1, false );
+      {
+      byteNum = writing.Size( );
+      writing.Allocate( writing.Size( ), false );
+      }
    }
 
 
