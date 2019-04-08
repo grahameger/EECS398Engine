@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <cstddef>
+#include <string>
 #include "String.h"
 
 
@@ -115,6 +116,15 @@ namespace hash {
     template <> struct Hash<std::string> {
         static uint64_t get(const std::string& str) {
             return Hash<char*>{}.get(str.c_str());
+        }
+    };
+}
+
+namespace std {
+    template<> 
+    struct hash<String> {
+        std::size_t operator()(const String &s) const {
+            return ::hash::Hash<char*>{}(s.CString());
         }
     };
 }

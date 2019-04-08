@@ -13,6 +13,7 @@
 
 #include "Stream.h"
 #include "String.h"
+#include "hash.h"
 
 struct FileSystem {
     
@@ -50,6 +51,8 @@ public:
 private:
     ssize_t offset; // the start of the filename
     ssize_t lenOffset;
-    static FileSystem fs;
+    inline static FileSystem fs;
     static const ssize_t npos = -1;
 };
+
+#endif

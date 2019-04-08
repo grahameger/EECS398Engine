@@ -9,11 +9,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
-#include <fts.h> // fts(3)
-
-#include <filesystem>
-namespace fs = std::filesystem;
-
+#include <cstring>
 
 #include "Stream.h"
 #include "mmap.h"
@@ -80,7 +76,7 @@ ssize_t Stream::write(char * src, size_t len) {
     }
     // do the copy
     void * nextAvailableSpot = backingFiles.back() + backingFiles.back()->fileSize;
-    memcpy(nextAvailableSpot, src, len); 
+    std::memcpy(nextAvailableSpot, src, len); 
     // increment fileSize 
     backingFiles.back()->fileSize += len;
     totalSize += len;

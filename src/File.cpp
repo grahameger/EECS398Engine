@@ -51,9 +51,9 @@ File::File(const char * filename, void * src, size_t len) {
     const size_t totalSize = filenameSize + len + sizeof(size_t);
     char * temp = (char*)malloc(totalSize);
     // copy everything over
-    memcpy(temp, filename, filenameSize);
-    memcpy(temp + filenameSize, &len, sizeof(size_t));
-    memcpy(temp + filenameSize + sizeof(size_t), src, len);
+    std::memcpy(temp, filename, filenameSize);
+    std::memcpy(temp + filenameSize, &len, sizeof(size_t));
+    std::memcpy(temp + filenameSize + sizeof(size_t), src, len);
     // write it to the stream
     offset = fs.disk.write(temp, totalSize);
     lenOffset = offset + filenameSize;
@@ -95,3 +95,5 @@ FileRead File::read() {
 String File::name() {
     return fs.disk.read(offset);
 }
+
+File::File() : offset(npos), lenOffset(npos) {}
