@@ -1,4 +1,5 @@
 // Created by Graham Eger on 4/2/2019
+// Graham Eger added a customization for std::hash<String> on 04/08/2019
 
 #pragma once
 #ifndef EECS_398_HASH_FUNCTIONS_H
