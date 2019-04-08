@@ -14,7 +14,6 @@ int main( )
    String numbers2("\x82\x01\x02\xFF\x80\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 23);
 
    InputByteStream bs(numbers);
-   InputByteStream bs2(numbers2);
    OutputByteStream bs3;
    for ( int i = 0; i < 4; i++ )
       {
@@ -24,10 +23,14 @@ int main( )
       cout << bs3.HexString( ).CString( ) << endl << endl;
       }
 
+   InputByteStream bs2(numbers2);
+   OutputByteStream bs4;
    for ( int i = 0; i < 3; i++ )
       {
       bs2 >> intPair;
       cout << intPair.GetFirst() << " " << intPair.GetSecond() << endl;
+      bs4 << intPair;
+      cout << bs4.HexString( ).CString( ) << endl << endl;
       }
 
    }

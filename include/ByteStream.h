@@ -14,6 +14,8 @@ class InputByteStream
 
       const unsigned char GetNextByte();
 
+      // TODO: Add Iterator like below for setting bit by bit
+
    private:
       const String reading;
       int byteNum;
@@ -28,6 +30,7 @@ class OutputByteStream
    {
    public:
       OutputByteStream(bool forwards = true);
+      ~OutputByteStream( );
 
       // TODO: Allocate new? What about backwards? Etc.
       const String& GetString( ) const;

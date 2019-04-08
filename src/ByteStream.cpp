@@ -21,11 +21,17 @@ const unsigned char InputByteStream::GetNextByte( )
    }
 
 
-OutputByteStream::OutputByteStream( bool forwards ) 
-      : writing( 63 ), byteNum( 0 ), forwardStream( forwards )
+OutputByteStream::OutputByteStream( bool forwards ) : writing( 63 ), 
+      byteNum( 0 ), forwardStream( forwards ), currentIterator( nullptr )
    {
    if ( !forwardStream )
       byteNum = 63;
+   }
+
+
+OutputByteStream::~OutputByteStream( )
+   {
+   delete currentIterator;
    }
 
 

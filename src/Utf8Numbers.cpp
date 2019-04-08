@@ -105,6 +105,17 @@ OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number )
 
 OutputByteStream& operator<< ( OutputByteStream& byteStream, PairUtf8Uint& number )
    {
+   // Add pair bit
+   byteStream.GetBitIterator( ).AddBit( number.GetSecond( ) != 1 );
+
+   // Add first number
+   unsigned nonPreambleBytes = PrintPreambleBytes( byteStream, number.GetFirst( ) );
+   PrintNumberBytes( byteStream, number.GetFirst( ), nonPreambleBytes );
+
+   // Add second number
+   if ( number.GetSecond( ) != 1 )
+      byteStream << number.second;
+
    return byteStream;
    }
 
