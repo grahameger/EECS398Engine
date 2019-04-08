@@ -43,6 +43,7 @@ namespace search {
 
         bool haveRobots(const std::string &domain);
         bool havePage(const HTTPRequest &req);
+        bool killedPage(const HTTPRequest &req);
         void addPageToFilter(const HTTPRequest &req);
 
         static void domainLock();
@@ -58,6 +59,10 @@ namespace search {
         inline static pthread_mutex_t domainMutex;
         RobotsTxt * robots;
         std::unordered_map<std::string, time_t> lastHitHost;
+        
+        // when a page is really bad and we don't want to crawl it again, it meets the killFilter
+        BloomFilter<std::string> killFilter; 
+        static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
     };
 }
 

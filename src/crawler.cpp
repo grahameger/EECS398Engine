@@ -13,7 +13,7 @@
 
 namespace search {
 
-    Crawler::Crawler(const std::vector<std::string> &seedUrls) {
+    Crawler::Crawler(const std::vector<std::string> &seedUrls) : killFilter(1000000000) {
 
         // get our HTTP client
         client = new HTTPClient(this);
@@ -63,6 +63,10 @@ namespace search {
     bool Crawler::havePage(const HTTPRequest& req) {
         std::string filename = req.filename();
         return File::find(filename.c_str()).exists();
+    }
+
+    bool Crawler::killedPage(const HTTPRequest& req) {
+        return killFilter.exists(req.uri());
     }
 
     void * Crawler::stub() {

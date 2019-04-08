@@ -174,6 +174,8 @@ namespace search {
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
             fprintf(stderr, "Too many redirects ending in host %s\n", url.c_str());
+            std::string uri = HTTPRequest(url).uri();
+            crawler->killFilter.add(uri);
             return;
         }
         HTTPRequest request(url);
@@ -198,11 +200,13 @@ namespace search {
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
+            crawler->killFilter.add(request.uri());
             return; 
         }
         ssize_t rv = sock->setFd(sockfd);
         if (rv < 0) {
             fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
+            crawler->killFilter.add(request.uri());
             return;
         }
 
@@ -218,6 +222,8 @@ namespace search {
         const std::string requestStr = request.requestString();
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
             fprintf(stderr, "error sending request to host for url '%s'\n", url.c_str());
+            crawler->killFilter.add(request.uri());
+            return;
         }
 
         // dynamic buffering
@@ -230,6 +236,7 @@ namespace search {
                 // error check
                 fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
                 free(fullResponse);
+                crawler->killFilter.add(request.uri());
                 return;
             } else if (rv == 0) {
                 // handle EOF
@@ -282,6 +289,7 @@ namespace search {
                         if (rv < 0) {
                             free(fullResponse);
                             fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                            crawler->killFilter.add(request.uri());
                             return;
                         }
                         break;
