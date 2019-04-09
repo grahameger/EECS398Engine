@@ -272,6 +272,7 @@ namespace search {
                             }
                         }
                     } else {
+                        // TODO: fix this
                         // recv until EOF, we request HTTP 1.0 so no need for chunked encoding anymore
                         rv = 0;
                         size_t currentBufferSize = constants::BUFFER_SIZE;
@@ -313,7 +314,7 @@ namespace search {
 
         bool isARobotsRequest = request.robots();
         if (!isARobotsRequest) {
-            process(fullResponse, bytesReceived);
+            process(fullResponse + headerSize, bytesReceived - headerSize);
         }
 
         // either going to write to a file or add another request to the queue
@@ -332,15 +333,15 @@ namespace search {
             robots->unlock();
             // move all the waiting pages to the readyQueue;
             pthread_mutex_lock(&crawler->waitingForRobotsLock);
-            // auto i = crawler->waitingForRobots.equal_range(request.host);
-            // for (auto it = i.first; it != i.second; it++) {
-            //     crawler->readyQueue.push(it->second);
-            // }
-            auto range = crawler->waitingForRobots.equal_range(request.host);
-            for (auto i = range.first; i != range.second; ++i) {
-                crawler->readyQueue.push(i->second);
+            auto it = crawler->waitingForRobots.find(request.host);
+            std::set<std::string> readyToCrawl;
+            if (it != crawler->waitingForRobots.end()) {
+                readyToCrawl.insert(it->second.begin(), it->second.end());
+                crawler->waitingForRobots.erase(it);
             }
+	        // remove the iterator for the host from the map
             pthread_mutex_unlock(&crawler->waitingForRobotsLock);
+            crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
         } else {
             // let's try out the file abstraction
             File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);

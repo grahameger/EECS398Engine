@@ -92,7 +92,18 @@ namespace search {
                 // queue, we need to have a method to get rid of those. Perhaps a separate queue.
                 readyQueue.push(p);
                 pthread_mutex_lock(&waitingForRobotsLock);
-                waitingForRobots.insert(req.host, p);
+                // see if there's a set already for it
+                auto it = waitingForRobots.find(req.host);
+                if (it == waitingForRobots.end()) {
+                    // if there isn't create a set and insert it
+                    std::set<std::string> s = {req.uri()};
+                    waitingForRobots.insert({req.host, s});
+                } else {
+                    // if there is, just add it to the set
+                    it->second.insert(req.uri());
+		            pthread_mutex_unlock(&waitingForRobotsLock);
+                    continue;
+                }
                 pthread_mutex_unlock(&waitingForRobotsLock);
                 client->SubmitURLSync(newUrl, 0);
                 continue;
