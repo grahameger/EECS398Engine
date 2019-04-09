@@ -1,3 +1,4 @@
+#include <cstring>
 #include "Parser.hpp"
 
 //default constructor
