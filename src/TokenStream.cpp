@@ -83,7 +83,7 @@ bool TokenStream::MatchEndline( )
 String TokenStream::MatchPath( )
    {
    if ( PeekNext( ) != '/' )
-      {
+     {
 	  ResetPeek( );
 	  return String( );
 	  }
@@ -187,7 +187,7 @@ void TokenStream::DecrementPeek( )
    if ( peekIndex == lexemeStart )
 	  return;
 
-   if ( peekIndex-- % BufferSize == 0 )
+   if ( --peekIndex % BufferSize == 0 )
 	  back--;
    }
 
@@ -209,15 +209,15 @@ String TokenStream::ConsumeLexemeToString( )
 
    for ( int i = 0, pages = 1; i < peekIndex - lexemeStart; i++ )
       {
-	  if ( i < BufferSize * pages - lexemeStart % BufferSize )
-	     cstring[ i ] = front[ ( lexemeStart + i ) % BufferSize ];
-      else
-	     {
-		 front++;
-		 delete buffers.RemoveFront( );
-		 pages++;
-		 }
-	  }
+      if ( i >= BufferSize * pages - lexemeStart % BufferSize )
+         {
+         front++;
+         delete buffers.RemoveFront( );
+         pages++;
+         }
+
+      cstring[ i ] = front[ ( lexemeStart + i ) % BufferSize ];
+	   }
 
    cstring[ length ] = 0;
    lexemeStart = peekIndex;
