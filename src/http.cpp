@@ -287,6 +287,7 @@ namespace search {
                     // once we have the full header check the content type
                     if (!isARobotsRequest && response200or300(fullResponse, headerSize) && !goodMimeContentType(fullResponse, headerSize)) {
                         auto uri = request.uri();
+                        crawler->killFilter.add(request.uri());
                         fprintf(stdout, "Bad content type for url %s\n", uri.c_str());
                         free(fullResponse);
                         return;
@@ -353,7 +354,7 @@ namespace search {
             return SubmitURLSync(newUrl, ++redirCount);
         }
         if (!isARobotsRequest) {
-            process(fullResponse + headerSize, bytesReceived - headerSize);
+            process(fullResponse + headerSize, bytesReceived - headerSize, url);
         }
 
         // either going to write to a file or add another request to the queue
@@ -364,7 +365,7 @@ namespace search {
             outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
             outfile.close();
             free(fullResponse);
-            fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
+            // fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
@@ -389,24 +390,28 @@ namespace search {
 
 
     // this function would probably fit better in crawler.cpp
-    void HTTPClient::process(char * file, size_t len) {
+    void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
+        const char * baseUri = currentUri.c_str();
         LinkFinder linkFinder; // each thread should probably just have they're own one of these
         linkFinder.parse(file, len);
         // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
-        std::vector<std::string> toPush;
-        toPush.reserve(linkFinder.Link_vector.size());
+        std::set<std::string> toPush;
         for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
-            toPush.push_back(std::string(linkFinder.Link_vector[i].CString()));
+            toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
         }
-        crawler->readyQueue.push(toPush);
+        crawler->readyQueue.push(toPush.begin(), toPush.end());
     }
 
     std::string HTTPClient::resolveRelativeUrl(const char * baseUri, const char * newUri) {
         // RFC 2396 Section 5.2 Resolving Relative References to Absolute Form
         // 1) Start 
         // Parse the URI reference into the potential four components and fragment identifier
+        if (std::string(baseUri) == "https://policies.oath.com/ca/en/oath/privacy/adinfo/index.html") {
+            fprintf(stdout, "%s", "hello");
+        }
         HTTPRequest newParsed = HTTPRequest(newUri);
         HTTPRequest baseParsed = HTTPRequest(baseUri);
+
 
         // 2)                                                   
         if (newParsed.path == "" && 
@@ -438,7 +443,9 @@ namespace search {
 
         // 5) if path begins with '/' then the reference is an absolute path, skip to step 7
         if (newParsed.path.begin() != newParsed.path.end() && newParsed.path[0] == '/') {
-            // skip to step 7
+            // copy the host over and skip to step 7
+            newParsed.scheme = baseParsed.scheme;
+            newParsed.host = baseParsed.host;
             return newParsed.uri();
         }
         
@@ -452,7 +459,9 @@ namespace search {
         // In other words, any characters after the last (right-most) slash character,
         // if any, are excluded.
         std::string base(baseUri);
-        std::string timBernersLeeBuffer = std::string(base.begin(), base.begin() + base.rfind('/'));
+         // remove everything after the last / in the base Uri path unless the last thing is a slash
+        base.erase(base.find_last_of('/') + 1, std::string::npos);
+        std::string timBernersLeeBuffer = std::string(base.begin(), base.end());
         // Is it PascalCase because it's a man's name or camelCase because it's local????
         
         // b) The reference's path component is appended to the buffer string
@@ -465,9 +474,9 @@ namespace search {
 
         // c) All occurrences of "./", where "." is a complete path segment,
         // are removed from the buffer string.
-        for (size_t pos = path.find("/./"); 
-             pos != std::string::npos; 
-             pos = path.find("/./")) 
+        for (size_t pos = path.find("/./");
+         pos != std::string::npos;
+         pos = path.find("/./")) 
         {
             // remove "./", not the first slash
             path.erase(pos + 1, 2);
@@ -490,7 +499,7 @@ namespace search {
         size_t segment;
         while ((segment = path.find("/../")) != std::string::npos) {
             std::string tmp = path.substr(0, segment);
-            size_t slash = tmp.find('/');
+            size_t slash = tmp.rfind('/');
             if (slash == std::string::npos) {
                 continue;
             }

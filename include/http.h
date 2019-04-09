@@ -80,7 +80,7 @@ namespace search {
 
         // 'main' function our worker threads run
         void processResponses();
-        void process(char* file, size_t len);
+        void process(char* file, size_t len, const std::string &currentUri);
 
         static bool goodMimeContentType(char * str, ssize_t len);
         static bool response200or300(char * str, ssize_t len);
@@ -89,7 +89,7 @@ namespace search {
 
         // Resolves a relative URL into an absolute path relative to the current request.
         // Returns a nullptr on errors and if the request is to the current document
-        std::string resolveRelativeUrl(const char * baseURi, const char * newUri);
+        static std::string resolveRelativeUrl(const char * baseURi, const char * newUri);
 
         // given a socket return the clientInfo
         std::mutex m;

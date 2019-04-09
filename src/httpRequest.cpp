@@ -42,20 +42,13 @@ namespace search {
         if (robots()) {
             return "robots/" + host;
         } else {
-            // slashesRemoved = host + path;
-            // for (char &ch : slashesRemoved) {
-            //     if (ch == '/') {
-            //         ch = '_';
-            //     }
-            // }
-            // rv = "pages/" + slashesRemoved;
             return uri();
         }
     }
 
     std::string HTTPRequest::requestString() const {
         std::stringstream ss;
-        ss << method << ' ' << '/' << path << ' ' << httpVersion << endl;
+        ss << constants::getMethod << ' ' << path << ' ' << constants::httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << userAgents << endl;
         ss << encoding << endl;
@@ -139,11 +132,6 @@ namespace search {
             result += "?";
             result += "query";
         }
-        if (fragment != "") {
-            result += "#";
-            result += fragment;
-        }
-
         return result;
     }
 }

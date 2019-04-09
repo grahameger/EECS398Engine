@@ -57,8 +57,9 @@ namespace search {
 
     inline bool Crawler::haveRobots(const std::string &host) {
         struct stat st = {0};
-        auto path = std::string("robots/" + host);
-        return (stat(path.c_str(), &st) == 0);    
+        auto path1 = std::string("robots/" + host);
+        auto path2 = std::string("robots/" + ("www." + host));
+        return (stat(path1.c_str(), &st) == 0 || stat(path2.c_str(), &st));    
     }
 
     bool Crawler::havePage(const HTTPRequest& req) {
@@ -88,9 +89,7 @@ namespace search {
             // check if we have the robots file for this domain
             if (!req.robots() && !haveRobots(req.host)) {
                 // change the path to get the robots.txt file
-                req.path = "/robots.txt";
                 // add the old url to the back of the queue until we get the robots file
-                auto newUrl = req.uri();
                 readyQueue.push(p);
                 pthread_mutex_lock(&waitingForRobotsLock);
                 // see if there's a set already for it
@@ -106,6 +105,8 @@ namespace search {
                     continue;
                 }
                 pthread_mutex_unlock(&waitingForRobotsLock);
+                req.path = "/robots.txt";
+                auto newUrl = req.uri();
                 client->SubmitURLSync(newUrl, 0);
                 continue;
             }
