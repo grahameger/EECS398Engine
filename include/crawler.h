@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <mutex>
 
 #include <sys/types.h>
@@ -49,7 +50,7 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 10000;
+        static const size_t NUM_CRAWLER_THREADS = 100;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 3;
     private:
         friend class HTTPClient;
@@ -63,7 +64,7 @@ namespace search {
         // when a page is really bad and we don't want to crawl it again, it meets the killFilter
         BloomFilter<std::string> killFilter; 
         static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
-        std::multimap<std::string, std::string> waitingForRobots;
+        std::map<std::string, std::set<std::string> > waitingForRobots;
         pthread_mutex_t waitingForRobotsLock;
     };
 }
