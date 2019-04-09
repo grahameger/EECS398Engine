@@ -21,6 +21,9 @@
 #include "String.h"
 #include "PersistentBitVector.h"
 
+#ifndef O_NOATIME
+#define O_NOATIME 0
+#endif
 
 // Linear Probing thread-safe file backed hash map
 template <typename Key, typename Mapped>
@@ -148,7 +151,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     bool fileExists = (stat(filename.CString(), &buffer) == 0);
 
     // open file with correct flags
-    int openFlags = O_RDWR;
+    int openFlags = O_RDWR | O_NOATIME;
     if (!fileExists) {
         openFlags |= O_CREAT;
     }

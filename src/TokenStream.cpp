@@ -22,7 +22,7 @@ bool IsWhitespace( const char toCheck )
 /* ### PUBLIC METHODS ### */
 
 TokenStream::TokenStream( const char* filename ) 
-      : fileDescriptor( open( filename, O_RDONLY ) ), lexemeStart( 0 ), 
+      : fileDescriptor( open( filename, O_RDONLY | O_NOATIME ) ), lexemeStart( 0 ), 
       peekIndex( 0 ), lastIndex( -1 )
    {
    front = buffers.GetFront( );

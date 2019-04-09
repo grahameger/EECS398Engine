@@ -18,7 +18,7 @@ PersistentBitVector::PersistentBitVector(String filename) {
     bool fileExists = (stat(filename.CString(), &buffer) == 0);
     
     // open file with correct flags
-    int openFlags = O_RDWR;
+    int openFlags = O_RDWR | O_NOATIME;
     if (!fileExists) {
         openFlags |= O_CREAT;
     }

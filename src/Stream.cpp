@@ -51,7 +51,7 @@ Stream::Stream() {
                     // build the pathname
                     sprintf(pathname, "%s/%s", STREAM_DIRECTORY_NAME, entry->d_name);
                     // open the file with read write permissions
-                    fd = open(pathname, O_RDWR);
+                    fd = open(pathname, O_RDWR | O_NOATIME);
                     if (fd < 0) {
                         fprintf(stderr, "error opening file %s - %s\n", pathname, strerror(errno));
                     }
@@ -74,7 +74,7 @@ Stream::Stream() {
         makeDir(STREAM_DIRECTORY_NAME);
         // create and open a new file in the directory
         sprintf(pathname, "%s/%c", STREAM_DIRECTORY_NAME, '1');
-        int fd = open(pathname, O_RDWR | O_CREAT, 0755);
+        int fd = open(pathname, O_RDWR | O_CREAT | O_NOATIME, 0755);
         if (fd < 0) {
             fprintf(stderr, "error opening file %s - %s\n", pathname, strerror(errno));
         }
@@ -139,7 +139,7 @@ void Stream::allocateNewFile() {
     // open a new file
     std::string filename = std::to_string(backingFiles.size() + 1);
     sprintf(pathname, "%s/%s", STREAM_DIRECTORY_NAME, filename.c_str());
-    int fd = open(pathname, O_RDWR | O_CREAT, 0755);
+    int fd = open(pathname, O_RDWR | O_CREAT | O_NOATIME, 0755);
     // map it
     BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
     // add to vector

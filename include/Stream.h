@@ -10,6 +10,11 @@
 #include <string>
 #include <map>
 
+#ifndef O_NOATIME
+#define O_NOATIME 0
+#endif
+
+
 struct FileSystem;
 
 class Stream {
