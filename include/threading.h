@@ -1,5 +1,6 @@
 // Created by Graham Eger on 3/28/2019
 // Graham Eger added ReadWriteLock on 4/1/2019
+// Graham Eger added a templated push function for containers on 04/08/2019
 
 #pragma once
 #ifndef THREADING_H_398
@@ -78,6 +79,11 @@ namespace threading {
 
         void push(const T &d);
         void push(const std::vector<T> &d);
+
+        template <typename Iterator>
+        void push(Iterator start, Iterator end);
+        void push();
+
         T pop();
         void popAll(std::vector<T> &d);
 
@@ -154,6 +160,17 @@ namespace threading {
         auto rv = q.empty();
         m.unlock();
         return rv;
+    }
+
+    template <typename T>
+    template <typename Iterator>
+    void ThreadQueue<T>::push(Iterator start, Iterator end) {
+        m.lock();
+        for (auto it = start; it != end; it++) {
+            q.push_back(*it);
+        }
+        cv.signal();
+        m.unlock();
     }
 }
 
