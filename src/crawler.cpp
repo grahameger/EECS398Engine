@@ -20,6 +20,7 @@ namespace search {
 
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
+        waitingForRobotsLock = PTHREAD_MUTEX_INITIALIZER;
         robots = &threading::Singleton<RobotsTxt>::getInstance();
 
         // make the robots and pages directory
@@ -82,7 +83,7 @@ namespace search {
             }
 
             // check if we have the robots file for this domain
-            if (!haveRobots(req.host)) {
+            if (!req.robots() && !haveRobots(req.host)) {
                 // change the path to get the robots.txt file
                 req.path = "/robots.txt";
                 // add the old url to the back of the queue until we get the robots file
@@ -90,6 +91,9 @@ namespace search {
                 // TODO: URLs that fail to get a robots.txt file may pile up at the back of the
                 // queue, we need to have a method to get rid of those. Perhaps a separate queue.
                 readyQueue.push(p);
+                pthread_mutex_lock(&waitingForRobotsLock);
+                waitingForRobots.insert(req.host, p);
+                pthread_mutex_unlock(&waitingForRobotsLock);
                 client->SubmitURLSync(newUrl, 0);
                 continue;
             }

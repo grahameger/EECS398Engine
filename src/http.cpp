@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <map>
 #include "Parser.hpp"
 
 namespace search {
@@ -329,6 +330,17 @@ namespace search {
             robots->lock();
             robots->SubmitRobotsTxt(request.host, filename);
             robots->unlock();
+            // move all the waiting pages to the readyQueue;
+            pthread_mutex_lock(&crawler->waitingForRobotsLock);
+            // auto i = crawler->waitingForRobots.equal_range(request.host);
+            // for (auto it = i.first; it != i.second; it++) {
+            //     crawler->readyQueue.push(it->second);
+            // }
+            auto range = crawler->waitingForRobots.equal_range(request.host);
+            for (auto i = range.first; i != range.second; ++i) {
+                crawler->readyQueue.push(i->second);
+            }
+            pthread_mutex_unlock(&crawler->waitingForRobotsLock);
         } else {
             // let's try out the file abstraction
             File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);

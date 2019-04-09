@@ -170,8 +170,9 @@ const int TokenStream::PeekNext( )
 	
 	if ( peekIndex % BufferSize == lastIndex && back == buffers.GetBack( ) )
 		return -1;
-	
-	return back[ peekIndex++ % BufferSize ];
+
+   
+   return back != buffers.End() ? back[peekIndex++ % BufferSize] : -1;
    }
 
 
