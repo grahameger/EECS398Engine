@@ -15,6 +15,7 @@ namespace constants {
     const std::string robotsTxtString = "/robots.txt";
     const std::string robotsTxtString2 = "robots.txt";
     const std::string doBackSlash = "./";
+    const std::string contentTypeString = "Content-Type: ";
 
     const size_t MAX_CONNECTIONS = 1000;
     const size_t RECV_SIZE = 8192;

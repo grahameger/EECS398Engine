@@ -121,11 +121,12 @@ namespace search {
     }
 
     static size_t caseInsensitiveStringFind(const std::string_view& str, const std::string& toFind) {
-        auto it = std::search(str.begin(), str.end(), toFind.begin(), toFind.end(), [](char a, char b) { return std::toupper(a) == std::toupper(b);});
+        auto it = std::search(str.begin(), str.end(), toFind.begin(), toFind.end(), 
+                                [](char a, char b) { return std::toupper(a) == std::toupper(b);});
         if (it != str.end()) {
             return it - str.begin();
         } else {
-            return std::basic_string_view<char>::npos; 
+            return std::string_view::npos; 
         }
     }
 
@@ -168,6 +169,33 @@ namespace search {
                                       response.data() + intEnd,
                                       rv);
         return rv;
+    }
+
+    // Returns false if there is no Content-Type, or if the Content-Type
+    // is not either "text/html" or "text/plain"
+    bool HTTPClient::goodMimeContentType(char * str, ssize_t len) {
+        // construct a string_view from our pointer and length
+        // find "Content-Type" using the case insensitive find function
+        // construct a string_view of the mime-type indicated in the header
+        // see if the first part is "text", if it is, check that the second part is "plain", or "html", nothing else
+        // otherwise return true and we'll throw this whole request out and move on
+        // if it's a robots.txt 
+
+        // string_view doesn't make any copies, it's essentially a pascal string
+        const std::string_view header(str, len);
+        const size_t contentTypeStart = caseInsensitiveStringFind(header, constants::contentTypeString);
+        if (contentTypeStart != std::string_view::npos) {
+            const size_t firstTokenStart = contentTypeStart + constants::contentTypeString.size();
+            // find the next whitespace character or a colon
+            // also didn't make a copy of the string
+            const std::string_view contentType = header.substr(firstTokenStart,
+                                             header.find_first_of(" \f\n\r\t\v;", firstTokenStart));
+            return contentType.size() >= 9 &&
+                   contentType.substr(0, 4) == "text" &&                               // this should be good
+                   (contentType.substr(5, 9) == "html" || contentType.substr(5, 9) == "plai");
+        } else {
+            return false;
+        }
     }
 
 
@@ -216,8 +244,10 @@ namespace search {
         size_t totalSize = 0;
         size_t headerPos = 0;
         size_t headerSize = 0;
+        size_t currentBufferSize = 0;
         ssize_t contentLength = -1;
         char * fullResponse = (char*)malloc(constants::BUFFER_SIZE);
+        currentBufferSize = constants::BUFFER_SIZE;
 
         // send request blocking
         const std::string requestStr = request.requestString();
@@ -250,6 +280,13 @@ namespace search {
                 headerPos = view.find("\r\n\r\n");
                 if (headerPos != std::string_view::npos) {
                     headerSize = headerPos + 4;
+                    // once we have the full header check the content type
+                    if (!goodMimeContentType(fullResponse, headerSize)) {
+                        auto uri = request.uri();
+                        fprintf(stdout, "Bad content type for url %s\n", uri.c_str());
+                        free(fullResponse);
+                        return;
+                    }
                     // search for "Content-Length"
                     contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
                     if (contentLength == CHUNKED) {
@@ -260,6 +297,7 @@ namespace search {
                         ssize_t remaining = totalSize - bytesReceived;
                         if (remaining > 0) {
                             fullResponse = (char *)realloc(fullResponse, totalSize);
+                            currentBufferSize = totalSize;
                             char * buf_front = fullResponse + bytesReceived;
                             rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                             if (rv >= 0) {
@@ -286,7 +324,7 @@ namespace search {
                             // we'll do a receive of the total amount of memory remaining in the buffer
                             // we're also not going to do a MSG_WAITALL because this is most likely
                             // going to loop, but it IS still a BLOCKING operation
-                            rv = sock->recv(fullResponse, currentBufferSize - bytesReceived, 0);
+                            rv = sock->recv(fullResponse + bytesReceived, currentBufferSize - bytesReceived, 0);
                         } while (rv > 0);
                         if (rv < 0) {
                             free(fullResponse);

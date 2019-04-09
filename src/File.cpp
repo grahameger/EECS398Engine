@@ -65,19 +65,21 @@ File::File(const char * filename, void * src, size_t len) {
 }
 
 File File::find(const char * filename) {
-    pthread_mutex_lock(&fs.m);
-    std::unordered_map<String, size_t>::iterator i = fs.mapping.find(filename);
     File f;
-    if (i == fs.mapping.end()) {
-        pthread_mutex_unlock(&fs.m);
-        f.offset = npos;
-        f.lenOffset = npos;
-    } else {
-        f.offset = i->second;
-        const char * filenamePtr = fs.disk.read(f.offset);
-        pthread_mutex_unlock(&fs.m);
-        size_t filenameLength = strlen(filenamePtr);
-        f.lenOffset = f.offset + filenameLength + 1;
+    if (filename) {
+        pthread_mutex_lock(&fs.m);
+        std::unordered_map<String, size_t>::iterator i = fs.mapping.find(filename);
+        if (i == fs.mapping.end()) {
+            pthread_mutex_unlock(&fs.m);
+            f.offset = npos;
+            f.lenOffset = npos;
+        } else {
+            f.offset = i->second;
+            const char * filenamePtr = fs.disk.read(f.offset);
+            pthread_mutex_unlock(&fs.m);
+            size_t filenameLength = strlen(filenamePtr);
+            f.lenOffset = f.offset + filenameLength + 1;
+        }
     }
     return f;
 }

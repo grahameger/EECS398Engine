@@ -82,6 +82,31 @@ namespace search {
         return path == constants::robotsTxtString || path == constants::robotsTxtString2;
     }
 
+    // returns whether the extension of the file is one we're looking for
+    // we're specifically trying to avoid javascript, css, and images
+    // everything else is fair game
+    bool HTTPRequest::goodExtension() const {
+        for (size_t i = 0; i < NUM_BAD_EXTENSIONS; ++i) {
+            const std::string& badExtension = BAD_EXTENSIONS[i];
+            if (path.size() > badExtension.size()) {
+                // check the last badExtension.size() characters and see if they match, if any of them match completely
+                // then return false, otherwise go onto the next one, if none of them match completely, we can return true
+                bool fullMatch = true;
+                for (size_t i = 0; i < badExtension.size(); ++i) {
+                        // align any matching extensions at the end of the up
+                    if (path[path.size() - badExtension.size() + i] != badExtension[i]) {
+                        fullMatch = false;
+                        break;
+                    }
+                }
+                if (fullMatch) {
+                    return false;
+                }
+            }
+        } 
+        return true;
+    }
+
     std::string HTTPRequest::uri() const {
         // Pseudocode from RFC 2396
         // result = ""

@@ -63,7 +63,9 @@ namespace search {
 
     bool Crawler::havePage(const HTTPRequest& req) {
         std::string filename = req.filename();
-        return File::find(filename.c_str()).exists();
+        const char * cStr = filename.c_str();
+        bool rv = File::find(cStr).exists();
+        return rv;
     }
 
     bool Crawler::killedPage(const HTTPRequest& req) {
@@ -78,7 +80,8 @@ namespace search {
             // no duplicates, we're only going to be checking this here to
             // prevent going to the filesystem twice.
             // Once we we add it to the queue and once when we pop from the queue
-            if (havePage(req)) {
+            // Also check the extension to make sure that it's not on the bad list.
+            if (havePage(req) || !req.goodExtension()) {
                 continue;
             }
 

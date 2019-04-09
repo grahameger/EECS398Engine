@@ -73,7 +73,6 @@ namespace search {
 
     private:
         friend class Crawler; 
-
         static const size_t REDIRECT_MAX = 20;
 
         // returns connected TCP socket to host
@@ -82,6 +81,8 @@ namespace search {
         // 'main' function our worker threads run
         void processResponses();
         void process(char* file, size_t len);
+
+        static bool goodMimeContentType(char * str, ssize_t len);
 
         char * checkRedirectsHelper(const char * getMessage, size_t len);
 
