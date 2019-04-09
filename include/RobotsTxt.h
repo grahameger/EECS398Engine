@@ -58,7 +58,7 @@ private:
    void ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules);
    bool TransferRulesFromDiscToCache(string &domain);
    DirectoryRules *CreateDirectoryRules(char *directoryName, 
-      vector<int> &childIndices, bool isAllowed, bool hasRule);
+      vector<size_t> &childIndices, bool isAllowed, bool hasRule);
    void CreateDirectoryRuleTree(vector<DirectoryRules*> &rules);
    string SerializedRulesPath;
    void makeDir(const char *name);
