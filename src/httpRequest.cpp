@@ -34,23 +34,23 @@ namespace search {
         }
     }
 
-    // TODO: do all the string manipulation on the stack
-    // maximum url length apache supports is 8KB. Our stacks are 2MB.
+    // return value will either get optimized out or the compiler
+    // will use the move constructor
     std::string HTTPRequest::filename() const {
         std::string slashesRemoved;
         std::string rv;
-        if (path == robotsTxtString) {
-            rv = "robots/" + host;
+        if (robots()) {
+            return "robots/" + host;
         } else {
-            slashesRemoved = host + path;
-            for (char &ch : slashesRemoved) {
-                if (ch == '/') {
-                    ch = '_';
-                }
-            }
-            rv = "pages/" + slashesRemoved;
+            // slashesRemoved = host + path;
+            // for (char &ch : slashesRemoved) {
+            //     if (ch == '/') {
+            //         ch = '_';
+            //     }
+            // }
+            // rv = "pages/" + slashesRemoved;
+            return uri();
         }
-        return rv;
     }
 
     std::string HTTPRequest::requestString() const {

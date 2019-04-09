@@ -74,7 +74,6 @@ namespace search {
         }
         for (p = servinfo; p != nullptr; p = p->ai_next) {
             if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-                // TODO log error
                 continue;
             }
             if (!blocking) {
@@ -82,6 +81,7 @@ namespace search {
                 if (rv == -1) {
                     fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
                     close(sockfd);
+                    freeaddrinfo(servinfo);
                     return -1;
                 }
             }
@@ -90,11 +90,11 @@ namespace search {
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
                 fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
                 close(sockfd);
+                freeaddrinfo(servinfo);
                 return -1;
             }
 
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-                // TODO log connect error
                 close(sockfd);
                 continue;
             }
@@ -102,8 +102,8 @@ namespace search {
         }
         // end of list with no connection
         if (p == nullptr) {  
-            // TODO: log, failed to connect
-            fprintf(stderr, "unable to connect to host '%s'\n", host.c_str());
+            fprintf(stderr, "unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));
+            freeaddrinfo(servinfo);
             return -1;
         }
         freeaddrinfo(servinfo);
@@ -200,6 +200,10 @@ namespace search {
     }
 
 
+    bool HTTPClient::response200or300(char * str, ssize_t len) {
+        return len >= 10 ? str[9] == '2' || str[9] == 3 : false;
+    }
+
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
@@ -213,8 +217,7 @@ namespace search {
             return;
         }
         std::unique_ptr<Socket> sock;
-        request.method = constants::getMethod;
-        request.headers = constants::connClose;
+        //request.method = constants::getMethod;
         if (request.scheme == constants::httpsStr) {
             request.port = 443;
             sock = std::unique_ptr<SecureSocket>(new SecureSocket);
@@ -224,7 +227,6 @@ namespace search {
             sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
-            // invalid, TODO log bad request
             return;
         }
         // open a socket to the host
@@ -262,6 +264,7 @@ namespace search {
         // every time recv returns we'll look for "Content-Length", length of the body
         // when we get t he length of the body then we can have a hard coded size to check for
         // get the size of the header by searching for /r/n/r/n
+        bool isARobotsRequest = request.robots();
         while (true) {
             rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
             if (rv < 0) {
@@ -282,7 +285,7 @@ namespace search {
                 if (headerPos != std::string_view::npos) {
                     headerSize = headerPos + 4;
                     // once we have the full header check the content type
-                    if (!goodMimeContentType(fullResponse, headerSize)) {
+                    if (!isARobotsRequest && response200or300(fullResponse, headerSize) && !goodMimeContentType(fullResponse, headerSize)) {
                         auto uri = request.uri();
                         fprintf(stdout, "Bad content type for url %s\n", uri.c_str());
                         free(fullResponse);
@@ -311,8 +314,7 @@ namespace search {
                             }
                         }
                     } else {
-                        // TODO: fix this
-                        // recv until EOF, we request HTTP 1.0 so no need for chunked encoding anymore
+                        // recv until EOF
                         rv = 0;
                         size_t currentBufferSize = constants::BUFFER_SIZE;
                         do {
@@ -350,8 +352,6 @@ namespace search {
             free(redirectUrl);
             return SubmitURLSync(newUrl, ++redirCount);
         }
-
-        bool isARobotsRequest = request.robots();
         if (!isARobotsRequest) {
             process(fullResponse + headerSize, bytesReceived - headerSize);
         }
@@ -576,14 +576,12 @@ namespace search {
         }
         int rv = ::SSL_set_fd(ssl, sockfd);
         if (rv != 1) {
-            // TODO better error handling
             fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);
             fflush(stderr);
             return -1;
         }
         rv = ::SSL_connect(ssl);
         if (rv <= 0) {
-            // TODO better error handling
             fprintf(stderr, "Error creating SSL connection\n");
             fflush(stderr);
             return -1;
@@ -655,7 +653,6 @@ namespace search {
         // currently
         } else {
             auto rv = ::SSL_read(ssl, (void*)buf, len);
-            // todo error handling
             // https://linux.die.net/man/3/ssl_read
             return rv;
         }
@@ -672,7 +669,7 @@ namespace search {
     ssize_t HTTPClient::SecureSocket::close() {
         // TODO error handling
         if (ssl) {
-            ::SSL_shutdown(ssl);
+            // ::SSL_shutdown(ssl); this was causing issues
             ::SSL_free(ssl);
             ssl = nullptr;
         }

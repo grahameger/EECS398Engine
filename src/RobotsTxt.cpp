@@ -153,7 +153,7 @@ bool RobotsTxt::GetRule(string path, string &domain)
       path.pop_back();
    
    //Look in cache
-   String tmpPath(path.c_str()); //todo remove
+   String tmpPath(path.c_str());
    try
       {
       DomainRules *domainRule = domainRulesCache.get(domain);

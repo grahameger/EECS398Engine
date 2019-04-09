@@ -7,14 +7,13 @@
 #include <cstring>
 #include <cassert>
 
-// load unaligned uint64_t from the pointer V
-static uint64_t load64LittleEndian(char const* V)
+// load unaligned uint64_t from the pointer p
+static uint64_t load64LittleEndian(char const* p)
 {
     size_t rv;
-    std::memcpy(&rv, V, sizeof(uint64_t));
+    std::memcpy(&rv, p, sizeof(uint64_t));
     return rv;
 }
-// TODO: finish replacing the alignment stuff
 
 // disk will have already been initialized at this point
 FileSystem::FileSystem() {

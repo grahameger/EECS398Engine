@@ -76,7 +76,6 @@ private:
     void insertKeyValue(const ValueType& value);
     void noProbeNoRehashInsertKeyValueAtIndex(const ValueType &value, SizeType index);
 
-    // TODO: make this work
     void rehashAndGrow();
 
     bool rehashNeeded();
@@ -159,7 +158,6 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
         exit(1);
-        // TODO: more error handling
     }
 
     // mmap and setup the header portion
@@ -289,7 +287,6 @@ Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
     auto indexForKey = this->probeForExistingKey(key);
     if (indexForKey == this->header->capacity) {
         this->unlock();
-        // TODO: is this what we really want to do here?
         throw std::out_of_range("Key does not exist in hash map");
     }
     auto& rv = this->buckets[indexForKey].second;

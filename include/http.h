@@ -83,8 +83,9 @@ namespace search {
         void process(char* file, size_t len);
 
         static bool goodMimeContentType(char * str, ssize_t len);
+        static bool response200or300(char * str, ssize_t len);
 
-        char * checkRedirectsHelper(const char * getMessage, size_t len);
+        static char * checkRedirectsHelper(const char * getMessage, size_t len);
 
         // Resolves a relative URL into an absolute path relative to the current request.
         // Returns a nullptr on errors and if the request is to the current document

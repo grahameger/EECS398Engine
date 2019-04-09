@@ -11,7 +11,6 @@
 #include "mmap.h"
 
 
-// TODO: reduce code duplication
 PersistentBitVector::PersistentBitVector(String filename) {
     // check if the file exists
     struct stat buffer;

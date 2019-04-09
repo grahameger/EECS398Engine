@@ -37,7 +37,6 @@ Stream::Stream() {
     // Check if the directory exists.
     struct stat st;
     char pathname[1024];
-    // TODO: check the ordering of the files that are created.
     if (stat(STREAM_DIRECTORY_NAME, &st) && S_ISDIR(st.st_mode)) {
         // for loop through each file in the directory
         DIR * dir;
@@ -113,8 +112,8 @@ ssize_t Stream::write(char * src, size_t len) {
 }
 
 char * Stream::read(size_t offset) {
-    // we one indexed the file numbers
-    // TODO: CHANGE THAT OH MY
+    // File numbers are 1-indexed
+    // TODO: CHANGE THAT
     size_t fileNumber = offset / BACKING_FILE_SIZE + 1;
     auto i = backingFiles.find(fileNumber);
     if (i == backingFiles.end()) {

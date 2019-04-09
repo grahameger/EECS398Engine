@@ -20,12 +20,12 @@ namespace search {
         bool robots() const;
         void print() const;
         bool goodExtension() const;
-        std::string   method;       // only GET implemented
+        inline static const std::string method = constants::getMethod; // only GET needed
         std::string   host; // hostname
         std::string   path; // easy enough
         std::string   query; // ? stuff
         std::string   fragment; // # stuff
-        std::string   headers; // TODO
+        inline static const std::string headers = constants::connClose; // it's just connClose right now
         std::string   scheme; // http://, https:// etc
         int           port;         // note 0 defaults to 80
 

@@ -91,8 +91,6 @@ namespace search {
                 req.path = "/robots.txt";
                 // add the old url to the back of the queue until we get the robots file
                 auto newUrl = req.uri();
-                // TODO: URLs that fail to get a robots.txt file may pile up at the back of the
-                // queue, we need to have a method to get rid of those. Perhaps a separate queue.
                 readyQueue.push(p);
                 pthread_mutex_lock(&waitingForRobotsLock);
                 // see if there's a set already for it
