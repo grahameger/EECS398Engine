@@ -173,6 +173,7 @@ namespace search {
 
     // Returns false if there is no Content-Type, or if the Content-Type
     // is not either "text/html" or "text/plain"
+    // tested good
     bool HTTPClient::goodMimeContentType(char * str, ssize_t len) {
         // construct a string_view from our pointer and length
         // find "Content-Type" using the case insensitive find function
@@ -190,9 +191,9 @@ namespace search {
             // also didn't make a copy of the string
             const std::string_view contentType = header.substr(firstTokenStart,
                                              header.find_first_of(" \f\n\r\t\v;", firstTokenStart));
-            return contentType.size() >= 9 &&
-                   contentType.substr(0, 4) == "text" &&                               // this should be good
-                   (contentType.substr(5, 9) == "html" || contentType.substr(5, 9) == "plai");
+            auto firstToken = contentType.substr(0,4);
+            auto secondToken = contentType.substr(5,4);
+            return contentType.size() >= 9 && firstToken == "text" && (secondToken == "html" || secondToken == "plai");
         } else {
             return false;
         }
