@@ -29,11 +29,13 @@ public:
 
    //Only use this if you are reading file and building tree from scratch
    void AddChildFromFile( DirectoryRules* child );
-   void SetChildIndices( vector<int> &childIndicesIn );
+   void SetChildIndices( vector<size_t> &childIndicesIn );
 
    //fp must point to empty file
    void SaveToFile( FILE *fp );
-   vector<int> childIndicesInDstVec; //used for saving to file
+   vector<size_t> childIndicesInDstVec; //used for saving to file
+
+   static const size_t npos = -1;
 
 private:
    void SetAllowedForSubtree(bool grantedPermission); 
@@ -43,9 +45,9 @@ private:
    std::string directoryName;
    bool isAllowed;
    bool hasRule;
-   std::unordered_map<std::string, int> directoryNameToChildRuleIndex;
+   std::unordered_map<std::string, size_t> directoryNameToChildRuleIndex;
    void ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules);
-   int FindEndIndexOfNextDirectoryName(std::string &path, int directoryStartIndex);
+   size_t FindEndIndexOfNextDirectoryName(std::string &path, size_t directoryStartIndex);
    void CreateDirectoryRuleTree(vector<DirectoryRules*> &rules);
    };
 

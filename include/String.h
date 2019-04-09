@@ -1,11 +1,15 @@
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #pragma once
 #ifndef STRING_H_398
 #define STRING_H_398
 
 class String
-   {
+{
 public:
    String( );
+   String( const char single_char );
    String( const char* toCopy );
    String( char*&& toMove );
    String( const String& toCopy );
@@ -24,13 +28,14 @@ public:
 
    String& operator+= ( const String& rhs );
    friend String operator+ ( String lhs, const String& rhs );
+   friend String operator+ ( String lhs, const char * toCat );
 
    operator bool( ) const;
 
 private:
-   const static char* nullString;
-   char* cstring;
-   int size;
-   };
+    const static char* nullString;
+    char* cstring;
+    int size;
+};
 
 #endif

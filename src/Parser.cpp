@@ -1,3 +1,4 @@
+#include <cstring>
 #include "Parser.hpp"
 
 //default constructor
@@ -6,27 +7,18 @@ LinkFinder::LinkFinder() {}
 //destructor
 LinkFinder::~LinkFinder() {}
 
-int LinkFinder::parse(char* filename) {
-    int fd = open(filename, O_RDWR);
-    if (fd < 0) {
-        perror("file open");
-        return -1;
-    };
-    struct stat mystat = {};
-    if (fstat(fd, &mystat)) {
-        perror("fstat");
-        return -1;
-    };
-    off_t file_size = mystat.st_size;
-    char *html_file = (char*)mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (html_file == MAP_FAILED){
-        printf("mmap error\n");
-        return -1;
+Index_object & Index_object::operator=(const Index_object& rhs) {
+    if(this == &rhs) {
+        return *this;
     }
-    if (close(fd)==-1) {
-        printf("failed to close file (errno=%d)",errno);
-        return -1;
-    }
+    word = rhs.word;
+    type = rhs.type;
+    position = rhs.position;
+    return *this;
+}
+
+
+int LinkFinder::parse(char* html_file) {
     long file_length = strlen(html_file);
     long num = 0;
     long *index = &num;
@@ -34,20 +26,21 @@ int LinkFinder::parse(char* filename) {
         if(html_file[*index] == '<') {
             (*index)++;
             switch(html_file[*index]) {
+                case 'A'  :
                 case 'a'  : //Link
                     if(html_file[*index+1] == ' ') {
                         char find_up[] = "HREF=";
                         char find_low[] = "href=";
                         long reset_value = *index;
                         if(find_link(html_file, find_low, find_up, index, file_length)) {
-                            std::cout << "link = ";
+                            String link;
                             while(html_file[*index] != ' ' && html_file[*index] != '>') {
                                 if(html_file[*index] != '"' && html_file[*index] != '\'') {
-                                    std::cout << html_file[*index];
+                                    link += html_file[*index];
                                 }
                                 (*index)++;
                             }
-                            std::cout << std::endl;
+                            Link_vector.push_back(link);
                         }
                         
                         //reset index in case link not found
@@ -72,6 +65,7 @@ int LinkFinder::parse(char* filename) {
                     }
                     break;
                     
+                case 'S'  :
                 case 's'  : //script/style Want to completely skip these
                     if(is_style(html_file, index, file_length)) {
                         char find_up[] = "</STYLE>";
@@ -88,11 +82,12 @@ int LinkFinder::parse(char* filename) {
                     }
                     break;
                     
+                case 'T'  :
                 case 't'  :
                     //found <t, if <title, get it
                     if(is_title(html_file, index, file_length)) {
-                        char title[] = "title";
-                        get_words(html_file, index, file_length, title);
+                        String type = "title";
+                        get_words(html_file, index, file_length, type);
                     }
                     else {//was not <title, treat as ordinary tag
                         goto DEFAULT;
@@ -112,24 +107,8 @@ int LinkFinder::parse(char* filename) {
         }
         //grab the body text
         else {
-            int count = 0;
-            long k = 0;
-            k = *index; //2 character text minimum
-            while(k < file_length && count < 2 && html_file[k] != '<') {
-                if(html_file[k] != ' ' && html_file[k] != '\n' && html_file[k] != '\t') {
-                    count++;
-                }
-                k++;
-            }
-            if(count > 1) {
-                while(html_file[*index] != '<') {
-                    char body[] = "body";
-                    get_words(html_file, index, file_length, body);
-                }
-            }
-            else {
-                (*index)++;
-            }
+            String type = "body";
+            get_words(html_file, index, file_length, type);
         }
     }
     return 0;
@@ -210,15 +189,24 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
     return false;
 }
 
-void LinkFinder::get_words(char *html_file, long *index, long file_length, char* word) {
+void LinkFinder::get_words(char *html_file, long *index, long file_length, String type) {
     while(*index < file_length && html_file[*index] != '<') {
         if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
-            std::cout << word << " = ";
+            String word;
             while(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
-                std::cout << html_file[*index];
+                if(html_file[*index] != '"' && html_file[*index] != '(' && html_file[*index] != ')' && html_file[*index] != ',' && html_file[*index] != '.') {
+                    word += html_file[*index];
+                }
                 (*index)++;
             }
-            std::cout << std::endl;
+            if(word.Size() >= 2) {
+                Index_object new_obj;
+                new_obj.word = word;
+                new_obj.type = type;//this is type
+                new_obj.position = word_count;
+                Document_meta_data_list.push_back(new_obj);
+                word_count++;
+            }
         }
         else {
             (*index)++;
@@ -227,7 +215,7 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, char*
 }
 
 void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length, long stop_index) {
-    char anchor[] = "anchor";
+    String type = "anchor";
     //Skip over all inner tags until we hit a's closing tag
     while(*index < stop_index) {
         if(html_file[*index] == '<') {
@@ -236,7 +224,7 @@ void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length,
             }
             (*index)++;
         }
-        get_words(html_file, index, file_length, anchor);
+        get_words(html_file, index, file_length, type);
     }
     *index = stop_index;
     return;
@@ -390,39 +378,3 @@ bool LinkFinder::find_open_tag(char *html_file, long *index, long file_length) {
     }
     return false;//never get here
 }
-//------------------------------------------------------------------------------
-// ATOMICITY:
-// Choose a name for the temporary file.
-// Write the new content to a temporary file.
-// Flush the new content to disc.
-// Move the temporary file onto the original.
-//filename means pathname
-/*  char tmp_pathname[strlen(filename)+2];
- snprintf(tmp_pathname,sizeof(tmp_pathname),"%s~",filename);
- if (unlink(tmp_pathname)==-1) {
- if (errno!=ENOENT) {
- printf("failed to remove existing temporary file (errno=%d)",errno);
- return -1;
- }
- }
- mode_t default_mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
- fd = open(tmp_pathname,O_RDWR|O_CREAT|O_TRUNC,default_mode);
- if (fd==-1) {
- printf("failed to open new file for writing (errno=%d)",errno);
- return -1;
- }
- char *p = " ";
- write(fd, kko, length);
- if (fsync(fd)==-1) {
- printf("failed to flush new file content to disc (errno=%d)",errno);
- return -1;
- }
- if (close(fd)==-1) {
- printf("failed to close new file (errno=%d)",errno);
- return -1;
- }
- if (rename(tmp_pathname,filename)==-1) {
- printf("failed to move new file to final location (errno=%d)",errno);
- return -1;
- }
- */
