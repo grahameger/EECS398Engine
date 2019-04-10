@@ -48,5 +48,11 @@ int main(int argc, char *argv[]) {
 	}
    */
    String file = "index.bin";
-   Index index(file);
+   // Index index(file);
+   int fd = fopen(file, O_RDWR);
+
+   PostingList pl(fd, 0, 64);
+   pl.update(7);
+   pl.update(10);
+   pl.update(66000);
 }
