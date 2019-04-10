@@ -147,6 +147,7 @@ namespace search {
                 continue;
             }
         }
+        return nullptr;
     }
 
     void Crawler::print2(double &prevGiB) {
@@ -170,6 +171,19 @@ namespace search {
             print2(prevGiB);
         }
         print2(prevGiB);
+        // need to do this so that any threads that are waiting on the
+        // thread queue can pop then quit
+        // should make a vector of NUM_CRAWLER_THREADS empty strings and push
+        // them all to the queue.
+        // Every worker thread will then pop, see that they're empty strings,
+        // continue their loop check and see they should exit the loop, and exit
+        // then finally all of the destructors will run, and .join will return
+        // for every thread.
+        // It will take some time because of the blocking IO functions and
+        // the potential for many redirects taking time.
+        std::vector<std::string> s;
+        s.resize(NUM_CRAWLER_THREADS);
+        readyQueue.push(s);
         return nullptr;
     }
 
@@ -186,6 +200,7 @@ namespace search {
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++)
         {
             pthread_join(threads[i], NULL);
+            fprintf(stderr, "Thread %zu of %zu returned\n", i + 1, NUM_CRAWLER_THREADS);
         }
     }
 
