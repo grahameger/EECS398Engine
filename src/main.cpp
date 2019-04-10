@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 	// 	}
 	// }
 	// urls.push_back("http://dmoztools.net/");
-	urls.push_back("http://dmoztools.net/");
+	urls.push_back("http://soshesawildflowerxo.tumblr.com/post/173338544891/deep-talks-are-my-favorite-if-you-can-connect#_=_");
 
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);

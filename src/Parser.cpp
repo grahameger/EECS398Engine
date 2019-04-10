@@ -1,4 +1,5 @@
 #include "Parser.hpp"
+#include <cstring>
 
 //default constructor
 LinkFinder::LinkFinder() {}
@@ -17,7 +18,7 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
 }
 
 
-int LinkFinder::parse(char* html_file) {
+int LinkFinder::parse(char* html_file, size_t len) {
     long file_length = strlen(html_file);
     long num = 0;
     long *index = &num;
@@ -47,7 +48,7 @@ int LinkFinder::parse(char* html_file) {
                         reset_index(index, reset_value);
                         
                         //close the a tag
-                        while(html_file[*index] != '>') {
+                        while(*index < file_length && html_file[*index] != '>') {
                             (*index)++;
                         }
                         (*index)++;
