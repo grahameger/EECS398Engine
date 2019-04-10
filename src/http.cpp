@@ -94,10 +94,16 @@ namespace search {
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
-        static const SSL_METHOD * meth = TLS_client_method();
 
-        search::HTTPClient::sslContext = SSL_CTX_new(meth);
+	
+	static const SSL_METHOD * meth = nullptr;
+	#if defined(LWS_HAVE_TLS_CLIENT_METHOD)
+		meth = (SSL_METHOD *)TLS_client_method();
+	#else	
+		meth = (SSL_METHOD *)SSLv23_client_method();
+	#endif
 
+	search::HTTPClient::sslContext = SSL_CTX_new(meth);
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
     }
