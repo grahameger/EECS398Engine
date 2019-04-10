@@ -118,7 +118,14 @@ namespace search {
                 freeaddrinfo(servinfo);
                 return -1;
             }
-
+            if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
+                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                close(sockfd);
+                freeaddrinfo(servinfo);
+                return -1;
+            }
+            // on linux kernels > 4.13 this is effectively a non-blocking
+            // connect call with the timeout specified above.
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 close(sockfd);
                 continue;
