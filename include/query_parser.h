@@ -15,53 +15,51 @@
 //  *
 //  */
 
-// #pragma once
-// #ifndef QUERY_PARSER_H_
-// #define QUERY_PARSER_H_
+#pragma once
+#ifndef PARSER_H_
+#define PARSER_H_
 
-// #include <string>
+#include "expression.h"
+#include "query_tokenstream.h"
 
-// #include "expression.h"
-// #include "TokenStream.h"
-
-// /**
-//  * The actual expression parser
-//  */
+/**
+ * The actual expression parser
+ */
+class Parser
+{
+    // Stream of tokens to consume input from
+    TokenStream stream;
+    
+    /**
+     * Find the appropriate nonterminal
+     *
+     * Return nullptr if it could not be found
+     */
+    
+    Expression *FindPhrase( );
+    
+    Expression *FindSimple( );
+    
+    Expression *FindAnd( );
+    
+    Expression *FindOr( );
+    
+    
+public:
+    
+    /**
+     * Construct parser based on given input
+     */
+    Parser( const std::string &in );
+    
+    bool fullParsed();
+    
+    /**
+     * The public interface of the parser. Call this function,
+     * rather than the private internal functions.
+     */
+    Expression *Parse( );
+};
 // class Parser
-//    {
-//    // Stream of tokens to consume input from
-//    TokenStream stream;
 
-//    /**
-//     * Find the appropriate nonterminal
-//     *
-//     * Return nullptr if it could not be found
-//     */
-       
-//        Expression *FindPhrase( );
-       
-//        Expression *FindSimple( );
-       
-//        Expression *FindAnd( );
-       
-//        Expression *FindOr( );
-       
-
-// public:
-
-//    /**
-//     * Construct parser based on given input
-//     */
-//    Parser( const std::string &in );
-       
-//    bool fullParsed();
-
-//    /**
-//     * The public interface of the parser. Call this function,
-//     * rather than the private internal functions.
-//     */
-//    Expression *Parse( );
-//    };
-// // class Parser
-
-// #endif /* QUERY_PARSER_H_ */
+#endif /* PARSER_H_ */

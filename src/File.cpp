@@ -22,7 +22,7 @@ FileSystem::FileSystem() {
     for ( i = disk.backingFiles.begin(); i != disk.backingFiles.end(); i++) {
         char * basePtr = ((char*)i->second + sizeof(Stream::BackingFile));
         char * c = basePtr;
-        while (disk.inArena(c, i->first) && (c - basePtr) < i->second->fileSize) {
+        while (disk.inArena(c, i->first) && (size_t)(c - basePtr) < i->second->fileSize) {
             String filename;
             if (*c != '\0') {
                 filename = String(c);
