@@ -193,7 +193,7 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, Strin
     while(*index < file_length && html_file[*index] != '<') {
         if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
             String word;
-            while(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
+            while(*index < file_length && html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
                 if(html_file[*index] != '"' && html_file[*index] != '(' && html_file[*index] != ')' && html_file[*index] != ',' && html_file[*index] != '.') {
                     word += html_file[*index];
                 }
@@ -217,9 +217,9 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, Strin
 void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length, long stop_index) {
     String type = "anchor";
     //Skip over all inner tags until we hit a's closing tag
-    while(*index < stop_index) {
+    while(*index < file_length && *index < stop_index) {
         if(html_file[*index] == '<') {
-            while(html_file[*index] != '>') {
+            while(*index < file_length && html_file[*index] != '>') {
                 (*index)++;
             }
             (*index)++;
@@ -351,7 +351,7 @@ bool LinkFinder::find_open_tag(char *html_file, long *index, long file_length) {
     int num_closing = 0;
     int num_opening = 0;
     while(*index > 0) {
-        while(*index > 0 && html_file[*index] != '>') { //find a tag
+        while(*index > 0 && *index < file_length && html_file[*index] != '>') { //find a tag
             if(html_file[*index] == '>') {
                 tag_found = true;
             }
