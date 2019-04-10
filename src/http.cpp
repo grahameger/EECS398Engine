@@ -30,6 +30,12 @@ namespace search {
         crawler = crawlerIn;
         robots = &threading::Singleton<RobotsTxt>::getInstance();
 
+        logFd = open("fileWrites.log", O_WRONLY | O_APPEND | O_CREAT, 0755);
+        if (logFd < 0) {
+            fprintf(stderr, "error opening log file");
+            exit(1);
+        }
+
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
         SSL_library_init();
@@ -393,7 +399,7 @@ namespace search {
             outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
             outfile.close();
             free(fullResponse);
-            fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
+            dprintf(logFd, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
@@ -412,7 +418,7 @@ namespace search {
             crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
         } else {
             // let's try out the file abstraction
-            fprintf(stdout, "wrote file %s\n", filename.c_str());
+            dprintf(logFd, "wrote file %s\n", filename.c_str());
             File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);
         }
     }

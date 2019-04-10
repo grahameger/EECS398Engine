@@ -12,6 +12,8 @@
 #include <dirent.h>
 #include <ctime>
 
+extern volatile sig_atomic_t keep_running;
+
 namespace search {
 
     Crawler::Crawler(const std::vector<std::string> &seedUrls) : killFilter(1000000000) {
@@ -75,7 +77,8 @@ namespace search {
     }
 
     void * Crawler::stub() {
-        while (true) {
+        while (keep_running) {
+
             std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
 

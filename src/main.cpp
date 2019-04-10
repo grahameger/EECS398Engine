@@ -1,15 +1,34 @@
+// Created by Graham Eger on 02/01/2019
+
 #include <iostream>
 #include <vector>
 #include <string>
 #include <cassert>
 #include <thread>
 #include <mutex>
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "crawler.h"
 #include "PersistentHashMap.h"
+
+// used to gracefully shut down and run all of our destructors
+volatile sig_atomic_t keep_running = 1;
+
+static void sig_handler(int _)
+{
+    (void)_;
+    keep_running = 0;
+	fprintf(stdout, "%s", "Stop signal received, shutting down gracefully");
+}
 
 static const char startFile[] = "/data/crawl/seedlist.url";
 
 int main(int argc, char *argv[]) {
+
+	// register our signal handler
+	signal(SIGINT, sig_handler);
+
 
 	std::vector<std::string> urls;
 	std::ifstream start_list(startFile);
