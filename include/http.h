@@ -84,6 +84,7 @@ namespace search {
 
         static bool goodMimeContentType(char * str, ssize_t len);
         static bool response200or300(char * str, ssize_t len);
+        static bool containsGzip(char * p, size_t len);
 
         static char * checkRedirectsHelper(const char * getMessage, size_t len);
 

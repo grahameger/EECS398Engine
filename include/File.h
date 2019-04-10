@@ -46,6 +46,7 @@ public:
     // move assignment operator default
     static File find(const char * filename); // goes to the stream
     size_t size();
+    static std::pair<size_t, size_t> totalSizeAndNumFiles();
     FileRead read();
     String name();
     bool exists();

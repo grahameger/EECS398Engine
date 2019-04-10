@@ -40,8 +40,9 @@ namespace search {
         Crawler(const std::vector<std::string> &seedUrls);
         ~Crawler();
         void * stub();
+        void * print();
         static void * stubHelper(void * context);
-
+        static void * printHelper(void * context);
         bool haveRobots(const std::string &domain);
         bool havePage(const HTTPRequest &req);
         bool killedPage(const HTTPRequest &req);
@@ -50,12 +51,13 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 1;
-        static const size_t DOMAIN_REHIT_WAIT_TIME = 0;
+        static const size_t NUM_CRAWLER_THREADS = 800;
+        static const size_t DOMAIN_REHIT_WAIT_TIME = 5;
     private:
         friend class HTTPClient;
         threading::ThreadQueue<std::string> readyQueue;
         pthread_t threads[NUM_CRAWLER_THREADS];
+        pthread_t printThread;
         HTTPClient * client;
         inline static pthread_mutex_t domainMutex;
         RobotsTxt * robots;

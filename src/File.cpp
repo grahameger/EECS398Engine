@@ -57,7 +57,6 @@ File::File(const char * filename, void * src, size_t len) {
     // insert the mapping
     if (offset != -1) {
         fs.mapping.insert({filename, offset});
-        fprintf(stdout, "created file %s at offset %zu\n", filename, offset);
     }
     // add it to our hash table
     pthread_mutex_unlock(&fs.m);
@@ -111,4 +110,12 @@ File::File() : offset(npos), lenOffset(npos) {}
 
 bool File::exists() {
     return offset != npos && lenOffset != npos;
+}
+
+std::pair<size_t, size_t> File::totalSizeAndNumFiles() {
+    pthread_mutex_lock(&fs.m);
+    size_t size = fs.disk.size();
+    size_t number = fs.mapping.size();
+    pthread_mutex_unlock(&fs.m);
+    return {size, number};
 }

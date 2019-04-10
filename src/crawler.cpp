@@ -10,6 +10,7 @@
 
 #include "crawler.h"
 #include <dirent.h>
+#include <ctime>
 
 namespace search {
 
@@ -25,7 +26,6 @@ namespace search {
 
         // make the robots and pages directory
         makeDir("robots");
-        makeDir("pages");
 
         // initialize our directory hierarchy for pages
         // !nah we're not doing this we're going to use ext4
@@ -40,6 +40,7 @@ namespace search {
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
         }
+        pthread_create(&printThread, NULL, &Crawler::printHelper, this);
     }
 
     void makeDir(const char * name) {
@@ -146,8 +147,30 @@ namespace search {
         }
     }
 
+    // runs every whatever seconds and prints out the progress of the crawler so far
+    void * Crawler::print() {
+        double prevGiB = 0;
+        while (true) {
+            sleep(10);
+            // get all the data
+            time_t now = time(0);
+            // size and number of files
+            auto sizeAndNumberOfFiles = File::totalSizeAndNumFiles();
+            size_t& number = sizeAndNumberOfFiles.second;
+            const char * time = ctime(&now);
+            double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
+            double rate = (GiB - (double)prevGiB) / 10.0 / 1073741824.0;
+            fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f\nTotal Files: %zu\n\n", time, GiB, rate, number);
+            prevGiB = GiB;
+        }
+    }
+
     void * Crawler::stubHelper(void * context) {
         return (((Crawler *)context)->stub());
+    }
+
+    void * Crawler::printHelper(void * context) {
+        return (((Crawler *)context)->print());
     }
 
     // just join and never ever quit

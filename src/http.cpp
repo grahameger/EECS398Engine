@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zlib.h>
 #include <map>
 #include "Parser.hpp"
 
@@ -288,14 +289,15 @@ namespace search {
                     if (!isARobotsRequest && response200or300(fullResponse, headerSize) && !goodMimeContentType(fullResponse, headerSize)) {
                         auto uri = request.uri();
                         crawler->killFilter.add(request.uri());
-                        fprintf(stdout, "Bad content type for url %s\n", uri.c_str());
+                        fprintf(stderr, "Bad content type for url %s\n", uri.c_str());
                         free(fullResponse);
                         return;
                     }
                     // search for "Content-Length"
                     contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
                     if (contentLength == CHUNKED) {
-                        fprintf(stdout, "received a chunked encoding\n");
+                        fprintf(stderr, "received a chunked encoding\n");
+                        return;
                     }
                     if (contentLength != (size_t)-1) {
                         totalSize = headerSize + contentLength;
@@ -354,7 +356,12 @@ namespace search {
             return SubmitURLSync(newUrl, ++redirCount);
         }
         if (!isARobotsRequest) {
-            process(fullResponse + headerSize, bytesReceived - headerSize, url);
+            if (containsGzip(fullResponse, headerSize)) {
+                free(fullResponse);
+                return;
+            } else {
+                process(fullResponse + headerSize, bytesReceived - headerSize, url);
+            }
         }
 
         // either going to write to a file or add another request to the queue
@@ -388,6 +395,12 @@ namespace search {
         }
     }
 
+    bool HTTPClient::containsGzip(char * p, size_t len) {
+        std::string_view header(p, len);
+        size_t i = header.find("gzip");
+        return i != std::string_view::npos;
+    }
+
 
     // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
@@ -406,12 +419,8 @@ namespace search {
         // RFC 2396 Section 5.2 Resolving Relative References to Absolute Form
         // 1) Start 
         // Parse the URI reference into the potential four components and fragment identifier
-        if (std::string(baseUri) == "https://policies.oath.com/ca/en/oath/privacy/adinfo/index.html") {
-            fprintf(stdout, "%s", "hello");
-        }
         HTTPRequest newParsed = HTTPRequest(newUri);
         HTTPRequest baseParsed = HTTPRequest(baseUri);
-
 
         // 2)                                                   
         if (newParsed.path == "" && 
@@ -522,7 +531,7 @@ namespace search {
     }
 
     char * HTTPClient::checkRedirectsHelper(const char * getMessage, const size_t len) {
-        if (len < 10) {
+        if (len < 10 || !getMessage) {
             return nullptr;
         }
         const char& redirectLeadInt = getMessage[9];
