@@ -275,7 +275,8 @@ namespace search {
         }
         ssize_t rv = sock->setFd(sockfd);
         if (rv < 0) {
-            fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
+            // this error message was getting really annoying.
+            // fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             crawler->killFilter.add(request.uri());
             return;
         }
@@ -644,7 +645,7 @@ namespace search {
             case SSL_ERROR_WANT_CONNECT:
                 goto connect;
             case SSL_ERROR_SYSCALL:
-                fprintf(stderr, "SSL syscall error %s\n", strerror(errno));
+                // fprintf(stderr, "SSL syscall error %s\n", strerror(errno));
                 return -1;
             case SSL_ERROR_ZERO_RETURN:
             case SSL_ERROR_WANT_READ:
@@ -655,7 +656,7 @@ namespace search {
             case SSL_ERROR_WANT_CLIENT_HELLO_CB:
             case SSL_ERROR_SSL:
             default:
-                fprintf(stderr, "%s", "SSL connect other error\n");
+                // fprintf(stderr, "%s", "SSL connect other error\n");
                 return -1;
         }
         return rv;
