@@ -8,20 +8,38 @@
 const char* String::nullString = "";
 
 
-String::String( ) : cstring( nullptr ), size( 0 ) { }
+String::String( const int length ) : cstring( nullptr ), size( length )
+   {
+   if ( size > 0 )
+      {
+      cstring = new char[ size + 1 ];
+      cstring[ size ] = 0;
+      }
+   }
 
-
-String::String( const char* toCopy ) : size( strlen( toCopy ) )
+String::String( const char single_char ) : size( 1 )
    {
    cstring = new char[ size + 1 ];
-   strcpy( cstring, toCopy );
+   cstring[0] = single_char;
+   cstring[1] = 0;
+   }
+
+String::String( const char* toCopy, int length ) : size( length )
+   {
+   if ( length == -1 )
+      size = strlen( toCopy );
+   cstring = new char[ size + 1 ];
+   cstring[ size ] = 0;
+   memcpy( cstring, toCopy, size );
    }
 
 
-String::String( char*&& toMove ) : cstring( toMove ), 
-      size( strlen( toMove ) )
+String::String( char*&& toMove, int length ) : cstring( toMove ), 
+      size( length )
    {
    toMove = nullptr;
+   if ( length == -1 )
+      size = strlen( cstring );
    }
 
 
@@ -31,12 +49,12 @@ String::String( const String& toCopy )
 
    if ( toCopy.cstring == nullptr )
       {
-	  cstring = nullptr;
-	  return;
-	  }
+      cstring = nullptr;
+	   return;
+	   }
    
    cstring = new char[ size + 1 ];
-   strcpy( cstring, toCopy.cstring );
+   memcpy( cstring, toCopy.cstring, size );
    }
 
 
@@ -65,7 +83,7 @@ String& String::operator = ( String&& toMove )
 
 String::~String( )
    {
-   delete[] cstring;
+   delete[ ] cstring;
    cstring = nullptr;
    }
 
@@ -96,10 +114,10 @@ const char* String::CString( ) const
 bool String::Compare( const String& other ) const
    {
    if ( size != other.size ) return false;
-
+    
    int index = 0, i;
    while ( ( i = index++ ) != size && cstring[ i ] == other.cstring[ i ]) { }
-
+    
    return index > size;
    }
 
@@ -107,19 +125,21 @@ bool String::Compare( const String& other ) const
 const char String::operator[ ] ( int index ) const
    {
    if ( cstring == nullptr )
-	  return nullString[ index ];
-
+      return nullString[ index ];
+    
    return cstring[ index ];
    }
 
 
 char& String::operator[ ] ( int index )
    {
-   if ( cstring == nullptr ) {
-      cstring = new char[1];
-      cstring[0] = 0x0;
-      return cstring[index];
-   }
+   if ( cstring == nullptr )
+      {
+      cstring = new char[ 1 ];
+      cstring[ 0 ] = 0;
+      return cstring[ index ];
+      }
+
    return cstring[ index ];
    }
 
@@ -130,13 +150,13 @@ String& String::operator+= ( const String& rhs )
       return *this;
 
    int newSize = size + rhs.size;
-   char* newCString = new char[newSize + 1];
+   char* newCString = new char[ newSize + 1 ];
 
    if ( cstring != nullptr )
-      strcpy( newCString, cstring );
-   strcpy( newCString + size, rhs.cstring );
+      memcpy( newCString, cstring, size );
+   memcpy( newCString + size, rhs.cstring, rhs.size );
 
-   delete[] cstring;
+   delete[ ] cstring;
    cstring = newCString;
    size = newSize;
 
@@ -154,23 +174,45 @@ String::operator bool( ) const
    return size > 0;
    }
 
-void String::RemoveWhitespace() 
-  {
-  char* i = cstring;
-  char* j = cstring;
-  while(*j != 0)
-  {
-    *i = *j++;
-    if(!isspace(*i))
-      i++;
-  }
-  *i = 0;
-  }
 
-
-String operator+ (String lhs, const char * toCat) 
+void String::Allocate( const int length, bool after )
    {
-   auto cat = String(toCat);
+   if ( length < 1 )
+      return;
+
+   int newSize = size + length;
+   char* newCString = new char[ newSize + 1 ];
+
+   if ( cstring != nullptr )
+      memcpy( newCString, cstring, size );
+
+   delete cstring;
+   cstring = newCString;
+   size = newSize;
+   }
+
+
+void String::RemoveWhitespace( ) 
+   {
+   if ( cstring == nullptr )
+     return;
+
+   char* i = cstring;
+   char* j = cstring;
+   while( *j != 0 )
+      {
+      *i = *j++;
+      if( !isspace( *i ) )
+      i++;
+      }
+
+   *i = 0;
+   }
+
+
+String operator+ ( String lhs, const char * toCat ) 
+   {
+   auto cat = String( toCat );
    lhs += cat;
    return lhs;
    }

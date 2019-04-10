@@ -119,8 +119,9 @@ Rule ReadNextRule( TokenStream& tokenStream )
 	  }
    }
 
-void DomainRules::WriteRulesToDisc(std::string &domain) {
-	FILE *file = fopen(domain.c_str(), "w");
+void DomainRules::WriteRulesToDisc(std::string& domain, string& RulesFolderPath) {
+   string writePath = RulesFolderPath + "/" + domain;
+	FILE *file = fopen(writePath.c_str(), "w");
 	root->SaveToFile(file);
 	fclose(file);
 }

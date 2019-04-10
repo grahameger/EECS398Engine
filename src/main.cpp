@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
 		auto datum = map.at(i);
 		assert(datum == -1 * i);
 	}
+<<<<<<< HEAD
    */
    String file = "index.bin";
    // Index index(file);
