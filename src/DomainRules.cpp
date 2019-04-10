@@ -29,6 +29,11 @@ struct Rule
 bool FindUserAgentRules( TokenStream& );
 Rule ReadNextRule( TokenStream& );
 
+DomainRules::~DomainRules( )
+   {
+   delete root;
+   }
+
 
 DomainRules::DomainRules( DirectoryRules* rootIn )
    : root(rootIn) {}
@@ -105,17 +110,18 @@ Rule ReadNextRule( TokenStream& tokenStream )
 
 	  if ( !path ) continue;
 
-	  //#ifdef TEST
+	  #ifdef TEST
 	  std::cout << "Rule Found: " << path.CString( );
 	  std::cout << " is " << ( allowed ? "allowed" : "disallowed" ) << std::endl;
-	  //#endif
+	  #endif
 
 	  return { path, allowed };
 	  }
    }
 
-void DomainRules::WriteRulesToDisc(std::string &domain) {
-	FILE *file = fopen(domain.c_str(), "w");
+void DomainRules::WriteRulesToDisc(std::string& domain, string& RulesFolderPath) {
+   string writePath = RulesFolderPath + "/" + domain;
+	FILE *file = fopen(writePath.c_str(), "w");
 	root->SaveToFile(file);
 	fclose(file);
 }

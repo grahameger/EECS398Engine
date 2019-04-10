@@ -1,21 +1,31 @@
-#include "http.hpp"
+// Created by Dennis Li
+// Graham Eger added threading functions on 3/29
+
 #include "RobotsTxt.h"
 
-const size_t CACHE_CAPACITY = 3;
+const size_t CACHE_CAPACITY = 10000;
 
 RobotsTxt::RobotsTxt()
-   : domainRulesCache(CACHE_CAPACITY) {}
-
-void RobotsTxt::SubmitRobotsTxt(string domain, string pathOnDisc) //given url?
+   : domainRulesCache(CACHE_CAPACITY, true), SerializedRulesPath("SerializedRobotsRules")
    {
-   DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());//todo implement and ask if this is what DomainRules expects
+   makeDir(SerializedRulesPath.c_str());
+   }
+
+RobotsTxt::~RobotsTxt()
+   {
+   domainRulesCache.clear();
+   }
+
+void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc)
+   {
+   DomainRules *newDomainRules = new DomainRules(pathOnDisc.c_str());
+
    domainRulesCache.put(domain, newDomainRules);
-   
-   newDomainRules->WriteRulesToDisc(domain);
+   newDomainRules->WriteRulesToDisc(domain, SerializedRulesPath);
    }
 
 DirectoryRules *RobotsTxt::CreateDirectoryRules(char *directoryName, 
-   vector<int> &childIndices, bool isAllowed, bool hasRule)
+   vector<size_t> &childIndices, bool isAllowed, bool hasRule)
    {
    string dirNameStr(directoryName);
    DirectoryRules *newDirRule = new DirectoryRules(dirNameStr, isAllowed, hasRule);
@@ -30,7 +40,7 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
        {
        //get name of directory
        char dirName[99];
-       int dirNameInd = 0;
+       size_t dirNameInd = 0;
 
        while(curChar != ' ')
        {
@@ -60,11 +70,11 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
            }
 
        //children indices
-       std::vector<int> childrenInd;
+       std::vector<size_t> childrenInd;
        curChar = (char)fgetc(file);
        while(curChar != '\n' && curChar != EOF && curChar != ' ')
           {
-          int index = curChar - '0';
+          size_t index = curChar - '0';
           curChar = (char)fgetc(file); //process the space
           //handle multi digit numbers
           while(curChar != ' ' && curChar != EOF)
@@ -92,12 +102,12 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
 
 void RobotsTxt::CreateDirectoryRuleTree(vector<DirectoryRules*> &rules)
    {
-   for(int i = 0; i < rules.size(); ++i)
+   for(size_t i = 0; i < rules.size(); ++i)
       {
-      vector<int> &indsInRulesVec = rules[i]->childIndicesInDstVec;
-      for(int j = 0; j < indsInRulesVec.size(); ++j)
+      vector<size_t> &indsInRulesVec = rules[i]->childIndicesInDstVec;
+      for(size_t j = 0; j < indsInRulesVec.size(); ++j)
          {
-         int childInd = indsInRulesVec[j];
+         size_t childInd = indsInRulesVec[j];
          DirectoryRules *childRule = rules[childInd];
          rules[i]->AddChildFromFile(childRule);
          }
@@ -107,7 +117,7 @@ void RobotsTxt::CreateDirectoryRuleTree(vector<DirectoryRules*> &rules)
 //returns false if file does not exist
 bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    {
-   string fileName = domain + ".txt";
+   string fileName = domain;
    //string fileName = "dennisli.txt";
    FILE *file = fopen(fileName.c_str(), "r");
    //file doesn't exist
@@ -136,8 +146,12 @@ bool RobotsTxt::TransferRulesFromDiscToCache(string &domain)
    return true;
    } 
 
-bool RobotsTxt::GetRule(string path, string domain)
+bool RobotsTxt::GetRule(string path, string &domain)
    { 
+   //strip ending '/' from directory names to keep consistent
+   if(path.back() == '/' && path.size() > 1)
+      path.pop_back();
+   
    //Look in cache
    String tmpPath(path.c_str()); //todo remove
    try
@@ -158,3 +172,18 @@ bool RobotsTxt::GetRule(string path, string domain)
       return domainRule->IsAllowed(tmpPath);
       }
    }
+
+void RobotsTxt::lock() {
+   m.lock();
+}
+
+void RobotsTxt::unlock() {
+   m.unlock();
+}
+
+void RobotsTxt::makeDir(const char * name) {
+   struct stat st = {0};
+   if (stat(name, &st) == -1) {
+      mkdir(name, 0700);
+   }
+}

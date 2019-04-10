@@ -41,7 +41,7 @@ namespace search {
             socks.push_back(events[i].data.fd);
         }
         // won't make a copy of the vector
-        return std::move(socks);
+        return socks;
     }
 
     void EventQueue::addSocket(int sockfd) {

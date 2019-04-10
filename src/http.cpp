@@ -6,122 +6,104 @@
 //  Copyright © 2019 Graham Eger. All rights reserved.
 //
 
-#include "http.hpp"
+#include "http.h"
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <regex>
+#include <memory>
 #include <charconv>
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
 #include <errno.h>
 #include <string.h>
-
+#include <stdio.h>
+#include <stdlib.h>
 
 namespace search {
-    static const std::string getMethod = "GET";
-    static const std::string endl = "\r\n";
-    static const std::string httpVersion = "HTTP/1.1";
-    static const std::string hostString = "Host: ";
-    static const std::string connClose = "Connection: close" + endl;
-    static const std::string userAgent = "User-Agent: Ceatles/1.0 (Linux)";
-    static const std::string encoding = "Accept-Encoding: identity";
-    static const std::string httpStr = "http";
-    static const std::string httpsStr = "https";
-    static const std::string port80 = "80";
-    static const std::string port443 = "443";
 
-    std::string HTTPRequest::filename() const {
-        auto s = host + path + query;
-        std::replace(s.begin(), s.end(), '/', '_');
-        return s;
+    // returns true if the given url has already been fetched
+    bool alreadyFetched(const std::string &url) {
+        auto filename = HTTPRequest(url).filename();
+        struct stat buffer;
+        return (stat (filename.c_str(), &buffer) == 0);
     }
 
-    std::string HTTPRequest::requestString() const {
-        std::stringstream ss;
-        ss << method << ' ' << path << ' ' << httpVersion << endl;
-        ss << hostString << ' ' << host << endl;
-        ss << userAgent << endl;
-        ss << encoding << endl;
-        ss << connClose << endl;
-        return ss.str();
-    }
-
-    void HTTPRequest::print() {
-        std::stringstream ss;
-        ss << "{\n";
-        ss << "\t" << "method: " << method << '\n';
-        ss << "\t" << "host: " << host << '\n';
-        ss << "\t" << "path: " << path << '\n';
-        ss << "\t" << "query: " << query << '\n';
-        ss << "\t" << "fragment: " << fragment << '\n';
-        ss << "\t" << "headers: " << headers << '\n';
-        ss << "\t" << "protocol: " << protocol << '\n';
-        ss << "\t" << "port: " << port << '\n';
-        ss << "}\n";
-        std::cout << ss.str() << std::flush;
-    }
-    
-    // send an entire buffer
-    static bool sendall(int sockfd, const char * buf, size_t len, int flags) {
-        while (len > 0) {
-            auto i = send(sockfd, buf, len, flags);
-            if (i < 1) {
-                return false; 
-            }
-            buf += i;
-            len -= i;
-        }
-        return true;
-    }
-
+    // returns a connected socket, -1 if error
     int HTTPClient::getConnToHost(const std::string &host, int port, bool blocking) {
-        struct hostent *server;
-        struct sockaddr_in serv_addr;
-        int sockfd;
-        // create socket
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            // TODO: log
-        }
-        if (!blocking) {
-            // set socket to non blocking
-            int rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
-            if (rv == -1) {
-                // TODO: log error
+        std::string portStr = std::to_string(port);
+        struct addrinfo hints, *servinfo, *p;
+        servinfo = p = nullptr;
+        int sockfd = 0;
+        int rv = 0;
+        // load up address structs with getaddrinfo();
+        memset(&hints, 0x0, sizeof hints);
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
+            fprintf(stderr, "getaddrinfo returned %d for host '%s' -- %s -- %s\n", rv, host.c_str(), gai_strerror(rv), strerror(errno));
+            if (rv == -11) {
+                rv = 0;
             }
+            return -1;
         }
-        // lookup ip address
-        server = gethostbyname(host.c_str());
-        if (server == nullptr) {
-            // TODO: log
+        for (p = servinfo; p != nullptr; p = p->ai_next) {
+            if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+                // TODO log error
+                continue;
+            }
+            if (!blocking) {
+                rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
+                if (rv == -1) {
+                    fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
+                    close(sockfd);
+                    return -1;
+                }
+            }
+            // timeout section of the show
+            timeval tm = {constants::TIMEOUTSECONDS, constants::TIMEOUTUSECONDS};
+            if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
+                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                close(sockfd);
+                return -1;
+            }
+
+            if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+                // TODO log connect error
+                close(sockfd);
+                continue;
+            }
+            break;
         }
-        // fill in struct
-        memset(&serv_addr, 0, sizeof(serv_addr));
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(port);
-        memcpy(&serv_addr.sin_addr.s_addr,
-                server->h_addr,
-                server->h_length);
-        // connect the socket
-        if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) {
-            // TODO: log
+        // end of list with no connection
+        if (p == nullptr) {  
+            // TODO: log, failed to connect
+            fprintf(stderr, "unable to connect to host '%s'\n", host.c_str());
+            return -1;
         }
+        freeaddrinfo(servinfo);
         return sockfd;
     }
 
     HTTPClient::HTTPClient() {
+        robots = &threading::Singleton<RobotsTxt>::getInstance();
+
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
-        static const SSL_METHOD * meth = TLSv1_2_client_method();
-        search::HTTPClient::sslContext = SSL_CTX_new(meth);
-        // this is deprecated and is potentially unnecessary
-        // the OpenSSL wiki says to call it anyway.
-        OPENSSL_config(NULL);
+
+	
+	static const SSL_METHOD * meth = nullptr;
+	#if defined(LWS_HAVE_TLS_CLIENT_METHOD)
+		meth = (SSL_METHOD *)TLS_client_method();
+	#else	
+		meth = (SSL_METHOD *)SSLv23_client_method();
+	#endif
+
+	search::HTTPClient::sslContext = SSL_CTX_new(meth);
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
     }
@@ -134,43 +116,6 @@ namespace search {
     void HTTPClient::destroySSL() {
         ERR_free_strings();
         EVP_cleanup();
-    }
-
-    // parse a well formed url and get the stuff within
-    // URI = scheme:[//authority]path[?query][#fragment]
-    // authority = [userinfo@]host[:port]
-    // uses the RFC 3986 regex suggestion for URL parsing
-    // Using GCC 8.2.0 on Linux the return value is moved
-    // not copied. Therefore it is faster than the heap
-    // based version. 
-    // Bad urls will copy the empty request but will not
-    // run a bunch of std::string constructors.
-    static HTTPRequest parseURLStack(const std::string &url) {
-        std::regex r(
-                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
-                std::regex::extended
-        );
-        std::smatch result;
-        if (std::regex_match(url, result, r)) {
-            HTTPRequest rv;
-            rv.protocol = result[2];
-            rv.host =     result[4];
-            rv.path =     result[5];
-            rv.query =    result[7];
-            rv.fragment = result[9];
-            if (rv.path == "")
-                rv.path = "/";
-            return rv;
-        } else {
-            return emptyHTTPRequest;
-        }
-    }
-
-    void * HTTPClient::SubmitUrlSyncWrapper(void * context) {
-        SubmitArgs * args = (SubmitArgs*)context;
-        args->client->SubmitURLSync(*args->url);
-        delete args->url;
-        delete args;
     }
 
     static ssize_t getContentLength(std::string_view response) {
@@ -198,24 +143,28 @@ namespace search {
             }
         }
         size_t rv = -1;
-        auto result = std::from_chars(response.data() + intStart,
+        std::from_chars(response.data() + intStart,
                                       response.data() + intEnd,
                                       rv);
         return rv;
     }
 
-    void HTTPClient::SubmitURLSync(const std::string &url) { //should submit to robotstxt data structure
-        HTTPRequest request = parseURLStack(url);
-        Socket * sock;
-        request.method = getMethod;
-        request.headers = connClose;
-        if (request.protocol == httpsStr) {
-            request.port = 443;
-            sock = new SecureSocket;
+    void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
+        if (redirCount > REDIRECT_MAX) {
+            fprintf(stderr, "Too many redirects ending in host %s\n", url.c_str());
+            return;
         }
-        else if (request.protocol == httpStr) {
+        HTTPRequest request(url);
+        std::unique_ptr<Socket> sock;
+        request.method = constants::getMethod;
+        request.headers = constants::connClose;
+        if (request.protocol == constants::httpsStr) {
+            request.port = 443;
+            sock = std::unique_ptr<SecureSocket>(new SecureSocket);
+        }
+        else if (request.protocol == constants::httpStr) {
             request.port = 80;
-            sock = new Socket; 
+            sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
             // invalid, TODO log bad request
@@ -223,52 +172,64 @@ namespace search {
         }
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
-        sock->setFd(sockfd);
+        if (sockfd < 0) {
+            return; 
+        }
+        ssize_t rv = sock->setFd(sockfd);
+        if (rv < 0) {
+            fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
+            return;
+        }
+
+        rv = 0;
+        int bytesReceived = 0;
+        size_t totalSize = 0;
+        size_t headerPos = 0;
+        size_t headerSize = 0;
+        ssize_t contentLength = -1;
+        char * fullResponse = (char*)malloc(constants::BUFFER_SIZE);
+
         // send request blocking
         const std::string requestStr = request.requestString();
-        sock->send(requestStr.c_str(), requestStr.size());
+        if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
+            fprintf(stderr, "error sending request to host for url '%s'\n", url.c_str());
+        }
 
         // dynamic buffering
         // every time recv returns we'll look for "Content-Length", length of the body
-        // when we get the length of the body then we can have a hard coded size to check for
+        // when we get t he length of the body then we can have a hard coded size to check for
         // get the size of the header by searching for /r/n/r/n
-        ssize_t rv = 0;
-        ssize_t content_length = -1;
-        int bytes_received = 0;
-        char * full_response = (char*)malloc(BUFFER_SIZE);
-        size_t total_size;
         while (true) {
-            rv = sock->recv(full_response, BUFFER_SIZE, 0);
+            rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
             if (rv < 0) {
                 // error check
+                fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                free(fullResponse);
                 return;
             } else if (rv == 0) {
                 // handle EOF
                 break;
                 // might need to do more?
-            } else if (content_length == -1) {
+            } else if (contentLength == -1) {
                 // check if the header has been downloaded
-                bytes_received += rv;
-                std::string_view view(full_response, bytes_received);
-                size_t header_pos = view.find("\r\n\r\n");
-                if (header_pos != std::string_view::npos) {
-                    size_t header_size = header_pos + 4;
+                bytesReceived += rv;
+                std::string_view view(fullResponse, bytesReceived);
+                headerPos = view.find("\r\n\r\n");
+                if (headerPos != std::string_view::npos) {
+                    headerSize = headerPos + 4;
                     // search for "Content-Length"
-                    content_length = getContentLength(std::string_view(full_response, bytes_received));
-                    total_size = header_size + content_length;
-                    size_t remaining = total_size - bytes_received;
+                    contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
+                    totalSize = headerSize + contentLength;
+                    ssize_t remaining = totalSize - bytesReceived;
                     if (remaining > 0) {
-                        char * tmp = (char *)malloc(total_size);
-                        memcpy(tmp, full_response, bytes_received);
-                        free(full_response);
-                        full_response = tmp;
-                        char * buf_front = full_response + bytes_received;
+                        fullResponse = (char *)realloc(fullResponse, totalSize);
+                        char * buf_front = fullResponse + bytesReceived;
                         rv = sock->recv(buf_front, remaining, MSG_WAITALL);
                         if (rv >= 0) {
-                            bytes_received += rv;
+                            bytesReceived += rv;
                             break;
                         }
-                        if (rv < 0 || bytes_received < content_length) {
+                        if (rv < 0 || bytesReceived < contentLength) {
                             // error reading from socket
                             break;
                         }
@@ -279,51 +240,114 @@ namespace search {
                 break;
             }
         }
-        // full response is completely downloaded now we can process
-        process(full_response, bytes_received);
+
+        char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
+        if (redirectUrl) {
+            free(fullResponse);
+            // TODO: https://stackoverflow.com/questions/8250259/is-a-302-redirect-to-relative-url-valid-or-invalid
+            return SubmitURLSync(redirectUrl, ++redirCount);
+        }
+
+        process(fullResponse, bytesReceived);
 
         // either going to write to a file or add another request to the queue
         // write it to a file
-        std::ofstream outfile(request.filename());
-        outfile.write(full_response, total_size);
-        outfile.close();
+        std::string filename = request.filename();
+        std::ofstream outfile(filename);
 
-        //handle robots.txt files
-        if(request.path.find("robots.txt") != std::string::npos)
-        {
-            //TODO (Graham and Dennis): Replace CRAWLER.robotstxt with the instance of RobotsTxt object
-            //that our crawler will have (there should only be one RobotsTxt object which contains
-            //all RobotsTxt info). Also, need to populate variable filePath, a string that contains
-            //the file path in disc that we saved our file. Consider making this filePath a part of 
-            //class HTTPrequest so I can just send the request object to submitRobotsTxt()
-            
-            //CRAWLER.robotstxt.submitRobotsTxt(request, filePath);
+        outfile.write(fullResponse + headerSize, contentLength);
+        outfile.close();
+        free(fullResponse);
+        fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
+
+        if (request.robots()) {
+            // TODO: make the data structure itself thread safe in a
+            // more optimized way than doing this...
+            robots->lock();
+            robots->SubmitRobotsTxt(request.host, filename);
+            robots->unlock();
         }
-        
     }
 
     void HTTPClient::process(char * file, size_t len) {
-        std::cout << "TODO" << '\n';
+
+    }
+
+    char * HTTPClient::checkRedirectsHelper(const char * getMessage, const size_t len) {
+        if (len < 10) {
+            return nullptr;
+        }
+        const char& redirectLeadInt = getMessage[9];
+        if (redirectLeadInt == '3'){
+            //Convert GET message to string for ease of access
+            std::string messageCopy(getMessage);
+            std::string currentLine;
+            std::string redirURL;
+            //Parse GET message
+            for (size_t i = 0; i < messageCopy.length(); ++i){
+                //Found the redirected link URL
+                if (currentLine == "Location: " || currentLine == "location: "){
+                    while (messageCopy[i] != '\n'){
+                        redirURL += messageCopy[i];
+                        i++;
+                    }
+                    break;
+                }
+                //Reset parsed line if newline char found
+                else if (messageCopy[i] == '\n'){
+                    currentLine = "";
+                }
+                //Append GET message to curr_line to scan for 'Location: ' string
+                else {
+                    currentLine += messageCopy[i];
+                }
+            }
+            // TODO: replace this with the new string class
+            redirURL.erase(std::remove_if(redirURL.begin(), redirURL.end(), [](char ch) {
+                return std::isspace(ch);
+            }), redirURL.end());
+            char * finalUrl = (char*)calloc(redirURL.length() + 1, sizeof(char));
+            strcpy(finalUrl, redirURL.c_str());
+            return finalUrl;
+        }
+        else {
+            return nullptr;
+        }
     }
 
     int HTTPClient::Socket::setFd(int fd_in) {
+        if (fd_in < 3) {
+            return -1;
+        }
         sockfd = fd_in;
         return sockfd;
     }
 
     int HTTPClient::SecureSocket::setFd(int fd_in) {
+        if (fd_in < 3) {
+            return -1;
+        }
         sockfd = fd_in;
         ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
+            fprintf(stderr, "Error creating new SSL struct\n");
+            fflush(stderr);
+            return -1;
         }
-        int sslsock = ::SSL_get_fd(ssl);
-        ::SSL_set_fd(ssl, sockfd);
-        int rv = ::SSL_connect(ssl);
+        int rv = ::SSL_set_fd(ssl, sockfd);
+        if (rv != 1) {
+            // TODO better error handling
+            fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);
+            fflush(stderr);
+            return -1;
+        }
+        rv = ::SSL_connect(ssl);
         if (rv <= 0) {
             // TODO better error handling
-            fprintf(stderr, "Error creating SSL connection");
+            fprintf(stderr, "Error creating SSL connection\n");
             fflush(stderr);
+            return -1;
         }
         return rv;
     }
@@ -361,7 +385,8 @@ namespace search {
     }
 
     ssize_t HTTPClient::Socket::recv(char * buf, size_t len, int flags) {
-        return ::recv(sockfd, (void*) buf, len, flags);
+        ssize_t rv = ::recv(sockfd, (void*) buf, len, flags);
+        return rv;
     }
     
     ssize_t HTTPClient::SecureSocket::recv(char * buf, size_t len, int flags) {
@@ -387,6 +412,8 @@ namespace search {
                 return -1;
             }
             return bytes_received;
+        // This is probably an unnecessary branch. We're doing blocking on all sockets
+        // currently
         } else {
             auto rv = ::SSL_read(ssl, (void*)buf, len);
             // todo error handling
@@ -396,12 +423,26 @@ namespace search {
     }
 
     ssize_t HTTPClient::Socket::close() {
-        return ::close(sockfd);
+        if (sockfd > 2) {
+            int rv = ::close(sockfd);
+            sockfd = -1;
+            return rv;
+        }
+        return 0;
     }
     ssize_t HTTPClient::SecureSocket::close() {
         // TODO error handling
-        ::SSL_shutdown(ssl);
-        ::SSL_free(ssl);
-        return ::close(sockfd);
+        if (ssl) {
+            ::SSL_shutdown(ssl);
+            ::SSL_free(ssl);
+            ssl = nullptr;
+        }
+        if (sockfd > 2) {
+            int rv = ::close(sockfd);
+            sockfd = -1;
+            return rv;
+        }
+        return 0;
     }
+    
 }

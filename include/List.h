@@ -1,5 +1,6 @@
-#ifndef LIST_H
-#define LIST_H
+#pragma once
+#ifndef LIST_H_398
+#define LIST_H_398
 
 template < typename T >
 class Node;

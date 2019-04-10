@@ -1,4 +1,6 @@
-#include <iostream>
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #include <cstring>
 #include <cctype>
 #include "String.h"
@@ -15,6 +17,12 @@ String::String( const int length ) : cstring( nullptr ), size( length )
       }
    }
 
+String::String( const char single_char ) : size( 1 )
+   {
+   cstring = new char[ size + 1 ];
+   cstring[0] = single_char;
+   cstring[1] = 0;
+   }
 
 String::String( const char* toCopy, int length ) : size( length )
    {
@@ -41,9 +49,9 @@ String::String( const String& toCopy )
 
    if ( toCopy.cstring == nullptr )
       {
-	  cstring = nullptr;
-	  return;
-	  }
+      cstring = nullptr;
+	   return;
+	   }
    
    cstring = new char[ size + 1 ];
    memcpy( cstring, toCopy.cstring, size );
@@ -106,10 +114,10 @@ const char* String::CString( ) const
 bool String::Compare( const String& other ) const
    {
    if ( size != other.size ) return false;
-
+    
    int index = 0, i;
    while ( ( i = index++ ) != size && cstring[ i ] == other.cstring[ i ]) { }
-
+    
    return index > size;
    }
 
@@ -117,19 +125,21 @@ bool String::Compare( const String& other ) const
 const char String::operator[ ] ( int index ) const
    {
    if ( cstring == nullptr )
-	  return nullString[ index ];
-
+      return nullString[ index ];
+    
    return cstring[ index ];
    }
 
 
 char& String::operator[ ] ( int index )
    {
-   if ( cstring == nullptr ) {
-      cstring = new char[1];
-      cstring[0] = 0x0;
-      return cstring[index];
-   }
+   if ( cstring == nullptr )
+      {
+      cstring = new char[ 1 ];
+      cstring[ 0 ] = 0;
+      return cstring[ index ];
+      }
+
    return cstring[ index ];
    }
 
@@ -140,19 +150,24 @@ String& String::operator+= ( const String& rhs )
       return *this;
 
    int newSize = size + rhs.size;
-   char* newCString = new char[newSize + 1];
+   char* newCString = new char[ newSize + 1 ];
 
    if ( cstring != nullptr )
       memcpy( newCString, cstring, size );
    memcpy( newCString + size, rhs.cstring, rhs.size );
 
-   delete cstring;
+   delete[ ] cstring;
    cstring = newCString;
    size = newSize;
 
    return *this;
    }
-
+ 
+ String operator+( String lhs, const String& rhs) 
+   {
+   lhs += rhs;
+   return lhs;
+   }
 
 String::operator bool( ) const
    {
@@ -177,18 +192,27 @@ void String::Allocate( const int length, bool after )
    }
 
 
-void String::RemoveWhitespace() 
-  {
-  if ( cstring == nullptr )
+void String::RemoveWhitespace( ) 
+   {
+   if ( cstring == nullptr )
      return;
 
-  char* i = cstring;
-  char* j = cstring;
-  while(*j != 0)
-  {
-    *i = *j++;
-    if(!isspace(*i))
+   char* i = cstring;
+   char* j = cstring;
+   while( *j != 0 )
+      {
+      *i = *j++;
+      if( !isspace( *i ) )
       i++;
-  }
-  *i = 0;
-  }
+      }
+
+   *i = 0;
+   }
+
+
+String operator+ ( String lhs, const char * toCat ) 
+   {
+   auto cat = String( toCat );
+   lhs += cat;
+   return lhs;
+   }

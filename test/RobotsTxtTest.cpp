@@ -1,5 +1,6 @@
 #include "RobotsTxt.h"
-#define BOOST_TEST_MODULE RobotsTxtTest
+#include "http.hpp"
+#define BOOST_TEST_MODULE DirectoryRuleTest
 #include <boost/test/included/unit_test.hpp>
 
 using namespace std;

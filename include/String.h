@@ -1,3 +1,6 @@
+// Created by Jason Setting
+// Graham Eger added additional string concatenation functions on 4/2
+
 #pragma once
 #ifndef STRING_H_398
 #define STRING_H_398
@@ -6,6 +9,7 @@ class String
    {
    public:
       String( const int length = 0 );
+      String( const char single_char );
       String( const char* toCopy, int length = -1 );
       String( char*&& toMove, int length = -1 );
       String( const String& toCopy );
@@ -28,6 +32,7 @@ class String
 
       String& operator+= ( const String& rhs );
       friend String operator+ ( String lhs, const String& rhs );
+      friend String operator+ ( String lhs, const char * toCat );
 
       operator bool( ) const;
 
