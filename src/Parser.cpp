@@ -101,7 +101,7 @@ int LinkFinder::parse(char* html_file) {
         }
         //Inside >...< and not script or style, so body. Get it.
         //ignore nothing
-        else if(html_file[*index] == '\n' || html_file[*index] == ' ' || html_file[*index] == '\t') {
+        else if(html_file[*index] == '\n' || html_file[*index] == ' ' || html_file[*index] == '\t' || html_file[*index] == '\r') {
             //do nothing
             (*index)++;
         }
@@ -191,9 +191,9 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
 
 void LinkFinder::get_words(char *html_file, long *index, long file_length, String type) {
     while(*index < file_length && html_file[*index] != '<') {
-        if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
+        if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != '\r' && html_file[*index] != ' ') {
             String word;
-            while(*index < file_length && html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
+            while(*index < file_length && html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<' && html_file[*index] != '\r') {
                 if(html_file[*index] != '"' && html_file[*index] != '(' && html_file[*index] != ')' && html_file[*index] != ',' && html_file[*index] != '.') {
                     word += html_file[*index];
                 }
