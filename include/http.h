@@ -104,6 +104,7 @@ namespace search {
         RobotsTxt * robots;
         Crawler * crawler;
         int logFd;
+        int errorFd;
 
         struct Socket {
         public:
