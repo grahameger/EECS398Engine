@@ -262,7 +262,7 @@ namespace search {
         }
 
         rv = 0;
-        int bytesReceived = 0;
+        size_t bytesReceived = 0;
         size_t totalSize = 0;
         size_t headerPos = 0;
         size_t headerSize = 0;
@@ -337,7 +337,6 @@ namespace search {
                     } else {
                         // recv until EOF
                         rv = 0;
-                        size_t currentBufferSize = constants::BUFFER_SIZE;
                         do {
                             bytesReceived += rv;
                             if (bytesReceived == currentBufferSize) {
@@ -617,11 +616,28 @@ namespace search {
             fflush(stderr);
             return -1;
         }
+        connect:
         rv = ::SSL_connect(ssl);
-        if (rv <= 0) {
-            fprintf(stderr, "Error creating SSL connection\n");
-            fflush(stderr);
-            return -1;
+        int errnoSSL = SSL_get_error(ssl, rv);
+        switch (errnoSSL) {
+            case SSL_ERROR_NONE:
+                return 0;
+            case SSL_ERROR_WANT_CONNECT:
+                goto connect;
+            case SSL_ERROR_SYSCALL:
+                fprintf(stderr, "SSL syscall error %s\n", strerror(errno));
+                return -1;
+            case SSL_ERROR_ZERO_RETURN:
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+            case SSL_ERROR_WANT_ASYNC:
+            case SSL_ERROR_WANT_ASYNC_JOB:
+            case SSL_ERROR_WANT_CLIENT_HELLO_CB:
+            case SSL_ERROR_SSL:
+            default:
+                fprintf(stderr, "%s", "SSL connect other error\n");
+                return -1;
         }
         return rv;
     }

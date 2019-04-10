@@ -20,7 +20,7 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
 
 
 int LinkFinder::parse(char* html_file, size_t fileSize) {
-    size_t file_length = fileSize;
+    long file_length = fileSize;
     long num = 0;
     long *index = &num;
     while(*index < file_length) {//run until end of file
@@ -192,7 +192,7 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
 }
 
 void LinkFinder::get_words(char *html_file, long *index, long file_length, String type) {
-    while(*index < file_length && html_file[*index] != '<') {
+    while((*index) < file_length && html_file[*index] != '<') {
         if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
             String word;
             while(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {

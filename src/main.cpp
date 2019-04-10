@@ -20,7 +20,8 @@ int main(int argc, char *argv[]) {
 	// 		urls.push_back(line);
 	// 	}
 	// }
-	urls.push_back("http://literatureismyutopia.tumblr.com/post/130165038543/celebrate-banned-books-week#_=_");
+	// urls.push_back("http://dmoztools.net/");
+	urls.push_back("http://dmoztools.net/");
 
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
