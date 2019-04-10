@@ -34,6 +34,14 @@ int main( )
       cout << int1.GetValue( ) << endl;
       os << int1;
       cout << os.HexString( ).CString( ) << endl << endl;
+
+      /* Uncomment to test the GetString( ) function
+       *
+      StringView sv = os.GetString( );
+      for ( int i = 0; i < sv.Size( ); i++ )
+         cout << ( int ) ( ( unsigned char ) sv[ i ] ) << " ";
+      cout << "\n" << endl;
+      */
       }
 
    InputByteStream is2( numbers2 );

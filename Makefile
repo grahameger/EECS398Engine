@@ -38,7 +38,7 @@ tester:
 robots:
 	$(CC) $(CFLAGS) test/RobotsTxtTest.cpp $(INC) $(LIB) -o bin/robots-test
 
-UTFOBJS := TestUtf8Numbers.o Utf8Numbers.o ByteStream.o String.o
+UTFOBJS := TestUtf8Numbers.o Utf8Numbers.o ByteStream.o String.o StringView.o
 utfnum: $(patsubst %,$(BUILDDIR)/%,$(UTFOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/utfnum"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/utfnum

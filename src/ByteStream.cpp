@@ -1,4 +1,3 @@
-#include <iostream>
 #include "ByteStream.h"
 
 
@@ -36,9 +35,10 @@ OutputByteStream::~OutputByteStream( )
    }
 
 
-const String& OutputByteStream::GetString( ) const
+const StringView OutputByteStream::GetString( ) const
    {
-   return writing;
+   int length = forwardStream ? byteNum : writing.Size( ) - byteNum;
+   return StringView( writing.CString( ), length, forwardStream );
    }
 
 

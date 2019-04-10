@@ -2,6 +2,7 @@
 #define BYTESTREAM_H
 
 #include "String.h"
+#include "StringView.h"
 
 // This class is given a String which it then turns into a ByteStream. The goal
 //  is to make a simple wrapper that abstracts whether the string is being read
@@ -32,8 +33,7 @@ class OutputByteStream
       OutputByteStream(bool forwards = true);
       ~OutputByteStream( );
 
-      // TODO: Allocate new? What about backwards? Etc.
-      const String& GetString( ) const;
+      const StringView GetString( ) const;
       // For Debugging
       const String HexString( ) const;
 
