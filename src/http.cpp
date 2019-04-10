@@ -206,9 +206,13 @@ namespace search {
             // also didn't make a copy of the string
             const std::string_view contentType = header.substr(firstTokenStart,
                                              header.find_first_of(" \f\n\r\t\v;", firstTokenStart));
-            auto firstToken = contentType.substr(0,4);
-            auto secondToken = contentType.substr(5,4);
-            return contentType.size() >= 9 && firstToken == "text" && (secondToken == "html" || secondToken == "plai");
+            if (contentType.size() >= 9) {
+                auto firstToken = contentType.substr(0,4);
+                auto secondToken = contentType.substr(5,4);
+                return firstToken == "text" && (secondToken == "html" || secondToken == "plai");
+            } else {
+                return false;
+            }
         } else {
             return false;
         }

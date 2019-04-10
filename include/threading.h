@@ -139,18 +139,6 @@ namespace threading {
         return temp;
     }
 
-    template <typename T> T ThreadQueue<T>::popRandom() {
-        m.lock();
-        while (q.empty()) {
-            cv.wait(m);
-        }
-        size_t idx = (((long long)rand() << 32) | rand()) % q.size();
-        T temp = q[idx];
-        q.erase(q.remove(q.at(idx)));
-        m.unlock();
-        return temp;
-    }
-
     template <typename T> void ThreadQueue<T>::popAll(std::vector<T> &d) {
         m.lock();
         while (q.empty()) {

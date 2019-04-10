@@ -76,7 +76,7 @@ namespace search {
 
     void * Crawler::stub() {
         while (true) {
-            std::string p = readyQueue.popRandom();
+            std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
 
             // no duplicates, we're only going to be checking this here to
