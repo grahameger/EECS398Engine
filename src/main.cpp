@@ -16,9 +16,11 @@ int main(int argc, char *argv[]) {
 	std::string line;
 
 	while (std::getline(start_list, line)) {
-		urls.push_back(line);
+		if (line != "") {
+			urls.push_back(line);
+		}
 	}
-	urls.push_back("https://www.amazon.com/Mozilla-Firefox-for-Fire-TV/dp/B078B5YMPD");
+
 	fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
 	search::Crawler crawler(urls);

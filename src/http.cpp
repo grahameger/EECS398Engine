@@ -66,8 +66,22 @@ namespace search {
         memset(&hints, 0x0, sizeof hints);
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
+        for (size_t i = 0; i < 5; i++) {
+            if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
+                continue;
+            } else {
+                break;
+            }
+        }
+        if (rv == EAI_AGAIN) {
+            fprintf(stderr, "getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));
+        } else if (rv != 0) {
+            return -1;
+            fprintf(stderr, "getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));
+        }
+
+
         if ((rv = getaddrinfo(host.c_str(), portStr.c_str(), &hints, &servinfo)) != 0) {
-            fprintf(stderr, "getaddrinfo returned %d for host '%s' -- %s -- %s\n", rv, host.c_str(), gai_strerror(rv), strerror(errno));
             if (rv == -11) {
                 rv = 0;
             }
@@ -372,7 +386,7 @@ namespace search {
             outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
             outfile.close();
             free(fullResponse);
-            // fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
+            fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
@@ -391,6 +405,7 @@ namespace search {
             crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
         } else {
             // let's try out the file abstraction
+            fprintf(stdout, "wrote file %s\n", filename.c_str());
             File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);
         }
     }

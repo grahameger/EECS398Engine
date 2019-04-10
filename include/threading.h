@@ -14,6 +14,7 @@
 #include <string.h>
 #include <deque>
 #include <vector>
+#include <random>
 
 namespace threading {
     struct Mutex  {
@@ -85,6 +86,7 @@ namespace threading {
         void push();
 
         T pop();
+        T popRandom();
         void popAll(std::vector<T> &d);
 
         size_t size();
@@ -133,6 +135,18 @@ namespace threading {
         }
         T temp = q.front();
         q.pop_front();
+        m.unlock();
+        return temp;
+    }
+
+    template <typename T> T ThreadQueue<T>::popRandom() {
+        m.lock();
+        while (q.empty()) {
+            cv.wait(m);
+        }
+        size_t idx = (((long long)rand() << 32) | rand()) % q.size();
+        T temp = q[idx];
+        q.erase(q.remove(q.at(idx)));
         m.unlock();
         return temp;
     }

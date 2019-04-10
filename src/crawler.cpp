@@ -60,7 +60,7 @@ namespace search {
         struct stat st = {0};
         auto path1 = std::string("robots/" + host);
         auto path2 = std::string("robots/" + ("www." + host));
-        return (stat(path1.c_str(), &st) == 0 || stat(path2.c_str(), &st));    
+        return (stat(path1.c_str(), &st) == 0 || stat(path2.c_str(), &st) == 0);    
     }
 
     bool Crawler::havePage(const HTTPRequest& req) {
@@ -76,7 +76,7 @@ namespace search {
 
     void * Crawler::stub() {
         while (true) {
-            std::string p = readyQueue.pop();
+            std::string p = readyQueue.popRandom();
             auto req = HTTPRequest(p);
 
             // no duplicates, we're only going to be checking this here to
@@ -159,8 +159,9 @@ namespace search {
             size_t& number = sizeAndNumberOfFiles.second;
             const char * time = ctime(&now);
             double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
-            double rate = (GiB - (double)prevGiB) / 10.0 / 1073741824.0;
-            fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f\nTotal Files: %zu\n\n", time, GiB, rate, number);
+            double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
+            size_t queueSize = readyQueue.size();
+            fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Files: %zu\nItems on Queue: %zu\n\n", time, GiB, rate, number, queueSize);
             prevGiB = GiB;
         }
     }
