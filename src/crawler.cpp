@@ -78,7 +78,6 @@ namespace search {
 
     void * Crawler::stub() {
         while (keep_running) {
-
             std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
 
@@ -150,23 +149,28 @@ namespace search {
         }
     }
 
+    void Crawler::print2(double &prevGiB) {
+        time_t now = time(0);
+        // size and number of files
+        auto sizeAndNumberOfFiles = File::totalSizeAndNumFiles();
+        size_t& number = sizeAndNumberOfFiles.second;
+        const char * time = ctime(&now);
+        double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
+        double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
+        size_t queueSize = readyQueue.size();
+        fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Files: %zu\nItems on Queue: %zu\n\n", time, GiB, rate, number, queueSize);
+        prevGiB = GiB;
+    }
+
     // runs every whatever seconds and prints out the progress of the crawler so far
     void * Crawler::print() {
         double prevGiB = 0;
-        while (true) {
+        while (keep_running) {
             sleep(10);
-            // get all the data
-            time_t now = time(0);
-            // size and number of files
-            auto sizeAndNumberOfFiles = File::totalSizeAndNumFiles();
-            size_t& number = sizeAndNumberOfFiles.second;
-            const char * time = ctime(&now);
-            double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
-            double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
-            size_t queueSize = readyQueue.size();
-            fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Files: %zu\nItems on Queue: %zu\n\n", time, GiB, rate, number, queueSize);
-            prevGiB = GiB;
+            print2(prevGiB);
         }
+        print2(prevGiB);
+        return nullptr;
     }
 
     void * Crawler::stubHelper(void * context) {

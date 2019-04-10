@@ -41,6 +41,7 @@ namespace search {
         ~Crawler();
         void * stub();
         void * print();
+        void print2(double &prevGiB);
         static void * stubHelper(void * context);
         static void * printHelper(void * context);
         bool haveRobots(const std::string &domain);
