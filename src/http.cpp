@@ -137,6 +137,9 @@ namespace search {
     }
 
     HTTPClient::~HTTPClient() {
+        // close our log file descriptors
+        close(logFd);
+        close(errorFd);
         // SSL Stuff, shouldn't run until all the threads return!
         destroySSL();
     }
