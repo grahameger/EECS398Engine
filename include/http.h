@@ -135,6 +135,7 @@ namespace search {
             virtual ssize_t close();
         private:
             SSL * ssl;
+            inline static threading::Mutex m;
         };
     };
 }

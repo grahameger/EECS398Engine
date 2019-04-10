@@ -20,6 +20,12 @@ namespace search {
     // Bad urls will copy the empty request but will not
     // run a bunch of std::string constructors.
     HTTPRequest::HTTPRequest(std::string url) {
+        // check mailto
+        if (url.size() >= 6 && 
+            url[0] == 'm' && url[1] == 'a' && url[2] == 'i' &&
+            url[3] == 'l' && url[4] == 't' && url[5] == 'o') {
+                return;
+        }
         static std::regex r(
                 R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended

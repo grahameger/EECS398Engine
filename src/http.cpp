@@ -42,6 +42,10 @@ namespace search {
         static const SSL_METHOD * meth = SSLv23_client_method();
         #endif
 
+        #ifdef OPENSSL_VERSION_TEXT
+        fprintf(stdout, "%s\n", OPENSSL_VERSION_TEXT);
+        #endif
+
         search::HTTPClient::sslContext = SSL_CTX_new(meth);
 
         // cross platform stuff
@@ -722,9 +726,11 @@ namespace search {
     ssize_t HTTPClient::SecureSocket::close() {
         // TODO error handling
         if (ssl) {
+            m.lock();
             // ::SSL_shutdown(ssl); this was causing issues
             ::SSL_free(ssl);
             ssl = nullptr;
+            m.unlock();
         }
         if (sockfd > 2) {
             int rv = ::close(sockfd);
