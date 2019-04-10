@@ -17,6 +17,12 @@ int StringView::Size( ) const
    }
 
 
+const char* StringView::GetCString( ) const
+   {
+   return CString;
+   }
+
+
 const char StringView::operator[ ] ( int index ) const
    {
    int newIndex = forwards ? index : ( length - index );

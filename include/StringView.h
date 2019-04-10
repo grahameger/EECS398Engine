@@ -11,6 +11,7 @@ class StringView
 
       bool Empty( ) const;
       int Size( ) const;
+      const char* GetCString( ) const;
       bool Compare( const StringView& other ) const;
 
       const char operator[ ] ( int index ) const;
