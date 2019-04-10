@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
    */
    String file = "index.bin";
    // Index index(file);
-   int fd = fopen(file, O_RDWR);
+   int fd = open(file.CString(), O_RDWR|O_CREAT);
 
    PostingList pl(fd, 0, 64);
    pl.update(7);

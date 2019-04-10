@@ -61,7 +61,7 @@ Index::~Index(){
 		//step 6 update url block index
       locks[pageEndBlock]->writeLock();
       char* buf = new char[blockSize];
-      readBllocation,ock(buf, pageEndBlock);
+      readBlock(buf, pageEndBlock);
 		//get newest url block
       int blockNum = followPointer(buf, pageEndBlock);
 
@@ -73,17 +73,17 @@ Index::~Index(){
 		//String utf8Location = utf8(currentLocation);
 		
       //read in the index, if pointer==0 create a new index
-      PostingListIndex index = indexPointer == 0 ? PostingListIndex(currentLocation) : PostingListIndex(buf, blockSize-1-sizeof(int) ,indexPointer);
+      PostingListIndex index = indexPointer == 0 ? PostingListIndex(currentLocation) : PostingListIndex(buf + indexPointer, blockSize - indexPointer);
 		//find offset and real location of most recently added page
 		//index.findNewestPost();
 		int delta = currentLocation - index.largestLocation();
 		//convert delta to utf8 for saving
-		String utf8Delta = utf8(delta);
+		String utf8Delta("holder"); //= utf8(delta);
       //add new delta this must be done before index.update
       memcpy(buf + index.nextOpenChar(), utf8Delta.CString(), utf8Delta.Size());
 		//check if there is space to add page end
 		index.update(currentLocation, index.nextOpenChar(), utf8Delta.Size());
-		if(utf8Delta.Size() + index.nextOpenChar() > index.pointer(blockSize, true)){
+		if(utf8Delta.Size() + index.nextOpenChar() > index.pointer(blockSize)){
 			//not enough space, need to move to next block
 			char* pointerWriter[sizeof(int)];
 			nextBlockLock.lock();
@@ -101,7 +101,7 @@ Index::~Index(){
          readBlock(buf, nextBlock);
          PostingListIndex newIndex = PostingListIndex(currentLocation);
          //last byte in block is blockSize-1, first byte of blockPointer is that - sizeof(int), first block of index is that - index.size()
-         indexPointer = newIndex.pointer(blockSize, true);
+         indexPointer = newIndex.pointer(blockSize);
          //update indexPointer
          memcpy(buf, &indexPointer, sizeof(int));
          //put in first delta 
@@ -114,7 +114,7 @@ Index::~Index(){
 		}
 		else{
          //update index pointer
-         indexPointer = index.pointer(blockSize, true);
+         indexPointer = index.pointer(blockSize);
          memcpy(buf, &indexPointer, sizeof(int));
          //update index
          memcpy(buf + indexPointer, index.string().CString(), index.size());
@@ -132,13 +132,13 @@ Index::~Index(){
 
 		memcpy(&indexPointer, buf, sizeof(int)); 
 		//is url passed as utf8?
-		String utf8Url = urlAndDataToUtf8(url);
-		PostingListIndex urlIndex = indexPointer == 0 ? PostingListIndex(currentDocId, utf8Url) : PostingListIndex(buf, blockSize-1-sizeof(int) ,indexPointer);
+		String utf8Url("holder");// = urlAndDataToUtf8(url);
+		PostingListIndex urlIndex = indexPointer == 0 ? PostingListIndex(currentDocId, utf8Url) : PostingListIndex(buf + indexPointer, blockSize-indexPointer);
       //add new url
       memcpy(buf + urlIndex.nextOpenChar(), utf8Url.CString(), utf8Url.Size());
 		//url fits in this block
 		urlIndex.update(currentDocId, urlIndex.nextOpenChar(), utf8Url.Size());
-		if(utf8Url.Size() + index.nextOpenChar() > urlIndex.pointer(blockSize, true)){
+		if(utf8Url.Size() + index.nextOpenChar() > urlIndex.pointer(blockSize)){
 			//not enough space in current block, must make a new one
 			char* pointerWriter[sizeof(int)];
 			nextBlockLock.lock();
@@ -154,7 +154,7 @@ Index::~Index(){
          readBlock(buf, nextBlock);
          PostingListIndex newIndex = PostingListIndex(currentDocId, utf8Url);
          //update index pointer
-         indexPointer = urlIndex.pointer(blockSize, true);
+         indexPointer = urlIndex.pointer(blockSize);
          memcpy(buf, &indexPointer, sizeof(int));
          //add new url
          memcpy(buf + sizeof(int), utf8Url.CString(), utf8Url.Size());
@@ -166,7 +166,7 @@ Index::~Index(){
 		else{
          //already added url
          //update index pointer
-         indexPointer = urlIndex.pointer(blockSize, true);
+         indexPointer = urlIndex.pointer(blockSize);
          memcpy(buf, &indexPointer, sizeof(int));
       	//update index
       	memcpy(buf + indexPointer , urlIndex.string().CString(), urlIndex.size());
@@ -229,7 +229,7 @@ void Index::addWord(String word, String wordData){
    int listSize;
    memcpy(&listSize, buf, sizeof(int));
    int offset = pair.offset + sizeof(int);
-   PostingList pList = PostingList(buf, offset, listSize);
+   PostingList pList = PostingList(fd, pair.blockNum*blockSize + offset, listSize);
    if(pList.update(word) == 1){
       //fits
       writeLocation(pList.string().CString(), pair.blockNum, offset, listSize);
@@ -391,8 +391,8 @@ void WordIndex::update(String word, int offset){
 }
 */
 PostingList::PostingList(int fd, int startOffset, int listLength)
-   : listLength(listLength) {
-   char* mapped =(char*)mmap(fd, listLength, startOffset);
+   : posts(nullptr,0), listLength(listLength) {
+   char* mapped =(char*)mmapWrapper(fd, listLength, startOffset);
    int indexPointer = *((int*)mapped);
    index = indexPointer == 0 ? PostingListIndex() : PostingListIndex(mapped + indexPointer, listLength);
    int postPointer = index.nextOpenChar();
@@ -407,7 +407,7 @@ int PostingList::update(unsigned long long location){
    Utf8Uint utf8(location);
    OutputByteStream obs;
    obs << utf8;
-   StringView utf8Delta = utf8.GetString();
+   StringView utf8Delta = obs.GetString();
 
    index.update(location, offset, utf8Delta.Size());
    int indexPointer = index.pointer(listLength);
@@ -419,8 +419,8 @@ int PostingList::update(unsigned long long location){
       memcpy(buf, pList.CString(), offset);
       indexPointer = index.pointer(listLength);
       memcpy(buf, &indexPointer, sizeof(int));
-      memcpy(buf + offset, utf8Delta.CString(), utf8Delta.Size());
-      memcpy(buf + indexPointer, index.string().CString(), index.Size());
+      memcpy(buf + offset, utf8Delta.GetCString(), utf8Delta.Size());
+      memcpy(buf + indexPointer, index.string().CString(), index.size());
       pList = String(std::move((char*)buf), listLength);//might need to change string constructor
       return 0;
    }
@@ -428,9 +428,8 @@ int PostingList::update(unsigned long long location){
    //add on the index and update the index pointer
    char* buf = new char[listLength];
    memcpy(buf, pList.CString(), offset);
-   memcpy(buf, &indexPointer, sizeof(int));
    memcpy(buf + offset, utf8Delta.GetCString(), utf8Delta.Size());
-   memcpy(buf + indexPointer, index.string().CString(), index.Size());
+   memcpy(buf + indexPointer, index.string().CString(), index.size());
    pList = String(std::move((const char*)buf), listLength);//might need to change string constructor
    return 1;
 }
@@ -442,14 +441,14 @@ int PostingList::length(){
 }
 
 PostingListIndex::PostingListIndex()
-   :indexsize(3*sizeof(int) + sizeof(unsigned long long int)) {
+   :indexSize(3*sizeof(int) + sizeof(unsigned long long int)) {
    char* newString = new char[ indexSize ];
    *((int*)newString) = sizeof(int);
    index = String(std::move(newString), indexSize);
 }
 
 PostingListIndex::PostingListIndex(char* buf, int length)
-   :indexsize(length), index(buf, length) {
+   :indexSize(length), index(buf, length) {
 
 }
 
@@ -476,23 +475,23 @@ int PostingListIndex::size(){
 }
 
 void PostingListIndex::update(unsigned long long location, int offset, int length){
-   unsigned int pairPointer = *(unsigned int)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long);
+   unsigned int pairPointer = *(unsigned int*)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long));
    
    // TODO: Better
    InputByteStream ibs( StringView( index.CString() + pairPointer, 24 ) );
    Utf8Uint pairOffset, pairLocation;
    ibs >> pairOffset >> pairLocation;
 
-   if(location >> 16 > pairLocation >> 16){
+   if(location >> 16 > pairLocation.GetValue() >> 16){
       //making a new pair
       OutputByteStream obs;
       obs << Utf8Uint(offset) << Utf8Uint(location);
-      index += obs.GetString();
+      index += String(obs.GetString().GetCString());
       pairPointer += obs.GetString().Size();
-      *(unsigned int)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long)) = pairPointer;
+      *(unsigned int*)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long)) = pairPointer;
    }
-   *(unsigned int)index.CString() = offset + length;
-   *(unsigned long long)(index.CString() + sizeof(unsigned int)) = location;
+   *(unsigned int*)index.CString() = offset + length;
+   *(unsigned long long*)(index.CString() + sizeof(unsigned int)) = location;
 }
 
 String PostingListIndex::string(){

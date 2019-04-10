@@ -77,15 +77,15 @@ public:
    //url page holds strings not locations, needs current docId
    PostingListIndex(int location, String url);
    //returns the largest location in this index
-   int largestLocation();
+   unsigned long long largestLocation();
    //returns the first unused charecter in this posting list
-   int nextOpenChar();
+   unsigned int nextOpenChar();
    int size();
    //updates the index with new post at offset in block, location in internet, size of post
-   void update(int location, int offset, int length);
+   void update(unsigned long long location, int offset, int length);
    String string();
    //returns location of index pointer. URL and page end blocks have an int after the index, set intOffset true
-   int pointer(int blockSize, bool intOffset);
+   int pointer(int blockSize);
 private:
    String index; 
    int indexSize;
@@ -95,11 +95,12 @@ class PostingList{
 public:
    PostingList(int fd, int startOffset, int listLength);
    //if the updated posting List fits in its block it returns 1, otherwise 0
-   int update(unsigned long long int location);
+   int update(unsigned long long location);
    String string();
    //returns the block size of this plist
    int length();
 private:
+   String pList;
    StringView posts;
    PostingListIndex index;
    int listLength;
