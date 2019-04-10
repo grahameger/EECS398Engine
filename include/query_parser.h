@@ -1,19 +1,19 @@
-/*
- * parser.h
- *
- * Basic query expression parser that supports phrase, and, or queries
- *
- * A basic BNF query language:
- *
- * <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
- *
- * <AndConstraint>  ::= <SimpleConstraint> { [ <AndOp> ] <SimpleConstraint> }
- *
- * <SimpleConstraint>  ::= <Phrase> | ‘(’ <OrConstraint> ‘)’| <UnaryOp> <SimpleConstraint> | <SearchWord>
- *
- * <Phrase>  ::= '"' { <SearchWord> } '"'
- *
- */
+// /*
+//  * parser.h
+//  *
+//  * Basic query expression parser that supports phrase, and, or queries
+//  *
+//  * A basic BNF query language:
+//  *
+//  * <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
+//  *
+//  * <AndConstraint>  ::= <SimpleConstraint> { [ <AndOp> ] <SimpleConstraint> }
+//  *
+//  * <SimpleConstraint>  ::= <Phrase> | ‘(’ <OrConstraint> ‘)’| <UnaryOp> <SimpleConstraint> | <SearchWord>
+//  *
+//  * <Phrase>  ::= '"' { <SearchWord> } '"'
+//  *
+//  */
 
 #pragma once
 #ifndef PARSER_H_

@@ -34,7 +34,7 @@ public:
     
     //returns -1 if something failed, else returns 0
     //parses html file into title, body, links, and anchor text
-    int parse(char *filename);
+    int parse(char * htmlFile, size_t fileSize);
     
     int word_count = 0;
     
@@ -43,13 +43,13 @@ public:
     Vector<String> Link_vector;
     
     void print_meta_objects() {
-        for(int i = 0; i < Document_meta_data_list.size(); i++) {
+        for(size_t i = 0; i < Document_meta_data_list.size(); i++) {
             std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word.CString() << " : " << Document_meta_data_list[i].type.CString() << std::endl;
         }
     }
     
     void print_links() {
-        for(int i = 0; i < Link_vector.size(); i++) {
+        for(size_t i = 0; i < Link_vector.size(); i++) {
             std::cout << Link_vector[i].CString() << std::endl;
         }
     }

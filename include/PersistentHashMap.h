@@ -21,6 +21,9 @@
 #include "String.h"
 #include "PersistentBitVector.h"
 
+#ifndef O_NOATIME
+#define O_NOATIME 0
+#endif
 
 // Linear Probing thread-safe file backed hash map
 template <typename Key, typename Mapped>
@@ -73,7 +76,6 @@ private:
     void insertKeyValue(const ValueType& value);
     void noProbeNoRehashInsertKeyValueAtIndex(const ValueType &value, SizeType index);
 
-    // TODO: make this work
     void rehashAndGrow();
 
     bool rehashNeeded();
@@ -148,14 +150,14 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     bool fileExists = (stat(filename.CString(), &buffer) == 0);
 
     // open file with correct flags
-    int openFlags = O_RDWR;
+    int openFlags = O_RDWR | O_NOATIME;
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags);
+    fd = open(filename.CString(), openFlags, 0666);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
-        // TODO: more error handling
+        exit(1);
     }
 
     // mmap and setup the header portion
@@ -285,7 +287,6 @@ Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
     auto indexForKey = this->probeForExistingKey(key);
     if (indexForKey == this->header->capacity) {
         this->unlock();
-        // TODO: is this what we really want to do here?
         throw std::out_of_range("Key does not exist in hash map");
     }
     auto& rv = this->buckets[indexForKey].second;

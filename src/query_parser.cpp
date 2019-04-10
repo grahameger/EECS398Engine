@@ -1,21 +1,21 @@
-/*
- * parser.cpp
- *
- * Implementation of parser.h
- *
- */
+// /*
+//  * parser.cpp
+//  *
+//  * Implementation of parser.h
+//  *
+//  */
 
 #include "expression.h"
 #include "query_parser.h"
 
-/* <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
- *
- * <AndConstraint>  ::= <SimpleConstraint> { [ <AndOp> ] <SimpleConstraint> }
- *
- * <SimpleConstraint>  ::= <Phrase> | ‘(’ <OrConstraint> ‘)’| <UnaryOp> <SimpleConstraint> | <SearchWord>
- *
- * <Phrase>  ::= '"' { <SearchWord> } '"'
- */
+// /* <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
+//  *
+//  * <AndConstraint>  ::= <SimpleConstraint> { [ <AndOp> ] <SimpleConstraint> }
+//  *
+//  * <SimpleConstraint>  ::= <Phrase> | ‘(’ <OrConstraint> ‘)’| <UnaryOp> <SimpleConstraint> | <SearchWord>
+//  *
+//  * <Phrase>  ::= '"' { <SearchWord> } '"'
+//  */
 
 Expression *Parser::FindPhrase( )
 {
