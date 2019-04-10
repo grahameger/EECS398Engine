@@ -94,7 +94,9 @@ int LinkFinder::parse(char* html_file, size_t len) {
                     find_string(html_file, find, find, index, file_length);
             }
         }
-        (*index)++;
+        else {
+            (*index)++;
+        }
     }
     return 0;
 }
