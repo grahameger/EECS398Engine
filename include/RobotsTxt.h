@@ -10,7 +10,6 @@
 #include "threading.h"
 #include "String.h"
 #include "LRUCache.hpp"
-#include "threading.h"
 #include "DomainRules.h"
 #include "DirectoryRules.h"
 #include "http.h"
@@ -61,6 +60,8 @@ private:
    DirectoryRules *CreateDirectoryRules(char *directoryName, 
       vector<size_t> &childIndices, bool isAllowed, bool hasRule);
    void CreateDirectoryRuleTree(vector<DirectoryRules*> &rules);
+   string SerializedRulesPath;
+   void makeDir(const char *name);
 };
 
 #endif

@@ -74,3 +74,7 @@ DerivedData/
 *.app
 bin/engine
 test/parsed.urls
+
+# VIM
+.vimrc
+*.swp

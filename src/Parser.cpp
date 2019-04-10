@@ -1,3 +1,4 @@
+#include <cstring>
 #include "Parser.hpp"
 
 //default constructor
@@ -17,27 +18,7 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
 }
 
 
-int LinkFinder::parse(char* filename) {
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-        perror("file open");
-        return -1;
-    };
-    struct stat mystat = {};
-    if (fstat(fd, &mystat)) {
-        perror("fstat");
-        return -1;
-    };
-    off_t file_size = mystat.st_size;
-    char *html_file = (char*)mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (html_file == MAP_FAILED){
-        printf("mmap error\n");
-        return -1;
-    }
-    if (close(fd)==-1) {
-        printf("failed to close file (errno=%d)",errno);
-        return -1;
-    }
+int LinkFinder::parse(char* html_file) {
     long file_length = strlen(html_file);
     long num = 0;
     long *index = &num;
@@ -52,7 +33,7 @@ int LinkFinder::parse(char* filename) {
                         char find_low[] = "href=";
                         long reset_value = *index;
                         if(find_link(html_file, find_low, find_up, index, file_length)) {
-                            std::string link = "";
+                            String link;
                             while(html_file[*index] != ' ' && html_file[*index] != '>') {
                                 if(html_file[*index] != '"' && html_file[*index] != '\'') {
                                     link += html_file[*index];
@@ -105,7 +86,7 @@ int LinkFinder::parse(char* filename) {
                 case 't'  :
                     //found <t, if <title, get it
                     if(is_title(html_file, index, file_length)) {
-                        std::string type = "title";
+                        String type = "title";
                         get_words(html_file, index, file_length, type);
                     }
                     else {//was not <title, treat as ordinary tag
@@ -126,11 +107,10 @@ int LinkFinder::parse(char* filename) {
         }
         //grab the body text
         else {
-            std::string type = "body";
+            String type = "body";
             get_words(html_file, index, file_length, type);
         }
     }
-    std::cout << "This file contains " << word_count << " words!" << std::endl;
     return 0;
 }
 
@@ -209,20 +189,21 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
     return false;
 }
 
-void LinkFinder::get_words(char *html_file, long *index, long file_length, std::string type) {
+void LinkFinder::get_words(char *html_file, long *index, long file_length, String type) {
     while(*index < file_length && html_file[*index] != '<') {
         if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
-            std::string word = "";
+            String word;
             while(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
-                word += html_file[*index];
+                if(html_file[*index] != '"' && html_file[*index] != '(' && html_file[*index] != ')' && html_file[*index] != ',' && html_file[*index] != '.') {
+                    word += html_file[*index];
+                }
                 (*index)++;
             }
-            if(word.length() >= 2 || isalnum(word[0])) {
+            if(word.Size() >= 2) {
                 Index_object new_obj;
                 new_obj.word = word;
                 new_obj.type = type;//this is type
                 new_obj.position = word_count;
-                
                 Document_meta_data_list.push_back(new_obj);
                 word_count++;
             }
@@ -234,7 +215,7 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, std::
 }
 
 void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length, long stop_index) {
-    std::string type = "anchor";
+    String type = "anchor";
     //Skip over all inner tags until we hit a's closing tag
     while(*index < stop_index) {
         if(html_file[*index] == '<') {
@@ -397,39 +378,3 @@ bool LinkFinder::find_open_tag(char *html_file, long *index, long file_length) {
     }
     return false;//never get here
 }
-//------------------------------------------------------------------------------
-// ATOMICITY:
-// Choose a name for the temporary file.
-// Write the new content to a temporary file.
-// Flush the new content to disc.
-// Move the temporary file onto the original.
-//filename means pathname
-/*  char tmp_pathname[strlen(filename)+2];
- snprintf(tmp_pathname,sizeof(tmp_pathname),"%s~",filename);
- if (unlink(tmp_pathname)==-1) {
- if (errno!=ENOENT) {
- printf("failed to remove existing temporary file (errno=%d)",errno);
- return -1;
- }
- }
- mode_t default_mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
- fd = open(tmp_pathname,O_RDWR|O_CREAT|O_TRUNC,default_mode);
- if (fd==-1) {
- printf("failed to open new file for writing (errno=%d)",errno);
- return -1;
- }
- char *p = " ";
- write(fd, kko, length);
- if (fsync(fd)==-1) {
- printf("failed to flush new file content to disc (errno=%d)",errno);
- return -1;
- }
- if (close(fd)==-1) {
- printf("failed to close new file (errno=%d)",errno);
- return -1;
- }
- if (rename(tmp_pathname,filename)==-1) {
- printf("failed to move new file to final location (errno=%d)",errno);
- return -1;
- }
- */

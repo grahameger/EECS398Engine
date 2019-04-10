@@ -4,6 +4,7 @@ LINTER := astyle
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := src
 BUILDDIR := build
+TESTDIR := test
 TARGET := bin/engine
 
 SRCEXT := cpp
@@ -16,6 +17,11 @@ INC := -I include
 $(TARGET): $(OBJECTS)
 	@echo " Linking..."
 	@echo " $(CC) $^ -o $(TARGET) $(LIB)"; $(CC) $^ -o $(TARGET) $(LIB)
+
+$(BUILDDIR)/Test%.o: $(TESTDIR)/Test%.$(SRCEXT)
+	@mkdir -p $(BUILDDIR)
+	@echo " Making test "
+	@echo " $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<"; $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 	@mkdir -p $(BUILDDIR)
@@ -31,6 +37,11 @@ tester:
 
 robots:
 	$(CC) $(CFLAGS) test/RobotsTxtTest.cpp $(INC) $(LIB) -o bin/robots-test
+
+UTFOBJS := TestUtf8Numbers.o Utf8Numbers.o ByteStream.o String.o StringView.o
+utfnum: $(patsubst %,$(BUILDDIR)/%,$(UTFOBJS))
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/utfnum"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/utfnum
 
 # Spikes
 ticket:
