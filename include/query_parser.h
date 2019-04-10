@@ -20,7 +20,7 @@
 #define PARSER_H_
 
 #include "expression.h"
-#include "tokenstream.h"
+#include "query_tokenstream.h"
 
 /**
  * The actual expression parser

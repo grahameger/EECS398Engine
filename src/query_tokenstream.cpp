@@ -3,7 +3,6 @@
  *
  * Implementation of tokenstream.h
  *
- * Lab3: You do not have to modify this file, but you may choose to do so
  */
 
 #include <assert.h>
@@ -12,7 +11,7 @@
 
 #include <iostream>
 
-#include "tokenstream.h"
+#include "query_tokenstream.h"
 
 bool CharIsRelevant( char c )
 {
