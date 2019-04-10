@@ -62,6 +62,14 @@ int main( )
       cout << int1.GetValue( ) << endl;
       os3 << int1;
       cout << os3.HexString( ).CString( ) << endl << endl;
+
+      /* Uncomment to test the GetString( ) function
+       *
+      StringView sv = os3.GetString( );
+      for ( int i = 0; i < sv.Size( ); i++ )
+         cout << ( int ) ( ( unsigned char ) sv[ i ] ) << " ";
+      cout << "\n" << endl;
+      */
       }
 
    InputByteStream is4( numbers4, false );

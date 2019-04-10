@@ -38,7 +38,11 @@ OutputByteStream::~OutputByteStream( )
 const StringView OutputByteStream::GetString( ) const
    {
    int length = forwardStream ? byteNum : writing.Size( ) - byteNum;
-   return StringView( writing.CString( ), length, forwardStream );
+   const char* cString = writing.CString( );
+   if ( !forwardStream )
+      cString += byteNum;
+
+   return StringView( cString, length, forwardStream );
    }
 
 
