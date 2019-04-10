@@ -4,8 +4,8 @@
 #include <cassert>
 #include <thread>
 #include <mutex>
-#include "crawler.h"
-#include "PersistentHashMap.h"
+#include "index.h"
+#include "String.h"
 
 int main(int argc, char *argv[]) {
 
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 	// 	urls.push_back(line);
 	// }
 	// search::Crawler crawler(urls);
-
+   /*
 	PersistentBitVector v("testVector");
 	v.set(0, true);
 	v.set(15, true);
@@ -46,4 +46,7 @@ int main(int argc, char *argv[]) {
 		auto datum = map.at(i);
 		assert(datum == -1 * i);
 	}
+   */
+   String file = "index.bin";
+   Index index(file);
 }
