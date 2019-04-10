@@ -73,7 +73,6 @@ template <> struct Hash<char*>
 };
 
 
-
 int main(int argc, const char * argv[]) {
    static Hash<uint64_t> hasher;
    static Hash<char*> strHasher;
