@@ -6,7 +6,7 @@
  */
 
 #include "expression.h"
-#include "query_parser.h"
+#include "parser.h"
 
 /* <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
  *
@@ -19,13 +19,14 @@
 
 Expression *Parser::FindPhrase( )
 {
-    Expression *word = stream.parseWord();
+    Expression *word = FindSimple( );
     if( word ) {
         AddExpression *self = new AddExpression( );
         self->addTerm( word );
-        while((word = stream.parseWord())) {
+        while( ( !stream.Match( '"' ) && ( word = FindSimple( ) ))) {
             self->addTerm( word );
         }
+        stream.Reset_location();//if match matches, it eats up word so reset
         return self;
     }
     return nullptr;
@@ -90,7 +91,7 @@ Expression *Parser::FindSimple() {
         Expression *left = FindOr( );
         if ( left )
         {
-            OrExpression *self = new OrExpression( );
+            ParenthOrExpression *self = new ParenthOrExpression( );
             self->addTerm( left );
             if(!stream.Match(')')) {
                 return nullptr;//must be closing
@@ -102,7 +103,7 @@ Expression *Parser::FindSimple() {
         Expression *left = FindSimple( );
         if ( left )
         {
-            AddExpression *self = new AddExpression( );
+            SubExpression *self = new SubExpression( );
             self->addTerm( left );
             return self;
         }
@@ -128,6 +129,6 @@ bool Parser::fullParsed() {
 }
 
 Parser::Parser( const std::string &in ) :
-      stream( in )
-   {
-   }
+stream( in )
+{
+}
