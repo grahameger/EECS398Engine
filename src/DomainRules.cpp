@@ -122,6 +122,11 @@ Rule ReadNextRule( TokenStream& tokenStream )
 void DomainRules::WriteRulesToDisc(std::string& domain, string& RulesFolderPath) {
    string writePath = RulesFolderPath + "/" + domain;
 	FILE *file = fopen(writePath.c_str(), "w");
+   if(!file)
+      {
+      pritnf('Error writing robotstxt file to disc!');
+      throw(1);
+      }
 	root->SaveToFile(file);
 	fclose(file);
 }

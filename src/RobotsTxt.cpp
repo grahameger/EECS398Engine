@@ -43,10 +43,10 @@ void RobotsTxt::ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules)
        size_t dirNameInd = 0;
 
        while(curChar != ' ')
-       {
-       dirName[dirNameInd++] = curChar;
-       curChar = (char)fgetc(file);
-       }
+         {
+         dirName[dirNameInd++] = curChar;
+         curChar = (char)fgetc(file);
+         }
 
        dirName[dirNameInd] = 0;
        string dirNameStr(dirName);
