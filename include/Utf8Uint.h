@@ -50,13 +50,13 @@ class Utf8Uint
 
    friend PairUtf8Uint;
    friend InputByteStream& operator>> ( InputByteStream& byteStream, Utf8Uint& number );
-   friend OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number );
+   friend OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint number );
    };
 
 // Read in a Utf8Uint from a byteStream
 InputByteStream& operator>> ( InputByteStream& byteStream, Utf8Uint& number );
 
 // Write a Utf8Uint to a byteStream
-OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number );
+OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint number );
 
 #endif

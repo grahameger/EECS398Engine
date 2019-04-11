@@ -11,15 +11,15 @@
 class InputByteStream
    {
    public:
-      InputByteStream(const String& toRead, bool forwards = true);
+      InputByteStream(const StringView& toRead, bool forwards = true);
 
       const unsigned char GetNextByte();
 
       // TODO: Add Iterator like below for setting bit by bit
 
    private:
-      const String reading;
-      int byteNum;
+      const StringView reading;
+      unsigned byteNum;
       bool forwardStream;
 
    };
@@ -36,6 +36,8 @@ class OutputByteStream
       const StringView GetString( ) const;
       // For Debugging
       const String HexString( ) const;
+
+      unsigned Size( ) const;
 
       void AddByte( const unsigned char byte );
 
@@ -62,7 +64,7 @@ class OutputByteStream
 
    private:
       String writing;
-      int byteNum;
+      unsigned byteNum;
       bool forwardStream;
       BitIterator* currentIterator;
 

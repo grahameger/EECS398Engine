@@ -98,7 +98,7 @@ InputByteStream& operator>> ( InputByteStream& byteStream, PairUtf8Uint& number 
    }
 
 
-OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number )
+OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint number )
    {
    unsigned nonPreambleBytes = PrintPreambleBytes( byteStream, number.GetValue( ) );
    PrintNumberBytes( byteStream, number.GetValue( ), nonPreambleBytes );
@@ -106,7 +106,7 @@ OutputByteStream& operator<< ( OutputByteStream& byteStream, Utf8Uint& number )
    }
 
 
-OutputByteStream& operator<< ( OutputByteStream& byteStream, PairUtf8Uint& number )
+OutputByteStream& operator<< ( OutputByteStream& byteStream, PairUtf8Uint number )
    {
    // Add pair bit
    byteStream.GetBitIterator( ).AddBit( number.GetSecond( ) != 1 );
@@ -142,6 +142,7 @@ void PrintNumberBytes( OutputByteStream& byteStream, unsigned long long number,
    // If the rest of the preamble byte is just padding, flush it
    if ( remainder == 0 )
       bitIterator.Flush( );
+
    // Otherwise, put the remainder into the current byte
    else
       {

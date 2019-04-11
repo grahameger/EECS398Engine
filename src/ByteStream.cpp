@@ -1,7 +1,7 @@
 #include "ByteStream.h"
 
 
-InputByteStream::InputByteStream( const String& toRead, bool forwards )
+InputByteStream::InputByteStream( const StringView& toRead, bool forwards )
       : reading( toRead ), byteNum( 0 ), forwardStream( forwards )
    {
    if ( !forwardStream )
@@ -37,12 +37,17 @@ OutputByteStream::~OutputByteStream( )
 
 const StringView OutputByteStream::GetString( ) const
    {
-   int length = forwardStream ? byteNum : writing.Size( ) - byteNum;
-   const char* cString = writing.CString( );
+   char* cString = ( char* )writing.CString( );
    if ( !forwardStream )
-      cString += byteNum;
+      cString += byteNum + 1;
 
-   return StringView( cString, length, forwardStream );
+   return StringView( cString, Size( ), forwardStream );
+   }
+
+
+unsigned OutputByteStream::Size( ) const
+   {
+   return forwardStream ? byteNum : ( writing.Size( ) - byteNum );
    }
 
 
@@ -104,9 +109,9 @@ void OutputByteStream::AddByte( const unsigned char byte )
 
    writing[ byteNum ] = byte;
 
-   if ( forwardStream && ++byteNum == writing.Size( ) )
+   if ( forwardStream && ++byteNum == ( unsigned )writing.Size( ) )
       writing.Allocate( writing.Size( ) );
-   else if ( !forwardStream && --byteNum == -1 )
+   else if ( !forwardStream && byteNum-- == 0 )
       {
       byteNum = writing.Size( );
       writing.Allocate( writing.Size( ), false );
