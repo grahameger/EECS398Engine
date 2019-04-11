@@ -19,7 +19,6 @@ static void sig_handler(int _)
 {
     (void)_;
     keep_running = 0;
-	fprintf(stdout, "%s", "Stop signal received, shutting down gracefully");
 }
 
 static const char startFile[] = "/data/crawl/seedlist.url";
@@ -27,7 +26,11 @@ static const char startFile[] = "/data/crawl/seedlist.url";
 int main(int argc, char *argv[]) {
 
 	// register our signal handler
-	signal(SIGINT, sig_handler);
+	struct sigaction sa;
+    memset( &sa, 0, sizeof(sa) );
+    sa.sa_handler = sig_handler;
+    sigfillset(&sa.sa_mask);
+    sigaction(SIGINT,&sa,NULL);
 
 
 	std::vector<std::string> urls;

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LRUCACHE_H_398
-#define LRUCACHE_H_398
+#ifndef LRUCACHE_CRAWLER_H_398
+#define LRUCACHE_CRAWLER_H_398
 
 #include <unordered_map>
 #include <list>
@@ -8,10 +8,10 @@ using std::list;
 using std::unordered_map;
 
 template <class Key, class Value>
-class LRUCache
+class LRUCacheCrawler
 {
 public:
-	LRUCache(size_t capacityIn, bool valueIsDynamicallyAllocated= false);
+	LRUCacheCrawler(size_t capacityIn, bool valueIsDynamicallyAllocated= false);
 	Value get(Key &key);
 	void put(Key &key, Value &val);
 	void clear();
@@ -28,18 +28,18 @@ private:
 
 //implementation
 template <class Key, class Value>
-void LRUCache<Key, Value>::clear()
+void LRUCacheCrawler<Key, Value>::clear()
 {
 	while(!Cache.empty())
 	   EvictLRU();
 }
 
 template <class Key, class Value>
-LRUCache<Key, Value>::LRUCache(size_t capacity, bool valueIsDynamicallyAllocated)
+LRUCacheCrawler<Key, Value>::LRUCacheCrawler(size_t capacity, bool valueIsDynamicallyAllocated)
 	: Capacity(capacity), ValueIsDynamicallyAllocated(valueIsDynamicallyAllocated) {}
 
 template <class Key, class Value>
-void LRUCache<Key, Value>::EvictLRU()
+void LRUCacheCrawler<Key, Value>::EvictLRU()
 {
 	Key *lruKey = &LRUQueue.front();
 
@@ -59,7 +59,7 @@ void LRUCache<Key, Value>::EvictLRU()
 }
 
 template <class Key, class Value>
-void LRUCache<Key, Value>::ChangeToMostRecentlyUsed(Key &key)
+void LRUCacheCrawler<Key, Value>::ChangeToMostRecentlyUsed(Key &key)
 {
 	if(LRUQueueKeyPositions.find(key) != LRUQueueKeyPositions.end())
 	{
@@ -75,7 +75,7 @@ void LRUCache<Key, Value>::ChangeToMostRecentlyUsed(Key &key)
 }
 
 template <class Key, class Value>
-Value LRUCache<Key, Value>::get(Key &key)
+Value LRUCacheCrawler<Key, Value>::get(Key &key)
 {	
 	if(Cache.find(key) == Cache.end()) throw 1; //key not in cache
 	
@@ -84,7 +84,7 @@ Value LRUCache<Key, Value>::get(Key &key)
 }
 
 template <class Key, class Value>
-void LRUCache<Key, Value>::put(Key &key, Value &val)
+void LRUCacheCrawler<Key, Value>::put(Key &key, Value &val)
 {
 	Cache[key] = val;
 	ChangeToMostRecentlyUsed(key);

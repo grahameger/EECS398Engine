@@ -59,8 +59,8 @@ public:
    Iterator GetFront( );
    Iterator GetBack( );
 
-   T&& RemoveFront( );
-   T&& RemoveBack( );
+   T RemoveFront( );
+   T RemoveBack( );
 
 
 private:

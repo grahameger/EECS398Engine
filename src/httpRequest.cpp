@@ -20,6 +20,7 @@ namespace search {
     // Bad urls will copy the empty request but will not
     // run a bunch of std::string constructors.
     HTTPRequest::HTTPRequest(std::string url) {
+        url.erase(remove_if(url.begin(), url.end(), isspace), url.end());
         // check mailto
         if (url.size() >= 6 && 
             url[0] == 'm' && url[1] == 'a' && url[2] == 'i' &&

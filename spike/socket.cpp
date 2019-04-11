@@ -62,7 +62,6 @@ namespace search {
             }
             host = fdsi.ssi_ptr; // the pointer passed to the sigevent structure
             // the rest is in the host->ar_result member
-            
         }
     }
 

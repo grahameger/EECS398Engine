@@ -13,7 +13,7 @@ RobotsTxt::RobotsTxt()
 
 RobotsTxt::~RobotsTxt()
    {
-   domainRulesCache.clear();
+   //domainRulesCache.clear();
    }
 
 void RobotsTxt::SubmitRobotsTxt(string &domain, string &pathOnDisc)

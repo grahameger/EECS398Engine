@@ -184,6 +184,7 @@ namespace search {
         std::vector<std::string> s;
         s.resize(NUM_CRAWLER_THREADS);
         readyQueue.push(s);
+        fprintf(stdout, "%s", "Stop signal received, shutting down gracefully\n");
         return nullptr;
     }
 
