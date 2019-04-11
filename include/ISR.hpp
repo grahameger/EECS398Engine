@@ -9,80 +9,56 @@
 #ifndef constraint_solver_hpp
 #define constraint_solver_hpp
 #include <stdio.h>
-#include <string>
+#include "string.h"
+#include "index.hpp"
 
-class WordAttributes{
-    //Constructor
-    WordAttributes(std::string input);
-    //Member variable
-    std::string word;
-};
-class DocumentAttributes{
-    //Constructor
-    DocumentAttributes(int docNum);
-    int docID;
-};
 
 typedef size_t Location;
 typedef size_t FileOffset;
-typedef union Attributes {
-    DocumentAttributes document;
-    WordAttributes word;
+
+
+class WordAttributes{
+    String word;
+    bool isBold;
+    bool isItalicized;
+    bool isHighlighted;
+    bool isTitle;
 };
 
-//Gets rid of circular dependencies
-class Post;
+class DocumentAttributes{
+    int docID;
+    int docLength;
+    int numWords;
+    String url;
+};
 
-class ISR{
-    public:
-    ISR* DocumentEnd;
+class ISRWord{
+public:
+    //Vector of strings for separated queries
+    Vector<String> queries;
+    Vector<String> parseQuery(String &query);
+    enum ISRType{ word, orr, aand, phrase };
+    ISRType isrType;
+    ISRWord (String &query){
+        parseQuery(query);
+    }
+    ISRWord* DocumentEnd;
     virtual Post* next();
     virtual Post* nextDocument();
     virtual Post* seek(Location target);
     virtual Location getStartLocation();
     virtual Location getEndLocation();
-    virtual ISR* getDocumentISR();
-};
-
-class ISREndDoc : public ISR {
-    FileOffset docEnd;
-    FileOffset docBegin;
-};
-
-class ISRContainer : public ISR {
-public:
-    ISR** contained, excluded;
-    ISREndDoc* endDoc;
-    unsigned countContained, countExcluded;
-    //Location Next();
-    Post* seek(Location target);
-    Post* next();
-private:
-    unsigned nearestTerm, farthestTerm;
-    Location nearestStartLocation, nearestEndLocation;
-};
-
-class ISRWord : public ISR{
-public:
+    virtual ISRWord* getDocumentISR();
+    String word;
     unsigned getDocumentCount();
     unsigned getNumberOfOccurences();
-    virtual Post* getCurrentPost();
+    Post* getCurrentPost();
 };
 
-class ISRPhrase : public ISR{
-public:
-    ISR** terms;
-    unsigned numOfTerms;
-    Post* seek(Location target);
-    Post* next();
-private:
-    unsigned nearestTerm, farthestTerm;
-    Location nearestStartLocation, nearestEndLocation;
-};
 
-class ISROr : public ISR{
+class ISROr : public ISRWord{
 public:
-    ISR** terms;
+    ISRWord** terms;
     unsigned numOfTerms;
     Location getStartLocation();
     Location getEndLocation();
@@ -94,7 +70,7 @@ private:
     Location nearestStartLocation, nearestEndLocation;
 };
 
-class ISRAnd : public ISR{
+class ISRAnd : public ISRWord{
 public:
     ISR** terms;
     unsigned numOfTerms;
@@ -105,47 +81,34 @@ private:
     Location nearestStartLocation, nearestEndLocation;
 };
 
-//ALL CLASSES BELOW ARE TEMP CLASSES UNTIL INDEX IS FINISHED
-
-//Temp post class
-class Post {
+class ISRPhrase : public ISRWord{
 public:
-    virtual Location getStartLocation();
-    virtual Location getEndLocation();
-    virtual Attributes getAttributes();
-    virtual Post *next();
-    virtual ISR *getISR();
-};
-
-//Temp dictionary class
-class Dictionary {
-public:
-    ISR* openISR(char* token);
-    Location getNumberOfWords();
-    Location getNumberOfUniqueWords();
-    Location getNumberOfDocuments();
-};
-
-//Temp postinglist class
-class PostingList{
-public:
-    virtual Post* Seek(Location);
+    ISRWord** terms;
+    unsigned numOfTerms;
+    Post* seek(Location target);
+    Post* next();
 private:
-    struct PostingListIndex{
-        FileOffset offset;
-        Location postLocation;
-    };
-    PostingListIndex* index;
-    virtual char* getPostingList();
+    unsigned nearestTerm, farthestTerm;
+    Location nearestStartLocation, nearestEndLocation;
 };
 
-//Temp index class
-class Index{
+class ISREndDoc : public ISRWord {
+    FileOffset docEnd;
+    FileOffset docBegin;
+};
+
+//Advanced feature, may implement later
+class ISRContainer : public ISRWord {
 public:
-    Location WordsInIndex, DocumentsInIndex, LocationsInIndex, MaximumLocation;
-    ISRWord* OpenISRWord(char*word);
-    ISRWord* OpenISREndDoc();
+    ISR** contained, excluded;
+    ISREndDoc* endDoc;
+    unsigned countContained, countExcluded;
+    //Location Next();
+    Post* seek(Location target);
+    Post* next();
+private:
+    unsigned nearestTerm, farthestTerm;
+    Location nearestStartLocation, nearestEndLocation;
 };
-
 
 #endif /* constraint_solver_hpp */
