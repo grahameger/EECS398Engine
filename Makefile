@@ -18,7 +18,7 @@ $(TARGET): $(OBJECTS)
 	@echo " Linking..."
 	@echo " $(CC) $^ -o $(TARGET) $(LIB)"; $(CC) $^ -o $(TARGET) $(LIB)
 
-$(BUILDDIR)/Test%.o: $(TESTDIR)/Test%.$(SRCEXT)
+$(BUILDDIR)/Test%.o: $(TESTDIR)/%.$(SRCEXT)
 	@mkdir -p $(BUILDDIR)
 	@echo " Making test "
 	@echo " $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<"; $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<
@@ -29,7 +29,7 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 
 clean:
 	@echo " Cleaning..."; 
-	@echo " $(RM) -r $(BUILDDIR) $(TARGET)"; $(RM) -r $(BUILDDIR) $(TARGET); $(RM) -r wd; mkdir wd;
+	@echo " $(RM) -r $(BUILDDIR) bin/*"; $(RM) -r $(BUILDDIR) bin/*; $(RM) -r wd; mkdir wd;
 
 # Tests
 tester:
@@ -42,6 +42,11 @@ UTFOBJS := TestUtf8Numbers.o Utf8Numbers.o ByteStream.o String.o StringView.o
 utfnum: $(patsubst %,$(BUILDDIR)/%,$(UTFOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/utfnum"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/utfnum
+
+POSTINGOBJS := TestPostingList.o Utf8Numbers.o ByteStream.o StringView.o String.o PostingList.o
+posting: $(patsubst %,$(BUILDDIR)/%,$(POSTINGOBJS))
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/posting"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/posting
 
 # Spikes
 ticket:
