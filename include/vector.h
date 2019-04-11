@@ -65,7 +65,7 @@ public:
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    const T& operator[](size_t index);
+    T& operator[](size_t index);
     
     //EFFECTS:  Returns the number of elements of this IntVector.
     size_t size() const;
@@ -155,7 +155,7 @@ const size_t &Vector<T>::at(size_t index) const {
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-const T& Vector<T>::operator[] (size_t index) {
+T& Vector<T>::operator[] (size_t index) {
     return elements[index];
 }
 

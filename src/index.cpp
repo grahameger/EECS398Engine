@@ -1,0 +1,472 @@
+#include "index.h"
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+Index::Index(String filename)
+   :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), currentBlocks(numOfPostingSizes) {
+
+
+
+   fd = open(filename.CString(), O_RDWR | O_CREAT);
+   if(fd == -1){
+
+	}
+	//start with 1026 blocks, 0-1023 are dictionary
+	//0 is disk backed variables
+	//1 is page end block
+	//2 is list of urls
+	//3 is the first block for holding posting lists
+	if(ftruncate(fd, numBlocks*blockSize) == -1){
+
+	}
+	currentBlocks[0] = locationPair(3,0);
+   for(int i = 0; i<1000; i++){
+      threading::ReadWriteLock* lock = new threading::ReadWriteLock;
+      locks.push_back(lock);
+   }
+}
+
+Index::~Index(){
+   for(int i = 0 ; i < locks.size(); i++){
+      delete locks[i];
+   }
+}
+
+	void Index::newDoc(String url){
+		//add page end
+		//add url to url list
+		//put page metadata in url list
+
+		//design of page end block:
+			//offset to index
+			//posts
+			//empty space
+			//index
+			//pointer to next block, 0 if this block is not full
+
+		//design of url list
+			//offset to index
+			//urls with metadata
+			//empty space
+			//index **this index will always include offset and docId of final url**
+			//int that holds location of next block, 0 if this block is not full
+
+		//step 1 find real location of previous doc end
+		//step 2 delta = current location - previous doc end location
+		//step 3 update index if necessary
+		//step 4 current locaiton++
+		//step 5 find location to place url+metadata
+		//step 6 update url block index
+      locks[pageEndBlock]->writeLock();
+      char* buf = new char[blockSize];
+      readBlock(buf, pageEndBlock);
+		//get newest url block
+      int blockNum = followPointer(buf, pageEndBlock);
+
+		int indexPointer;
+		memcpy(&indexPointer, buf, sizeof(int));
+
+
+      //need the location in utf8 form for the index
+		//String utf8Location = utf8(currentLocation);
+		
+      //read in the index, if pointer==0 create a new index
+      PostingListIndex index = indexPointer == 0 ? PostingListIndex(currentLocation) : PostingListIndex(buf, blockSize-1-sizeof(int) ,indexPointer);
+		//find offset and real location of most recently added page
+		//index.findNewestPost();
+		int delta = currentLocation - index.largestLocation();
+		//convert delta to utf8 for saving
+		String utf8Delta = utf8(delta);
+      //add new delta this must be done before index.update
+      memcpy(buf + index.nextOpenChar(), utf8Delta.CString(), utf8Delta.Size());
+		//check if there is space to add page end
+		index.update(currentLocation, index.nextOpenChar(), utf8Delta.Size());
+		if(utf8Delta.Size() + index.nextOpenChar() > index.pointer(blockSize, true)){
+			//not enough space, need to move to next block
+			char* pointerWriter[sizeof(int)];
+			nextBlockLock.lock();
+         int nextBlock = incrementNextEmptyBlock();
+			nextBlockLock.unlock();
+			//need to convert nextEmptyBlock to a cstring to write it
+         memcpy(pointerWriter, &nextBlock, sizeof(int));
+         //update block pointer, buf was fucked up by memcpying the delta when it didnt fit, so I use pointer writer
+         writeLocation((char*)pointerWriter, blockNum, blockSize - 1 - sizeof(int), sizeof(int));		
+         //locks[blockNum] is write locked by followPointer()
+         locks[blockNum]->unlock();
+
+         //create a new url block
+         locks[nextBlock]->writeLock();
+         readBlock(buf, nextBlock);
+         PostingListIndex newIndex = PostingListIndex(currentLocation);
+         //last byte in block is blockSize-1, first byte of blockPointer is that - sizeof(int), first block of index is that - index.size()
+         indexPointer = newIndex.pointer(blockSize, true);
+         //update indexPointer
+         memcpy(buf, &indexPointer, sizeof(int));
+         //put in first delta 
+         memcpy(buf + sizeof(int), utf8Delta.CString(), utf8Delta.Size());
+         //put in index
+         memcpy(buf + indexPointer, newIndex.string().CString(), newIndex.size());
+         //save it
+         writeBlock(buf, nextBlock);
+         locks[nextBlock]->unlock();
+		}
+		else{
+         //update index pointer
+         indexPointer = index.pointer(blockSize, true);
+         memcpy(buf, &indexPointer, sizeof(int));
+         //update index
+         memcpy(buf + indexPointer, index.string().CString(), index.size());
+			
+			//save the block
+         writeBlock(buf, blockNum);
+         locks[blockNum]->unlock();
+		}
+		currentLocation++;
+		//this concludes the page end portion of newDoc()
+		locks[urlBlock]->writeLock();
+      readBlock(buf, urlBlock);
+      //get newest url block
+		blockNum = followPointer(buf, urlBlock);
+
+		memcpy(&indexPointer, buf, sizeof(int)); 
+		//is url passed as utf8?
+		String utf8Url = urlAndDataToUtf8(url);
+		PostingListIndex urlIndex = indexPointer == 0 ? PostingListIndex(currentDocId, utf8Url) : PostingListIndex(buf, blockSize-1-sizeof(int) ,indexPointer);
+      //add new url
+      memcpy(buf + urlIndex.nextOpenChar(), utf8Url.CString(), utf8Url.Size());
+		//url fits in this block
+		urlIndex.update(currentDocId, urlIndex.nextOpenChar(), utf8Url.Size());
+		if(utf8Url.Size() + index.nextOpenChar() > urlIndex.pointer(blockSize, true)){
+			//not enough space in current block, must make a new one
+			char* pointerWriter[sizeof(int)];
+			nextBlockLock.lock();
+         int nextBlock = incrementNextEmptyBlock();
+			nextBlockLock.unlock();
+			memcpy(pointerWriter, &nextBlock, sizeof(int));
+			//write pointer to new block in current block
+         writeLocation((char*)pointerWriter, blockNum, blockSize - 1 - sizeof(int), sizeof(int));		
+			locks[blockNum]->unlock();
+
+
+         locks[nextBlock]->writeLock();
+         readBlock(buf, nextBlock);
+         PostingListIndex newIndex = PostingListIndex(currentDocId, utf8Url);
+         //update index pointer
+         indexPointer = urlIndex.pointer(blockSize, true);
+         memcpy(buf, &indexPointer, sizeof(int));
+         //add new url
+         memcpy(buf + sizeof(int), utf8Url.CString(), utf8Url.Size());
+      	//update index
+      	memcpy(buf + indexPointer, newIndex.string().CString(), newIndex.size());
+         writeBlock(buf, nextBlock);
+		   locks[nextBlock]->unlock();
+		}
+		else{
+         //already added url
+         //update index pointer
+         indexPointer = urlIndex.pointer(blockSize, true);
+         memcpy(buf, &indexPointer, sizeof(int));
+      	//update index
+      	memcpy(buf + indexPointer , urlIndex.string().CString(), urlIndex.size());
+         writeBlock(buf, blockNum);
+		   locks[blockNum]->unlock();
+      }
+		currentDocId++;
+		delete[] buf;		
+	}
+
+void Index::addWord(String word, String wordData){
+   //adds a word to the index
+   //
+   //design of posting list block
+   //    int block size
+   //    int index pointer
+   //    utf8 posting lists
+   //    empty space
+   //    utf8 word index
+   //
+   //step 1 find block that contains word's posting list
+   //step 2 read that block and index
+   //step 3 if the word already has a posting list attempt to add the delta to the posting list
+   //    check if there is space in the posting list
+   //    if there is space put the delta in, update the posting list index, update the index pointer, save the block
+   //    if there is not space the posting list needs to be migrated to a block with bigger posting list
+   //       find the block with next largest posting list size
+   //       put current posting list in it, update word index and index pointer in new block
+   //       add delta and update posting list index and index pointer
+   //       attempt to migrate a posting list from current block of that posting list size to block that posting lsit was removed from
+   //       if a posting list that fits is found make sure to update word index and index pointer
+   //if the word does not have a posting list attempt to create one
+   //    check if there is space
+   //    if there is space update the word index and index pointer, create posting list
+   //    if there is not space change current block of that size to next empty block
+   //       initaite block with block size at location 0, create word's posting list in first posting list location
+   //       update index and index pointer
+   //
+   //
+   //locking done in findWordBlock()
+	locationPair pair = map[word];
+   char* buf = new char[blockSize];
+   if(pair.blockNum == 0){
+      //word not in map
+      currentBlocksLock.lock();
+	   //make sure we didnt get data raced
+      if(pair.blockNum == 0){
+         //posting list doesn't exist, must be created
+         pair = locationPair(currentBlocks[0]);
+         //copy constructor changes mapped struct value too
+         nextPostingListBlock(postingBlockSizes[0]);
+      }
+      currentBlocksLock.unlock();
+      //save block size
+      writeLocation((char*)&postingBlockSizes[0], pair.blockNum, 0, sizeof(int));
+   }
+   locks[pair.blockNum]->writeLock();
+   readBlock(buf, pair.blockNum);
+   int listSize;
+   memcpy(&listSize, buf, sizeof(int));
+   int offset = pair.offset + sizeof(int);
+   PostingList pList = PostingList(buf, offset, listSize);
+   if(pList.update(word) == 1){
+      //fits
+      writeLocation(pList.string().CString(), pair.blockNum, offset, listSize);
+
+   }
+   else{
+      //doesnt fit
+      currentBlocksLock.lock();
+
+      currentBlocksLock.unlock();
+   }
+
+   locks[pair.blockNum]->unlock();
+
+/*
+   int blockNum, offset;
+   memcpy(&blockNum, pair, sizeof(int));
+   memcpy(&offset, pair + sizeof(int), sizeof(int));
+   char* buf = new char[blockSize];   
+   locks[blockNum].writeLock();
+   readBlock(buf, blockNum);
+   int listSize;
+   memcpy(&listSize, buf, sizeof(int));
+   //memcpy(buf + sizeof(int), &indexPointer, sizeof(int));
+   //WordIndex index = indexPointer == 0 ? WordIndex(word) : WordIndex(buf, blocksize-1, indexPointer);
+   //int offset = index.findWord(word);
+   //posting list found
+   //check if posting list can be expanded, if not move it to a bigger list size
+   if(pList.update(currentLocation) == 0){
+      //updated posting list fits in its block
+      writeLocation(pList.String().CString(), blockNum, offset, listSize);
+      locks[blockNum].unlock();
+      //EZ
+   }
+   else{
+      //find a posting list to move into list block that is being left
+      locks[blockNum].unlock();
+      currentBlocksLock.lock();
+      for(int i = 0; i < numOfPostingSizes; i++){
+         if(postingBlockSizes[i] == listSize){
+            locks[currentBlocks[i]].writeLock();
+         }
+      }
+      currentBlocksLock.unlock();
+      
+      //posting list needs to be moved to new block
+      int* pair2 = nextBiggerPostingListBlock(listSize, word);
+
+
+      memcpy(&blockNum, pair2, sizeof(int));
+      memcpy(&offset, pair2 + sizeof(int), sizeof(int));
+      writeLocation(pList.String().CString(), blockNum, offset, pList.length());
+   }*/
+   //currentLocation++ in update()
+   delete[] buf;
+}
+
+
+int Index::hash(String word){
+
+}
+
+int Index::hash2(String word){
+
+}
+
+int Index::incrementNextEmptyBlock(){
+   if(nextEmptyBlock == numBlocks - 1){
+		numBlocks *= 2;
+		if(ftruncate(fd, numBlocks*blockSize) == -1){
+
+		}
+		for(int i = 0; i < numBlocks / 2; i++){
+         threading::ReadWriteLock* lock = new threading::ReadWriteLock;
+         locks.push_back(lock);
+      }
+	}
+	//return nextEmptyBlock then increment
+   return nextEmptyBlock++;
+}
+
+int Index::nextPostingListBlock(int listSize){
+
+}
+
+void Index::readBlock(char* buf, int blockNum){
+   if(lseek(fd, blockNum*blockSize, SEEK_SET) == -1){
+
+   }
+   if(read(fd, buf, blockSize)){
+
+   }
+}
+
+void Index::writeBlock(char* buf, int blockNum){
+   if(lseek(fd, blockNum*blockSize, SEEK_SET) == -1){
+
+   }
+   if(write(fd, buf, blockSize)){
+
+   }
+}
+
+void Index::readLocation(char* buf, int blockNum, int offset, int length){
+   if(lseek(fd, blockNum*blockSize + offset, SEEK_SET) == -1){
+
+   }
+   if(read(fd, buf, length)){
+
+   }
+}
+
+void Index::writeLocation(char* buf, int blockNum, int offset, int length){
+   if(lseek(fd, blockNum*blockSize + offset, SEEK_SET) == -1){
+
+   }
+   if(write(fd, buf, length)){
+
+   }
+}
+
+void Index::writeLocation(const char* buf, int blockNum, int offset, int length){
+   if(lseek(fd, blockNum*blockSize + offset, SEEK_SET) == -1){
+
+   }
+   if(write(fd, buf, length)){
+
+   }
+}
+
+int Index::followPointer(char* buf, int blockNum){
+   int pointer = 0;
+   memcpy(&pointer, buf + blockSize - 5, sizeof(int));
+   while( pointer != 0){
+      locks[blockNum]->unlock();
+      blockNum = pointer;
+      locks[blockNum]->writeLock();
+      readBlock(buf, blockNum);
+      memcpy(&pointer, buf + blockSize - 5, sizeof(int));
+   }
+   return blockNum;
+}
+/*
+WordIndex::WordIndex(char* buf, int startOffset, int endOffset){
+
+}
+
+WordIndex::WordIndex(String Word){
+
+}
+
+int WordInex::findWord(String word){
+   //returns offset to start of this words posting list
+
+}
+
+void WordIndex::update(String word, int offset){
+
+}
+*/
+PostingList::PostingList(char* buf,int startOffset, int listLength)
+   : listLength(listLength), index(buf, (long)buf + listLength,*(int*)(buf + startOffset)) {
+   
+
+}
+
+int PostingList::update(int location){
+   int offset = index.nextOpenChar();
+   int largestLocation = index.largestLocation();
+   int delta  = location - largestLocation;
+   String utf8Delta = utf8(delta);
+   index.update(location, offset, utf8Delta.Size());
+   int indexPointer = index.pointer(listLength, false);
+   if(offset + utf8Delta.Size() > indexPointer){
+      //need to grow the posting list
+      listLength *= 2;
+      char* buf = new char[listLength];
+      memcpy(buf, pList.CString(), offset);
+      indexPointer = index.pointer(listLength, false);
+      memcpy(buf, &indexPointer, sizeof(int));
+      memcpy(buf + offset, utf8Delta.CString(), utf8Delta.Size());
+      memcpy(buf + indexPointer, index.string().CString(), index.size());
+      pList = String((const char*)buf);//might need to change string constructor
+      delete[] buf;
+      return 0;
+   }
+   //add on the index and update the index pointer
+   char* buf = new char[listLength];
+   memcpy(buf, pList.CString(), offset);
+   memcpy(buf, &indexPointer, sizeof(int));
+   memcpy(buf + offset, utf8Delta.CString(), utf8Delta.Size());
+   memcpy(buf + indexPointer, index.string().CString(), index.size());
+   pList = String((const char*)buf);//might need to change string constructor
+   delete[] buf;
+   return 1;
+}
+
+
+
+int PostingList::length(){
+   return listLength;
+}
+
+PostingListIndex::PostingListIndex(char* buf, int startOffset, int endOffset)
+   :index(utf8(buf, startOffset, endOffset)){
+
+}
+
+PostingListIndex::PostingListIndex(int location){
+
+}
+
+PostingListIndex::PostingListIndex(int location, String url){
+
+}
+
+int PostingListIndex::largestLocation(){
+
+}
+
+int PostingListIndex::nextOpenChar(){
+
+}
+
+int PostingListIndex::size(){
+   return index.Size();
+}
+
+void PostingListIndex::update(int location, int offset, int length){
+
+}
+
+String PostingListIndex::string(){
+   return index;
+}
+//intOffset = true if there is an int afte rthe index in the positng list
+int PostingListIndex::pointer(int blockSize, bool intOffset){
+   return (intOffset ? blockSize - sizeof(int) - indexSize : blockSize - indexSize);
+
+}
+
+

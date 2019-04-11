@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iterator>
-
+#include <cassert>
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/mman.h>
