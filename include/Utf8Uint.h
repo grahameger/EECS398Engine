@@ -40,6 +40,7 @@ class Utf8Uint
    {
    public:
       Utf8Uint( );
+      Utf8Uint( unsigned long long value );
 
       const unsigned long long GetValue( ) const;
       void Reset( );
