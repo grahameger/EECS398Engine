@@ -4,6 +4,9 @@
 #include "PersistentHashMap.h"
 #include "Pair.h"
 #include "StringView.h"
+#include "PostingList.h"
+
+
 class Index{
 public:
 	Index(String filename);
@@ -16,10 +19,14 @@ private:
 
 	//returns blocks that contains word's posting list
 	//if posting list does not exist creates it, immediately updates blocks word index to hold this word
+	void threadDriver(void* notNeeded);
 	int* findWordBlock(String word);
 	int hash(String word);
 	int hash2(String word);
 	int incrementNextEmptyBlock();
+   //returns the block and sub block that the next posting list of size postingBlockSizes[index] will be moved into
+   //CALLS TO THIS MUST BE LOCKED WITH currentBlocksLock
+   locationPair getCurrentBlock(unsigned index);
    //changes currentBlocks to the next location for listSize
    int nextPostingListBlock(int listSize);
    //reading and writing functions
@@ -30,7 +37,18 @@ private:
    void writeLocation(const char* buf, int blockNum, int offset, int length);
    //input is char* of a block with int at the end which is a pointer, output is the same char* containing block with pointer = 0
    int followPointer(char* buf, int blockNum);
+   //returns the index of smallest posting list block that string of length byte size will fit in
+   unsigned int smallesFit(unsigned int byteSize);
 	//VARIABLES
+   priority_queue<wordLocations> queue;
+   struct wordLocations{
+      unsigned numWords;
+      String word;
+      vector <unsigned long long> locations;
+      wordLocations(wordLocations&& toMove)
+         :numWords(toMove.numWords), word(toMove.word), locations(toMove.locations){}
+   };
+   
 	struct locationPair{
       int blockNum;
       int offset;
@@ -52,10 +70,12 @@ private:
 	int nextEmptyBlock;
 	int numBlocks;
 	int currentDocId;
-   
+   bool doneReadingIn;
    //THREADING
+   vector<pthread_t> threads;
    Vector<threading::ReadWriteLock*> locks;
-	threading::Mutex nextBlockLock;
+	threading::Mutex queueLock;
+   threading::Mutex nextBlockLock;
    threading::Mutex currentBlocksLock;
    threading::Mutex mapLock;
    threading::Mutex currentLocationMutex;
@@ -64,7 +84,7 @@ private:
 		//not sure what we need here
 	};
 };
-
+/*
 class PostingListIndex{
    //this is the index contained in a posting list that contains offsets to posts
 public:
@@ -105,3 +125,5 @@ private:
    PostingListIndex index;
    int listLength;
 };
+*/
+

@@ -5,7 +5,7 @@
 #include "Utf8Uint.h"
 
 Index::Index(String filename)
-   :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), currentBlocks(numOfPostingSizes) {
+   :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), currentBlocks(numOfPostingSizes), threads(10), doneReadingIn(false) {
 
 
 
@@ -25,6 +25,9 @@ Index::Index(String filename)
    for(int i = 0; i<1000; i++){
       threading::ReadWriteLock* lock = new threading::ReadWriteLock;
       locks.push_back(lock);
+   }
+   for(unsigned i = 0; i < threads[i].size(); i++){
+      pthread_create(&threads[i], NULL, &index::threadDriver, (void*)0);
    }
 }
 
@@ -177,7 +180,20 @@ Index::~Index(){
 		delete[] buf;		
 	}
 
-void Index::addWord(String word, String wordData){
+void threadDriver(void* notNeeded){
+   //put them in a priority queue that holds wordLocations, sorted by numWords
+   //pop value from priority queue to addWord
+   wordLocations* locations;
+   while(!doneReadingIn){
+      queueLock.lock();
+      locations = &(queue.top());
+      addWord(locations);
+      //unlocked in addWord
+   }
+   
+}
+
+void Index::addWord(wordLocations* locationsToMove, int queueIndex){
    //adds a word to the index
    //
    //design of posting list block
@@ -207,7 +223,35 @@ void Index::addWord(String word, String wordData){
    //       update index and index pointer
    //
    //
-   //locking done in findWordBlock()
+   
+   //set being used in function that passes locations for concurrency
+
+   //now that locaitons is out of queue we remove the entry
+   wordLocations locations(std::move(*locationsToMove));
+   queue.remove(queueIndex);
+   queueLock.unlock();
+   ScheduleBlock sb = Scheduler::GetPostingList(locations->word);//write version?
+   PostingList postingList(sb.pl);
+   unsigned int beforeSizeIndex = smallestFit(postingList.GetByteSize());
+   for(unsigned i = 0; i < locations->numWords; i++){
+      postingList.AddPosting(locations->locations[i]);
+   }
+   if(smallestFit(postingList.GetByteSize()) - beforeSizeIndex == 0){
+      //it fits
+      postingList.UpdateInPlace();
+   }
+   else{
+      //doesn't fit
+      vector <PostingList> split = PostingList::Split(blockSize);
+      unsigned blockPointer = 0;
+      for(i = split.size() - 1; i > 0; i++){
+         blockPointer = Scheduler::GetBlock(split[i], blockPointer);
+      }
+      sb.sb.UpgradeBlock(split[0], blockPointer);
+      
+   }
+
+/*
 	locationPair pair = map[word];
    char* buf = new char[blockSize];
    if(pair.blockNum == 0){
@@ -244,7 +288,7 @@ void Index::addWord(String word, String wordData){
 
    locks[pair.blockNum]->unlock();
 
-/*
+
    int blockNum, offset;
    memcpy(&blockNum, pair, sizeof(int));
    memcpy(&offset, pair + sizeof(int), sizeof(int));
@@ -283,8 +327,6 @@ void Index::addWord(String word, String wordData){
       memcpy(&offset, pair2 + sizeof(int), sizeof(int));
       writeLocation(pList.String().CString(), blockNum, offset, pList.length());
    }*/
-   //currentLocation++ in update()
-   delete[] buf;
 }
 
 
@@ -389,7 +431,7 @@ int WordInex::findWord(String word){
 void WordIndex::update(String word, int offset){
 
 }
-*/
+
 PostingList::PostingList(int fd, int startOffset, int listLength)
    : posts(nullptr,0), listLength(listLength) {
    char* mapped =(char*)mmapWrapper(fd, listLength, startOffset);
@@ -478,14 +520,14 @@ void PostingListIndex::update(unsigned long long location, int offset, int lengt
    unsigned int pairPointer = *(unsigned int*)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long));
    
    // TODO: Better
-   InputByteStream ibs( StringView( index.CString() + pairPointer, 24 ) );
+   InputByteStream ibs( String( index.CString() + pairPointer, 24 ) );
    Utf8Uint pairOffset, pairLocation;
    ibs >> pairOffset >> pairLocation;
-
+   unsigned long long longOffset = (unsigned long long) offset;
    if(location >> 16 > pairLocation.GetValue() >> 16){
       //making a new pair
       OutputByteStream obs;
-      obs << Utf8Uint(offset) << Utf8Uint(location);
+      obs << Utf8Uint(longOffset) << Utf8Uint(location);
       index += String(obs.GetString().GetCString());
       pairPointer += obs.GetString().Size();
       *(unsigned int*)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long)) = pairPointer;
@@ -503,4 +545,4 @@ int PostingListIndex::pointer(int blockSize){
 
 }
 
-
+*/
