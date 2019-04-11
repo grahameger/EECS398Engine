@@ -22,6 +22,9 @@ int GetUnaryPreamble( InputByteStream& byteStream,
 Utf8Uint::Utf8Uint( ) : value( 0 )
    { }
 
+Utf8Uint::Utf8Uint( unsigned long long value ) : value( value )
+   { }
+
 PairUtf8Uint::PairUtf8Uint( ) : first( 0 ), second( )
    { }
 
