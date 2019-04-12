@@ -19,7 +19,7 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
 
 
 int LinkFinder::parse(char* html_file, size_t len) {
-    long file_length = strlen(html_file);
+    long file_length = len;
     long num = 0;
     long *index = &num;
     while(*index < file_length) {//run until end of file

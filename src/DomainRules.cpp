@@ -123,7 +123,7 @@ void DomainRules::WriteRulesToDisc(std::string& domain, string& RulesFolderPath)
    {
    string writePath = RulesFolderPath + "/" + domain;
    FILE *file = nullptr;
-   for(int i = 0; i < 10, !file; ++i) //try to open file 10 times in case of disk busy
+   for(int i = 0; i < 10 && !file; ++i) //try to open file 10 times in case of disk busy
       {
       file = fopen(writePath.c_str(), "w");
       }

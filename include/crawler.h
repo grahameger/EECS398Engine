@@ -23,12 +23,12 @@
 #include <time.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <atomic>
 
 #include "RobotsTxt.h"
 #include "http.h"
 #include "threading.h"
 #include "BloomFilter.h"
-#include "File.h"
 
 class RobotsTxt;
 
@@ -66,9 +66,13 @@ namespace search {
         
         // when a page is really bad and we don't want to crawl it again, it meets the killFilter
         BloomFilter<std::string> killFilter; 
+        BloomFilter<std::string> pageFilter;
         static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
         std::map<std::string, std::set<std::string> > waitingForRobots;
         pthread_mutex_t waitingForRobotsLock;
+        std::atomic<size_t> numBytes;
+        std::atomic<size_t> numPages;
+        std::atomic<size_t> numRobots;
     };
 }
 

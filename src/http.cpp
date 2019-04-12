@@ -20,7 +20,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <zlib.h>
 #include <map>
 #include "Parser.hpp"
 
@@ -56,13 +55,6 @@ namespace search {
 
         // cross platform stuff
         signal(SIGPIPE, SIG_IGN);
-    }
-
-    // returns true if the given url has already been fetched
-    bool alreadyFetched(const std::string &url) {
-        auto filename = HTTPRequest(url).filename();
-        struct stat buffer;
-        return (stat (filename.c_str(), &buffer) == 0);
     }
 
     // returns a connected socket, -1 if error
@@ -397,22 +389,25 @@ namespace search {
                 free(fullResponse);
                 return;
             } else {
+                if (currentBufferSize == bytesReceived) {
+                    fullResponse = (char*)realloc(fullResponse, bytesReceived + 1);
+                    fullResponse[bytesReceived] = '\0';
+                }
                 process(fullResponse + headerSize, bytesReceived - headerSize, url);
             }
         }
 
-        // either going to write to a file or add another request to the queue
         // write it to a file
-        std::string filename = request.filename();
+        if (!writeToFile(request, fullResponse, bytesReceived, headerSize)) {
+            // don't need to free?
+            return;
+        }
+
         if (isARobotsRequest) {
-            std::ofstream outfile(filename);
-            outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
-            outfile.close();
-            free(fullResponse);
-            dprintf(logFd, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
+            auto filename = request.filename();
             robots->SubmitRobotsTxt(request.host, filename);
             robots->unlock();
             // move all the waiting pages to the readyQueue;
@@ -426,10 +421,79 @@ namespace search {
 	        // remove the iterator for the host from the map
             pthread_mutex_unlock(&crawler->waitingForRobotsLock);
             crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
+        }
+    }
+
+    // write an HTML file to disk
+    // we'll see if this segfaults :)
+    bool HTTPClient::writeToFile(const HTTPRequest& req, void * fullRespnose, size_t bytesReceived, size_t headerSize) {
+        const auto filename = req.filename();
+        int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0755);
+        for (size_t i = 0; i < 5; ++i) {
+            fd = open(filename.c_str(), O_RDWR | O_CREAT, 0755);
+            if (fd == -1) {
+                // check errno
+                switch (errno) {
+                    // all of these cases can't be retried, the rest can
+                    case EACCES:
+                    case EDQUOT:
+                    case EINTR:
+                    case EINVAL:
+                    case EISDIR:
+                    case ELOOP:
+                    case EMFILE:
+                    case ENAMETOOLONG:
+                    case ENFILE:
+                    free(fullRespnose);
+                    return false;
+                    default:
+                    continue;
+                }
+            } else {
+                break;
+            }
+        }
+        if (fd == -1) {
+            dprintf(logFd, "error opening file %s - %s", filename.c_str(), strerror(errno));
+            free(fullRespnose);
+            return false;
         } else {
-            // let's try out the file abstraction
-            dprintf(logFd, "wrote file %s\n", filename.c_str());
-            File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);
+            // write the file
+            ssize_t bytesWrote = 0;
+            const ssize_t bytesToWrite = bytesReceived - headerSize;
+            char * filePointer = (char*)fullRespnose + headerSize;
+            ssize_t rv = 0;
+            while (bytesWrote < bytesToWrite) {
+                rv = write(fd, filePointer + bytesWrote, bytesToWrite - bytesWrote);
+                if (rv > 0) {
+                    bytesWrote += rv;
+                } else if (rv == 0) {
+                    break;
+                } else if (rv < 0) {
+                    // destroy the file and return false
+                    remove(filename.c_str());
+                    close(fd);
+                    free(fullRespnose);
+                    return false;
+                }
+            }
+            if (bytesWrote != bytesToWrite) {
+                // destroy the file and return false
+                remove(filename.c_str());
+                close(fd);
+                free(fullRespnose);
+                return false;
+            }
+            close(fd);
+            crawler->pageFilter.add(filename);
+            crawler->numBytes += bytesWrote;
+            if (req.robots()) {
+                crawler->numRobots++;
+            } else {
+                crawler->numPages++;
+            }
+            dprintf(logFd, "wrote %s to disk.\n", filename.c_str());
+            return true;
         }
     }
 

@@ -1,4 +1,6 @@
 #include "httpRequest.h"
+#include <string>
+#include <sstream>
 
 namespace search {
 
@@ -18,9 +20,46 @@ namespace search {
     // not copied. Therefore it is faster than the heap
     // based version. 
     // Bad urls will copy the empty request but will not
-    // run a bunch of std::string constructors.
+    // run a bunch of std::string constructors
+
+
+    static std::string urlDecoder(const std::string& url) {
+        std::ostringstream decoded;
+        std::string hexBuffer = "00"; 
+        for (size_t i = 0; i < url.size(); ++i) {
+            if (url[i] == '%') {
+                if (url.size() < i + 3) {
+                    return url; // fail safeish
+                } else {
+                    try { // std::stoi can throw
+                        hexBuffer[0] = url[i + 1];
+                        hexBuffer[1] = url[i + 2];
+                        size_t decodedNum;     // convert the hex string to an ascii int then cast it to a char
+                        decoded << static_cast<char>(std::stoi(hexBuffer, &decodedNum, 16));
+                        // if we only decoded 1 number then there was an illegal sequence
+                        if (decodedNum < hexBuffer.size()) {
+                            return url;
+                        }
+                        // move out pointer forward
+                        i += 2;
+                    } catch (...) {
+                        return url;
+                    }
+                }
+            } else if (url[i] == '+') {
+                decoded << ' ';
+            } else {
+                decoded << url[i];
+            }
+        }
+        return decoded.str();
+    }
+
+
     HTTPRequest::HTTPRequest(std::string url) {
         url.erase(remove_if(url.begin(), url.end(), isspace), url.end());
+        // decode the url before we do anything else
+        url = urlDecoder(url);
         // check mailto
         if (url.size() >= 6 && 
             url[0] == 'm' && url[1] == 'a' && url[2] == 'i' &&
@@ -44,12 +83,17 @@ namespace search {
     // return value will either get optimized out or the compiler
     // will use the move constructor
     std::string HTTPRequest::filename() const {
-        std::string slashesRemoved;
         std::string rv;
         if (robots()) {
             return "robots/" + host;
         } else {
-            return uri();
+            std::string slashesRemoved = host + path;
+            for (size_t i = 0; i < slashesRemoved.size(); ++i) {
+                if (slashesRemoved[i] == '/' || slashesRemoved[i] == '\0') {
+                    slashesRemoved[i] = '_';
+                }
+            }
+            return "pages/" + slashesRemoved;
         }
     }
 

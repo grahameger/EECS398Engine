@@ -3,9 +3,10 @@
 // Abstraction for a File that lives within a Stream.
 // Necessary as to not create billions of .html files in our ext4 RAID5 volume.
 
-#include "File.h"
 #include <cstring>
+#include <cstddef>
 #include <cassert>
+#include "File.h"
 
 // load unaligned uint64_t from the pointer p
 static uint64_t load64LittleEndian(char const* p)

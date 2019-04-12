@@ -10,13 +10,31 @@
 
 #include "crawler.h"
 #include <dirent.h>
+#include <unistd.h>
 #include <ctime>
 
 extern volatile sig_atomic_t keep_running;
 
 namespace search {
 
-    Crawler::Crawler(const std::vector<std::string> &seedUrls) : killFilter(1000000000) {
+    Crawler::Crawler(const std::vector<std::string> &seedUrls) : killFilter(1000000000), pageFilter(1000000000) {
+        
+        // check if the size file exists
+        numBytes = 0;
+        numPages = 0;
+        numRobots = 0;
+        struct stat st = {0};
+        if (stat("stats", &st) == 0) {
+            std::ifstream stats("stats");
+            size_t bytes = 0, pages = 0, robots = 0;
+            stats >> bytes >> pages >> robots;
+            numBytes = bytes;
+            numPages = pages;
+            numRobots = robots;
+            remove("stats");
+        }
+        // grab our queue
+
 
         // get our HTTP client
         client = new HTTPClient(this);
@@ -28,6 +46,7 @@ namespace search {
 
         // make the robots and pages directory
         makeDir("robots");
+        makeDir("pages");
 
         // initialize our directory hierarchy for pages
         // !nah we're not doing this we're going to use ext4
@@ -39,10 +58,10 @@ namespace search {
         readyQueue.push(seedUrls);
 
         // when does this run?
+        pthread_create(&printThread, NULL, &Crawler::printHelper, this);
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
         }
-        pthread_create(&printThread, NULL, &Crawler::printHelper, this);
     }
 
     void makeDir(const char * name) {
@@ -58,18 +77,29 @@ namespace search {
         }
     }
 
-    inline bool Crawler::haveRobots(const std::string &host) {
-        struct stat st = {0};
-        auto path1 = std::string("robots/" + host);
-        auto path2 = std::string("robots/" + ("www." + host));
-        return (stat(path1.c_str(), &st) == 0 || stat(path2.c_str(), &st) == 0);    
+    bool Crawler::havePage(const HTTPRequest& req) {
+        auto filename = req.filename();
+        if (pageFilter.exists(req.filename())) {
+            // check the filesystem if the bloom filter tells us to
+            struct stat st = {0};
+            const char * cStr = filename.c_str();
+            return (stat(cStr, &st) == 0);
+        }
+        return false;
     }
 
-    bool Crawler::havePage(const HTTPRequest& req) {
-        std::string filename = req.filename();
-        const char * cStr = filename.c_str();
-        bool rv = File::find(cStr).exists();
-        return rv;
+    bool Crawler::haveRobots(const std::string &host) {
+        auto path1 = std::string("robots/" + host);
+        auto path2 = std::string("robots/" + ("www." + host)); // unfortunately the web sucks
+        struct stat st = {0};
+        if (pageFilter.exists(path1) && (stat(path1.c_str(), &st) == 0)) {
+            return true;
+        }
+        st = {0};
+        if (pageFilter.exists(path2) && (stat(path2.c_str(), &st) == 0)) {
+            return true;
+        }
+        return false;
     }
 
     bool Crawler::killedPage(const HTTPRequest& req) {
@@ -153,13 +183,14 @@ namespace search {
     void Crawler::print2(double &prevGiB) {
         time_t now = time(0);
         // size and number of files
-        auto sizeAndNumberOfFiles = File::totalSizeAndNumFiles();
-        size_t& number = sizeAndNumberOfFiles.second;
+        size_t pages = numPages;
+        size_t bytes = numBytes;
+        size_t robots = numRobots;
         const char * time = ctime(&now);
-        double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
+        double GiB = (double)bytes / 1073741824.0;
         double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
         size_t queueSize = readyQueue.size();
-        fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Files: %zu\nItems on Queue: %zu\n\n", time, GiB, rate, number, queueSize);
+        fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Pages: %zu\nTotal Robots: %zu \nItems on Queue: %zu\n\n", time, GiB, rate, pages, robots, queueSize);
         prevGiB = GiB;
     }
 
@@ -203,6 +234,10 @@ namespace search {
             pthread_join(threads[i], NULL);
             fprintf(stderr, "Thread %zu of %zu returned\n", i + 1, NUM_CRAWLER_THREADS);
         }
+        // delete and print the number of bytes and the number of pages to a file
+        std::ofstream stats("stats");
+        stats << numBytes << ' ' << numPages << ' ' << numRobots << '\n';
+        stats.close();
     }
 
     inline void Crawler::domainLock() {
