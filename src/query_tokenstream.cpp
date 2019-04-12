@@ -89,7 +89,12 @@ Phrase *TokenStream::parseWord( )
     string val = "";
     size_t start = location;
     bool parenth = true;
+    int k = 0;
     while(location < input.size() && CharIsRelevant(input[location]) && input[location] != ' ' && input[location] != '"' && input[location] != '&' && input[location] != '|') {
+        if(k == 0 && input[location] == ')') {
+            return nullptr;//
+        }
+        k++;
         if(is_char(input[location])) {
             val += tolower(input[location]);
         }
@@ -99,7 +104,7 @@ Phrase *TokenStream::parseWord( )
         location++;
     }
     
-    if(location == start) {
+    if(location == start) { //no word at all
         return nullptr;
     }
     
@@ -107,17 +112,17 @@ Phrase *TokenStream::parseWord( )
         parenth = false;
         location++;
     }
-    int i = 1;
+    int i = 1; //get all ) in a row )))))
     while(location + i < input.length() && input[location + i] == ')' && !parenth) {
         val += ')';
         i++;
     }
     parenth = false;
-    while(input[location] == ')') {
+    while(input[location] == ')') { //Find first ) in a series of ))))
         location--;
         parenth = true;
     }
-    if(parenth) {
+    if(parenth) {//increase pointer to ) so I can check if it's closed later
         location++;
     }
     while(location < input.size() && input[location] == ' ') {
