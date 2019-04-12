@@ -44,7 +44,7 @@ public:
     
     void print_meta_objects() {
         for(int i = 0; i < Document_meta_data_list.size(); i++) {
-            std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word.CString() << " : " << Document_meta_data_list[i].type.Cstring() << std::endl;
+            std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word.CString() << " : " << Document_meta_data_list[i].type.CString() << std::endl;
         }
     }
     

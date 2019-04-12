@@ -24,6 +24,7 @@ int LinkFinder::parse(char* html_file) {
     while(*index < file_length) {//run until end of file
         if(html_file[*index] == '<') {
             (*index)++;
+            
             switch(html_file[*index]) {
                 case 'A'  :
                 case 'a'  : //Link
@@ -63,7 +64,7 @@ int LinkFinder::parse(char* html_file) {
                         goto DEFAULT;
                     }
                     break;
-                    
+                   
                 case 'S'  :
                 case 's'  : //script/style Want to completely skip these
                     if(is_style(html_file, index, file_length)) {
@@ -100,7 +101,7 @@ int LinkFinder::parse(char* html_file) {
         }
         //Inside >...< and not script or style, so body. Get it.
         //ignore nothing
-        else if(html_file[*index] == '\n' || html_file[*index] == ' ' || html_file[*index] == '\t') {
+        else if(html_file[*index] == '\n' || html_file[*index] == ' ' || html_file[*index] == '\t' || html_file[*index] == '\r') {
             //do nothing
             (*index)++;
         }
@@ -134,9 +135,9 @@ bool LinkFinder::is_style(char *html_file, long *index, long file_length) {
             return true;
         }
         else if(html_file[*index] == 'S' && html_file[*index+1] == 'T' && html_file[*index+2] == 'Y' && html_file[*index+3] == 'L' && html_file[*index+4] == 'E') {
-            *index += 4;
-            return true;
-        }
+                *index += 4;
+                return true;
+            }
     }
     return false;
 }
@@ -167,7 +168,7 @@ void LinkFinder::find_string(char *html_file, char* find_lower, char* find_upper
         }
         (*index)++;
     }
-    return;
+        return;
 }
 
 bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, long *index, long file_length) {
@@ -190,21 +191,21 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
 
 void LinkFinder::get_words(char *html_file, long *index, long file_length, String type) {
     while(*index < file_length && html_file[*index] != '<') {
-        if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ') {
+        if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != '\r' && html_file[*index] != ' ') {
             String word;
-            while(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<') {
+            while(*index < file_length && html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<' && html_file[*index] != '\r') {
                 if(html_file[*index] != '"' && html_file[*index] != '(' && html_file[*index] != ')' && html_file[*index] != ',' && html_file[*index] != '.') {
                     word += html_file[*index];
                 }
                 (*index)++;
             }
             if(word.Size() >= 2) {
-                Index_object new_obj;
-                new_obj.word = word;
-                new_obj.type = type;//this is type
-                new_obj.position = word_count;
-                Document_meta_data_list.push_back(new_obj);
-                word_count++;
+            Index_object new_obj;
+            new_obj.word = word;
+            new_obj.type = type;//this is type
+            new_obj.position = word_count;
+            Document_meta_data_list.push_back(new_obj);
+            word_count++;
             }
         }
         else {
@@ -216,9 +217,9 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, Strin
 void LinkFinder::get_anchor_text(char *html_file, long *index, long file_length, long stop_index) {
     String type = "anchor";
     //Skip over all inner tags until we hit a's closing tag
-    while(*index < stop_index) {
+    while(*index < file_length && *index < stop_index) {
         if(html_file[*index] == '<') {
-            while(html_file[*index] != '>') {
+            while(*index < file_length && html_file[*index] != '>') {
                 (*index)++;
             }
             (*index)++;
@@ -350,11 +351,11 @@ bool LinkFinder::find_open_tag(char *html_file, long *index, long file_length) {
     int num_closing = 0;
     int num_opening = 0;
     while(*index > 0) {
-        while(*index > 0 && html_file[*index] != '>') { //find a tag
+        while(*index > 0 && *index < file_length && html_file[*index] != '>') { //find a tag
             if(html_file[*index] == '>') {
                 tag_found = true;
             }
-            (*index)--;
+        (*index)--;
         }
         if(!tag_found) { //no parent tag found
             return false;
