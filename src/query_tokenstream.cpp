@@ -13,6 +13,7 @@
 
 #include "query_tokenstream.h"
 
+
 bool CharIsRelevant( char c )
 {
     switch ( c )
@@ -58,6 +59,9 @@ bool TokenStream::Match( char c )
     if ( input[ location ] == c )
     {
         ++location;
+        if ( c == '&' ) {
+            match_and = true;
+        }
         return true;
     }
     return false;
@@ -84,6 +88,7 @@ Phrase *TokenStream::parseWord( )
     }
     string val = "";
     size_t start = location;
+    bool parenth = true;
     while(location < input.size() && CharIsRelevant(input[location]) && input[location] != ' ' && input[location] != '"' && input[location] != '&' && input[location] != '|') {
         if(is_char(input[location])) {
             val += tolower(input[location]);
@@ -97,10 +102,24 @@ Phrase *TokenStream::parseWord( )
     if(location == start) {
         return nullptr;
     }
-    if(input[--location] != ')') {
+    
+    if(location > 0 && input[--location] != ')') {
+        parenth = false;
         location++;
     }
-    
+    int i = 1;
+    while(location + i < input.length() && input[location + i] == ')' && !parenth) {
+        val += ')';
+        i++;
+    }
+    parenth = false;
+    while(input[location] == ')') {
+        location--;
+        parenth = true;
+    }
+    if(parenth) {
+        location++;
+    }
     while(location < input.size() && input[location] == ' ') {
         location++;//get rid of whitespace
     }
@@ -112,12 +131,17 @@ bool is_char(const char c) {
     return (((int)c >= 65 && (int)c <= 90) || ((int)c >= 97 && (int)c <= 122)) ? true : false;
 }
 
+bool TokenStream::last_char() {
+    return location == input.length() - 1;
+}
+
 void help_message() {
     std::cout << "You entered an invalid character. Valid characters are:\n";
-    std::cout << "[A-Z], [a,z], [0-9], #, @, &, $, |\n\n";
+    std::cout << "[A-Z], [a,z], [0-9], #, @, &, $, -, * |\n\n";
     std::cout << "Make sure phrase are in double qoutes: \"word0 word1\" not word0 word 1\n\n";
     std::cout << "To AND two phrases, use &. To OR two phrases, use |\n\n";
     std::cout << "To search for words in title, prepend #\n";
     std::cout << "To search for words in url, prepend @\n";
     std::cout << "To search for words in anchor text, prepend $\n";
+    std::cout << "To search for words in body text, prepend *\n";
 }
