@@ -61,11 +61,17 @@ int main(int argc, char *argv[]) {
       locations2.push_back(i);
    }
    pq.insert(String("first"), &locations2);
+   locations.push_back(100);
+   pq.insert(String("third"), &locations);
    
 
    std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;
    delete pq.top();
    pq.pop();
+   std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;
+   delete pq.top();
+   pq.pop();
+   std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;
    delete pq.top();
    pq.pop();
    std::cout<<"end"<<std::endl;
