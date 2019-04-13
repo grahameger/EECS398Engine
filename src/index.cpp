@@ -8,7 +8,7 @@ Index::Index(String filename)
    :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), currentBlocks(numOfPostingSizes), threads(10), doneReadingIn(false) {
 
 
-
+   parserFd = open(parserFile, O_RDONLY);
    fd = open(filename.CString(), O_RDWR | O_CREAT);
    if(fd == -1){
 
@@ -29,6 +29,9 @@ Index::Index(String filename)
    for(unsigned i = 0; i < threads[i].size(); i++){
       pthread_create(&threads[i], NULL, &index::threadDriver, (void*)0);
    }
+
+   //read in
+   reader();
 }
 
 Index::~Index(){
@@ -193,6 +196,13 @@ void threadDriver(void* notNeeded){
    
 }
 
+void reader(){
+   //could this be threaded?
+   //    would have to make sure thread driver only happens when all document older than the newest currently being read are completely read.
+   //    reader must add to queue in correct order, has to wait for readers of old docs to finish if necessary
+
+}
+
 void Index::addWord(wordLocations* locationsToMove, int queueIndex){
    //adds a word to the index
    //
@@ -226,8 +236,8 @@ void Index::addWord(wordLocations* locationsToMove, int queueIndex){
    
    //set being used in function that passes locations for concurrency
 
-   //now that locaitons is out of queue we remove the entry
    wordLocations locations(std::move(*locationsToMove));
+   //now that locaitons is out of queue we remove the entry
    queue.remove(queueIndex);
    queueLock.unlock();
    ScheduleBlock sb = Scheduler::GetPostingList(locations->word);//write version?
@@ -329,15 +339,6 @@ void Index::addWord(wordLocations* locationsToMove, int queueIndex){
    }*/
 }
 
-
-int Index::hash(String word){
-
-}
-
-int Index::hash2(String word){
-
-}
-
 int Index::incrementNextEmptyBlock(){
    if(nextEmptyBlock == numBlocks - 1){
 		numBlocks *= 2;
@@ -351,10 +352,6 @@ int Index::incrementNextEmptyBlock(){
 	}
 	//return nextEmptyBlock then increment
    return nextEmptyBlock++;
-}
-
-int Index::nextPostingListBlock(int listSize){
-
 }
 
 void Index::readBlock(char* buf, int blockNum){
@@ -414,6 +411,13 @@ int Index::followPointer(char* buf, int blockNum){
    }
    return blockNum;
 }
+
+unsigned int smallestFit(unsigned int byteSize){
+   for(unsigned i = 0; i < postingBlockSizes.size(); i++){
+      if(byteSize >= postingBlockSizes[i]) return i;
+   }
+}
+
 /*
 WordIndex::WordIndex(char* buf, int startOffset, int endOffset){
 

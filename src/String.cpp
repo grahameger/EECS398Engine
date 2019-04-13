@@ -54,6 +54,7 @@ String::String( const String& toCopy )
 	   }
    
    cstring = new char[ size + 1 ];
+   cstring[size] = 0;
    memcpy( cstring, toCopy.cstring, size );
    }
 

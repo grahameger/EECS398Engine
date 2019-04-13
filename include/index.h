@@ -20,15 +20,11 @@ private:
 	//returns blocks that contains word's posting list
 	//if posting list does not exist creates it, immediately updates blocks word index to hold this word
 	void threadDriver(void* notNeeded);
-	int* findWordBlock(String word);
-	int hash(String word);
-	int hash2(String word);
-	int incrementNextEmptyBlock();
+	void reader();
+   int incrementNextEmptyBlock();
    //returns the block and sub block that the next posting list of size postingBlockSizes[index] will be moved into
    //CALLS TO THIS MUST BE LOCKED WITH currentBlocksLock
    locationPair getCurrentBlock(unsigned index);
-   //changes currentBlocks to the next location for listSize
-   int nextPostingListBlock(int listSize);
    //reading and writing functions
    void readBlock(char* buf, int blockNum);
    void readLocation(char* buf, int blockNum, int offset, int length);
@@ -56,13 +52,14 @@ private:
       locationPair(const locationPair& copy):blockNum(copy.blockNum), offset(copy.offset){}
       locationPair(int blockNumber, int off):blockNum(blockNumber), offset(off){}
    };
-	PersistentHashMap<String, locationPair> map;
+	//map will prob be moved to scheduler
+   PersistentHashMap<String, locationPair> map;
 	const int blockSize;
-	
+	int parserFd;
 	int fd;
 	int numOfPostingSizes;
 	Vector<locationPair> currentBlocks;
-	Vector<int> postingBlockSizes;
+	Vector<unsigned int> postingBlockSizes;
 	const int pageEndBlock;
 	const int urlBlock;
 	long currentLocation;//increment at end of addWord and newDoc

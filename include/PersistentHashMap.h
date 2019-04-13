@@ -273,7 +273,7 @@ Mapped& PersistentHashMap<Key, Mapped>::operator[] (const KeyType& key) {
     }
     // get key and return val at that location
     indexForKey = this->probeForExistingKey(key);
-    auto rv = this->buckets[indexForKey].second;
+    auto& rv = this->buckets[indexForKey].second;
     this->unlock();
     return rv;
 }
