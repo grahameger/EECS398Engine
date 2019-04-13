@@ -32,80 +32,87 @@ class DocumentAttributes{
     String url;
 };
 
-class ISRWord{
+class ISR{
 public:
-    //Vector of strings for separated queries
-    Vector<String> queries;
+    
     Vector<String> parseQuery(String &query);
-    enum ISRType{ word, orr, aand, phrase };
-    ISRType isrType;
-    ISRWord (String &query){
+    ISR (String &query){
         parseQuery(query);
     }
-    ISRWord* DocumentEnd;
-    virtual Post* next();
-    virtual Post* nextDocument();
-    virtual Post* seek(Location target);
-    virtual Location getStartLocation();
-    virtual Location getEndLocation();
-    virtual ISRWord* getDocumentISR();
+    ISR* docEnd;
+    virtual PostingListIndex* nextInstance();
+    virtual PostingListIndex* nextDocument();
+    virtual PostingListIndex* seekDocStart(Location docStart);
+    virtual Location getDocStartLocation();
+    virtual Location getDocEndLocation();
+    virtual ISR* getDocISR();
+};
+
+class ISRWord : public ISR{
+public:
+    PostingListIndex* nextInstance();
+    PostingListIndex* nextDocument();
+    PostingListIndex* seekDocStart(Location docStart);
+    PostingListIndex* getCurrentPost();
+    Location getDocStartLocation();
+    Location getDocEndLocation();
+    ISR* getDocISR();
     String word;
     unsigned getDocumentCount();
     unsigned getNumberOfOccurences();
-    Post* getCurrentPost();
 };
 
 
-class ISROr : public ISRWord{
+class ISROr : public ISR{
 public:
-    ISRWord** terms;
+    ISR** terms;
     unsigned numOfTerms;
     Location getStartLocation();
     Location getEndLocation();
-    Post* seek(Location target);
-    Post* next();
-    Post* nextDocument();
+    PostingListIndex* seekDocStart(Location target);
+    PostingListIndex* nextInstance();
+    PostingListIndex* nextDocument();
 private:
     unsigned nearestTerm;
     Location nearestStartLocation, nearestEndLocation;
 };
 
-class ISRAnd : public ISRWord{
+class ISRAnd : public ISR{
 public:
     ISR** terms;
     unsigned numOfTerms;
-    Post* seek(Location target);
-    Post* next();
+    PostingListIndex* seekDocStart(Location target);
+    PostingListIndex* nextInstance();
 private:
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
 };
 
-class ISRPhrase : public ISRWord{
+class ISRPhrase : public ISR{
 public:
     ISRWord** terms;
     unsigned numOfTerms;
-    Post* seek(Location target);
-    Post* next();
+    PostingListIndex* seekDocStart(Location target);
+    PostingListIndex* nextInstance();
 private:
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
 };
 
-class ISREndDoc : public ISRWord {
+class ISREndDoc : public ISR {
     FileOffset docEnd;
     FileOffset docBegin;
 };
 
 //Advanced feature, may implement later
-class ISRContainer : public ISRWord {
+class ISRContainer : public ISR {
 public:
     ISR** contained, excluded;
     ISREndDoc* endDoc;
     unsigned countContained, countExcluded;
     //Location Next();
-    Post* seek(Location target);
-    Post* next();
+    PostingListIndex* seek(Location target);
+    PostingListIndex* next();
 private:
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
