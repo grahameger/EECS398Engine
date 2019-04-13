@@ -189,6 +189,9 @@ void threadDriver(void* notNeeded){
    wordLocations* locations;
    while(!doneReadingIn){
       queueLock.lock();
+      while(queue.size() == 0){
+         queueReadCV.wait(&queueLock);
+      }
       locations = &(queue.top());
       addWord(locations);
       //unlocked in addWord
@@ -203,7 +206,7 @@ void reader(){
 
 }
 
-void Index::addWord(wordLocations* locationsToMove, int queueIndex){
+void Index::addWord(wordLocations* locations, int queueIndex){
    //adds a word to the index
    //
    //design of posting list block
@@ -236,9 +239,8 @@ void Index::addWord(wordLocations* locationsToMove, int queueIndex){
    
    //set being used in function that passes locations for concurrency
 
-   wordLocations locations(std::move(*locationsToMove));
    //now that locaitons is out of queue we remove the entry
-   queue.remove(queueIndex);
+   queue.pop();
    queueLock.unlock();
    ScheduleBlock sb = Scheduler::GetPostingList(locations->word);//write version?
    PostingList postingList(sb.pl);

@@ -5,7 +5,7 @@
 #include "Pair.h"
 #include "StringView.h"
 #include "PostingList.h"
-
+#include "PriorityQueue.h"
 
 class Index{
 public:
@@ -23,7 +23,7 @@ private:
 	void reader();
    int incrementNextEmptyBlock();
    //returns the block and sub block that the next posting list of size postingBlockSizes[index] will be moved into
-   //CALLS TO THIS MUST BE LOCKED WITH currentBlocksLock
+   //CALLS TO THIS MUST BEnew LOCKED WITH currentBlocksLock
    locationPair getCurrentBlock(unsigned index);
    //reading and writing functions
    void readBlock(char* buf, int blockNum);
@@ -36,14 +36,7 @@ private:
    //returns the index of smallest posting list block that string of length byte size will fit in
    unsigned int smallesFit(unsigned int byteSize);
 	//VARIABLES
-   priority_queue<wordLocations> queue;
-   struct wordLocations{
-      unsigned numWords;
-      String word;
-      vector <unsigned long long> locations;
-      wordLocations(wordLocations&& toMove)
-         :numWords(toMove.numWords), word(toMove.word), locations(toMove.locations){}
-   };
+   PriorityQueue<wordLocations> queue;
    
 	struct locationPair{
       int blockNum;
@@ -71,6 +64,8 @@ private:
    //THREADING
    vector<pthread_t> threads;
    Vector<threading::ReadWriteLock*> locks;
+   threading::ConditionVariable queueReadCV;
+   threading::ConditionVariable queueWriteCV;
 	threading::Mutex queueLock;
    threading::Mutex nextBlockLock;
    threading::Mutex currentBlocksLock;
