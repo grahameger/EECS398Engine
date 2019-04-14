@@ -25,10 +25,10 @@ public:
 };
 
 struct Doc_object {
-    String doc_url; //curr doc url
-    Vector<String> Links; //all links in doc
-    Vector<Index_object> Words; //all words in doc
-    Vector<Vector<String>> anchor_words; //all anchor text words in doc
+    String doc_url;
+    Vector<String> Links;
+    Vector<Index_object> Words;
+    Vector<Vector<Index_object>> anchor_words;
 };
 
 class LinkFinder {
