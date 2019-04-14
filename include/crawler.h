@@ -69,7 +69,7 @@ namespace search {
         BloomFilter<std::string> pageFilter;
         static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
         std::map<std::string, std::set<std::string> > waitingForRobots;
-        pthread_mutex_t waitingForRobotsLock;
+        inline static pthread_mutex_t waitingForRobotsLock;
         std::atomic<size_t> numBytes;
         std::atomic<size_t> numPages;
         std::atomic<size_t> numRobots;

@@ -205,6 +205,17 @@ namespace search {
             sleep(30);
             print2(prevGiB, oldTime);
             readyQueue.write();
+            // remove domains that have not been hit in the last 10 seconds 
+            pthread_mutex_lock(&domainMutex);
+            auto now = time(NULL);
+            for (auto it = lastHitHost.begin(); it != lastHitHost.end();) {
+                if (difftime(now, it->second) > 5.0) {
+                    it = lastHitHost.erase(it);
+                } else {
+                    it++;
+                }
+            }
+            pthread_mutex_unlock(&domainMutex);
         }
         print2(prevGiB, oldTime);
         // need to do this so that any threads that are waiting on the

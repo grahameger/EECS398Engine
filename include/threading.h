@@ -16,6 +16,8 @@
 #include <vector>
 #include <random>
 #include <fstream>
+#include <string>
+#include <unistd.h>
 
 namespace threading {
     struct Mutex  {
@@ -102,9 +104,14 @@ namespace threading {
 
         std::deque<T> q;
 
+        void writeOverflow(const T &d);
+
+        static const char overflowFilename[] = "overflow.urls";
+
         Mutex m;
         ConditionVariable cvPop;
         ConditionVariable cvPush;
+        int overflowFd;
     };
 
     class ReadWriteLock {
@@ -118,9 +125,18 @@ namespace threading {
         void unlock();
     };
 
+    template <typename T> void ThreadQueue<T>::ThreadQueue() {
+        // check if the file exists already or not
+        int oFlags = 
+        struct stat st = {};
+        if (stat(overflowFilename, &st) == 0) {
+            // file already exits
+        }
+    }
+
     template <typename T> void ThreadQueue<T>::push(const T &d) {
         m.lock();
-        while (d.size() > maxSize) {
+        while (q.size() > maxSize) {
             cvPush.wait(m);
         }
         q.push_back(d);
@@ -130,7 +146,7 @@ namespace threading {
 
     template <typename T> void ThreadQueue<T>::push(const std::vector<T> &d) {
         m.lock();
-        while (d.size() > maxSize) {
+        while (q.size() > maxSize) {
             cvPush.wait(m);
         }
         for (auto &i : d) {
@@ -200,11 +216,19 @@ namespace threading {
     template <typename Iterator>
     void ThreadQueue<T>::push(Iterator start, Iterator end) {
         m.lock();
+        while (q.size() > maxSize) {
+            cvPush.wait(m);
+        }
         for (auto it = start; it != end; it++) {
             q.push_back(*it);
         }
         cvPop.signal();
         m.unlock();
+    }
+
+    template <typename T>
+    void ThreadQueue<T>::writeOverflow(const T &d) {
+        
     }
 }
 
