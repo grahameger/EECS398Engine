@@ -42,5 +42,3 @@ class String
       int size;
 
    };
-
-#endif

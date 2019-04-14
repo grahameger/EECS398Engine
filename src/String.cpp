@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Created by Jason Setting
 // Graham Eger added additional string concatenation functions on 4/2
 
@@ -6,7 +7,6 @@
 #include "String.h"
 
 const char* String::nullString = "";
-
 
 String::String( const int length ) : cstring( nullptr ), size( length )
    {
@@ -217,3 +217,6 @@ String operator+ ( String lhs, const char * toCat )
    lhs += cat;
    return lhs;
    }
+
+String::String() : cstring(nullptr), size(0) {}
+
