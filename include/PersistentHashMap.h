@@ -154,7 +154,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags, 0666);
+    fd = open(filename.CString(), openFlags, 0755);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
         exit(1);
