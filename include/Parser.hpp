@@ -41,7 +41,9 @@ public:
     
     //returns -1 if something failed, else returns 0
     //parses html file into title, body, links, and anchor text
-    int parse(char *filename, String url);
+    int parse(char *filename);//String url
+    long file_length = 0;
+    long index = 0;
     
     void print_all() {
         for(int i = 0; i < Document.Links.size(); i ++) {
@@ -49,7 +51,7 @@ public:
         }
         std::cout << std::endl << std::endl;
         for(int i = 0; i < Document.Words.size(); i++) {
-            std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
+            std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type.CString() << ":" << Document.Words[i].position << std::endl;
         }
     }
     
@@ -60,29 +62,29 @@ private:
     //must know string can be found.
     //will skip entire html file if no </a> on the page. else skips to next </a>
     //be careful to reset index pointer to ensure still in range
-    void find_string(char *html_file, char* find_lower, char* find_upper, long *index, long file_length);
+    void find_string(char *html_file, char* find_lower, char* find_upper);
     
     //Look for href= If doesn't exist in <a>, returns false. Else, true.
-    bool find_link(char *html_file, char* find_lower, char* find_upper, long *index, long file_length);
+    bool find_link(char *html_file, char* find_lower, char* find_upper);
     
     //If tag found, returns true. Else, false;
-    bool is_script(char *html_file, long *index, long file_length);
-    bool is_style(char *html_file, long *index, long file_length);
-    bool is_title(char *html_file, long *index, long file_length);
+    bool is_script(char *html_file);
+    bool is_style(char *html_file);
+    bool is_title(char *html_file);
     
     //Prints out words line by line and which tag(word) they belong to
-    void get_words(char *html_file, long *index, long file_length, String word);
+    void get_words(char *html_file, String word);
     
     //resets the file pointer to reset_value. Good to use after find_string.
-    void reset_index(long *index, long reset_value);
+    void reset_index(long reset_value);
     
     //Prints out all words from *index to stop_index. Ignores everything in <...>
-    void get_anchor_text(char *html_file, long *index, long file_length, long stop_index);
+    void get_anchor_text(char *html_file, long stop_index);
     
     //Finds <a> tag's parent tag if exists. Then finds position of either the
     //parent's closing tag or </a>, whichever occurs first. Then prints out anchor
     //text between <a>....position.
-    void find_closing_a_tag(char *html_file, long *index, long file_length);
+    void find_closing_a_tag(char *html_file);
     
     //returns min of index1 and index2
     long get_min(long index1, long index2);
@@ -91,10 +93,17 @@ private:
     long get_max(long index1, long index2);
     
     //sets file pointer to start of opening parent tag
-    bool find_open_tag(char *html_file, long *index, long file_length);
+    bool find_open_tag(char *html_file);
     
     //If parent tag exists, returns position of parent tag close.
-    long parent_tag_distance(char *html_file, char* tag, long *index, long file_length);
+    long parent_tag_distance(char *html_file, char* tag);
+    
+    //Adds character to word if it's a relevant char. Lowers it as well.
+    void add_char_to_word(char *html_file, String &word, String type, Vector<Index_object> &v);
+    
 };
+
+bool is_space(char c);
+bool is_relevant_char(char c);
 
 #endif /* Parser_hpp_398 */
