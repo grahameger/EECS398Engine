@@ -77,3 +77,6 @@ test/parsed.urls
 
 # Scripts
 startCodeServer.sh
+# VIM
+.vimrc
+*.swp

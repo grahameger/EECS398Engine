@@ -194,3 +194,9 @@ void Vector<T>::resize() {
     numAllocated *= 2;
     delete [] tmp_array;
 }
+    
+
+template<class T>
+void Vector<T>::pop_back(){
+   numElements--;
+}
