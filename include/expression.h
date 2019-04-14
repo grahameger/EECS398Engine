@@ -4,11 +4,9 @@
  * Class declarations for expressions
  *
  */
-
 #pragma once
 #ifndef EXPRESSION_H_
 #define EXPRESSION_H_
-
 #include <stdint.h>
 #include <vector>
 #include <cstddef>
@@ -87,6 +85,40 @@ public:
         string phrase = terms[ 0 ]->stringEval( );
         for ( size_t i = 1;  i < terms.size( );  ++i ) {
             phrase += "|" + terms[ i ]->stringEval( );
+        }
+        return phrase;
+    }
+};
+
+class ParenthOrExpression : public Expression
+{
+protected:
+    std::vector < Expression * > terms;
+public:
+    void addTerm(Expression *);
+    
+    string stringEval( ) const override
+    {
+        string phrase = "(" + terms[ 0 ]->stringEval( );
+        for ( size_t i = 1;  i < terms.size( );  ++i ) {
+            phrase += " " + terms[ i ]->stringEval( );
+        }
+        return phrase;
+    }
+};
+
+class SubExpression : public Expression
+{
+protected:
+    std::vector < Expression * > terms;
+public:
+    void addTerm(Expression *);
+    
+    string stringEval( ) const override
+    {
+        string phrase = "!" + terms[ 0 ]->stringEval( );
+        for ( size_t i = 1;  i < terms.size( );  ++i ) {
+            phrase += " " + terms[ i ]->stringEval( );
         }
         return phrase;
     }

@@ -36,5 +36,4 @@ robots:
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
 
-
 .PHONY: clean
