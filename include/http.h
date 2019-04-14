@@ -24,13 +24,12 @@
 #include <algorithm>
 #include <string_view>
 #include <charconv>
-#include <locale>
 #include <cctype>
 #include <algorithm>
-#include <utility>
 
 #include <fcntl.h>
 #include <sys/types.h>
+#include <unordered_set>
 #include <sys/socket.h> 
 #include <signal.h>
 #include <netinet/in.h> 
@@ -55,24 +54,19 @@
 #include "httpRequest.h"
 #include "constants.h"
 #include "RobotsTxt.h"
-#include "crawler.h"
-#include "Parser.hpp"
 
 class RobotsTxt; 
-
 namespace search {
-    class Crawler;
 
     class HTTPClient {
     public:
-        HTTPClient(search::Crawler * crawlerIn);
+        HTTPClient();
         ~HTTPClient();
         void SubmitURLSync(const std::string &url, size_t redirCount);
         static void * SubmitUrlSyncWrapper(void * context);
-        static const size_t CHUNKED = -10;
 
     private:
-        friend class Crawler; 
+
         static const size_t REDIRECT_MAX = 20;
 
         // returns connected TCP socket to host
@@ -80,17 +74,9 @@ namespace search {
 
         // 'main' function our worker threads run
         void processResponses();
-        void process(char* file, size_t len, const std::string &currentUri);
+        void process(char* file, size_t len);
 
-        static bool goodMimeContentType(char * str, ssize_t len);
-        static bool response200or300(char * str, ssize_t len);
-        static bool containsGzip(char * p, size_t len);
-
-        static char * checkRedirectsHelper(const char * getMessage, size_t len);
-
-        // Resolves a relative URL into an absolute path relative to the current request.
-        // Returns a nullptr on errors and if the request is to the current document
-        static std::string resolveRelativeUrl(const char * baseURi, const char * newUri);
+        char * checkRedirectsHelper(const char * getMessage, size_t len);
 
         // given a socket return the clientInfo
         std::mutex m;
@@ -104,7 +90,6 @@ namespace search {
         static inline SSL_CTX * sslContext;
 
         RobotsTxt * robots;
-        Crawler * crawler;
 
         struct Socket {
         public:

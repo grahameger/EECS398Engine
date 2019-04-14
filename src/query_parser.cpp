@@ -1,32 +1,31 @@
-// /*
-//  * parser.cpp
-//  *
-//  * Implementation of parser.h
-//  *
-//  */
+/*
+ * parser.cpp
+ *
+ * Implementation of parser.h
+ *
+ */
 
 #include "expression.h"
 #include "query_parser.h"
 
-// /* <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
-//  *
-//  * <AndConstraint>  ::= <SimpleConstraint> { [ <AndOp> ] <SimpleConstraint> }
-//  *
-//  * <SimpleConstraint>  ::= <Phrase> | ‘(’ <OrConstraint> ‘)’| <UnaryOp> <SimpleConstraint> | <SearchWord>
-//  *
-//  * <Phrase>  ::= '"' { <SearchWord> } '"'
-//  */
+/* <OrConstraint>  ::=   <AndConstraint> { <OrOp> <AndConstraint> }
+ *
+ * <AndConstraint>  ::= <SimpleConstraint> { [ <AndOp> ] <SimpleConstraint> }
+ *
+ * <SimpleConstraint>  ::= <Phrase> | ‘(’ <OrConstraint> ‘)’| <UnaryOp> <SimpleConstraint> | <SearchWord>
+ *
+ * <Phrase>  ::= '"' { <SearchWord> } '"'
+ */
 
 Expression *Parser::FindPhrase( )
 {
-    Expression *word = FindSimple( );
+    Expression *word = stream.parseWord();
     if( word ) {
         AddExpression *self = new AddExpression( );
         self->addTerm( word );
-        while( ( !stream.Match( '"' ) && ( word = FindSimple( ) ))) {
+        while((word = stream.parseWord())) {
             self->addTerm( word );
         }
-        stream.Reset_location();//if match matches, it eats up word so reset
         return self;
     }
     return nullptr;
@@ -91,7 +90,7 @@ Expression *Parser::FindSimple() {
         Expression *left = FindOr( );
         if ( left )
         {
-            ParenthOrExpression *self = new ParenthOrExpression( );
+            OrExpression *self = new OrExpression( );
             self->addTerm( left );
             if(!stream.Match(')')) {
                 return nullptr;//must be closing
@@ -103,7 +102,7 @@ Expression *Parser::FindSimple() {
         Expression *left = FindSimple( );
         if ( left )
         {
-            SubExpression *self = new SubExpression( );
+            AddExpression *self = new AddExpression( );
             self->addTerm( left );
             return self;
         }
@@ -129,6 +128,6 @@ bool Parser::fullParsed() {
 }
 
 Parser::Parser( const std::string &in ) :
-stream( in )
-{
-}
+      stream( in )
+   {
+   }

@@ -8,8 +8,8 @@
 #include "expression.h"
 
 Expression::~Expression( )
-{
-}
+   {
+   }
 
 Phrase::Phrase( string val ) : value(val) {}
 
@@ -28,14 +28,6 @@ void AddExpression::addTerm(Expression * phrase) {
 }
 
 void OrExpression::addTerm(Expression * phrase) {
-    terms.push_back(phrase);
-}
-
-void ParenthOrExpression::addTerm(Expression * phrase) {
-    terms.push_back(phrase);
-}
-
-void SubExpression::addTerm(Expression * phrase) {
     terms.push_back(phrase);
 }
 

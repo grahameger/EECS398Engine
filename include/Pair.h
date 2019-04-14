@@ -4,6 +4,8 @@
 
 // Created by Graham Eger on 4/1/2019
 // Graham Eger added default constructor
+
+// TODO: will add constructors as necessary
 template<typename Type1, typename Type2>
 struct Pair {
     Type1 first;

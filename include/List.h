@@ -34,7 +34,6 @@ public:
       Iterator operator-- ( int postfix );
 
    private:
-      friend class List;
       Iterator( Node< T >* node );
       Node< T >* node;
 
@@ -49,7 +48,6 @@ public:
    List( List&& toMove ) = delete;
    List< T >& operator=( const List& toCopy ) = delete;
    List< T >& operator=( List&& toMove ) = delete;
-   Iterator End();
 
    bool Empty( );
 

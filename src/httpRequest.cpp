@@ -26,29 +26,39 @@ namespace search {
         );
         std::smatch result;
         if (std::regex_match(url, result, r)) {
-            scheme = result[2];
+            protocol = result[2];
             host = result[4];
             path = result[5];
             query = result[7];
             fragment = result[9];
+            if (path == "") {
+                path = "/";
+            }
         }
     }
 
-    // return value will either get optimized out or the compiler
-    // will use the move constructor
+    // TODO: do all the string manipulation on the stack
+    // maximum url length apache supports is 8KB. Our stacks are 2MB.
     std::string HTTPRequest::filename() const {
         std::string slashesRemoved;
         std::string rv;
-        if (robots()) {
-            return "robots/" + host;
+        if (path == robotsTxtString) {
+            rv = "robots/" + host;
         } else {
-            return uri();
+            slashesRemoved = host + path;
+            for (char &ch : slashesRemoved) {
+                if (ch == '/') {
+                    ch = '_';
+                }
+            }
+            rv = "pages/" + slashesRemoved;
         }
+        return rv;
     }
 
     std::string HTTPRequest::requestString() const {
         std::stringstream ss;
-        ss << constants::getMethod << ' ' << path << ' ' << constants::httpVersion << endl;
+        ss << method << ' ' << path << ' ' << httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << userAgents << endl;
         ss << encoding << endl;
@@ -65,73 +75,13 @@ namespace search {
         ss << "\t" << "query: " << query << '\n';
         ss << "\t" << "fragment: " << fragment << '\n';
         ss << "\t" << "headers: " << headers << '\n';
-        ss << "\t" << "scheme: " << scheme << '\n';
+        ss << "\t" << "protocol: " << protocol << '\n';
         ss << "\t" << "port: " << port << '\n';
         ss << "}\n";
         std::cout << ss.str() << std::flush;
     }
 
     bool HTTPRequest::robots() const {
-        return path == constants::robotsTxtString || path == constants::robotsTxtString2;
-    }
-
-    // returns whether the extension of the file is one we're looking for
-    // we're specifically trying to avoid javascript, css, and images
-    // everything else is fair game
-    bool HTTPRequest::goodExtension() const {
-        for (size_t i = 0; i < NUM_BAD_EXTENSIONS; ++i) {
-            const std::string& badExtension = BAD_EXTENSIONS[i];
-            if (path.size() > badExtension.size()) {
-                // check the last badExtension.size() characters and see if they match, if any of them match completely
-                // then return false, otherwise go onto the next one, if none of them match completely, we can return true
-                bool fullMatch = true;
-                for (size_t i = 0; i < badExtension.size(); ++i) {
-                        // align any matching extensions at the end of the up
-                    if (path[path.size() - badExtension.size() + i] != badExtension[i]) {
-                        fullMatch = false;
-                        break;
-                    }
-                }
-                if (fullMatch) {
-                    return false;
-                }
-            }
-        } 
-        return true;
-    }
-
-    std::string HTTPRequest::uri() const {
-        // Pseudocode from RFC 2396
-        // result = ""
-        //  if scheme is defined then
-        //      append scheme to result
-        //      append ":" to result
-        //  if authority is defined then
-        //      append "//" to result
-        //      append authority to result
-        //  append path to result
-        //  if query is defined then
-        //      append "?" to result
-        //      append query to result
-        //  if fragment is defined then
-        //      append "#" to result
-        //      append fragment to result
-        //  return result
-        std::string result = "";
-        if (scheme != "") {
-            result += scheme;
-            result += "://";
-        }
-        result += host;
-        if (path != "") {
-            result += path;
-        } else {
-            result += "/";
-        }
-        if (query != "") {
-            result += "?";
-            result += "query";
-        }
-        return result;
+        return path == robotsTxtString;
     }
 }

@@ -1,16 +1,16 @@
 /*
- * tokenstream.h
+ * query_tokenstream.h
  *
  * Declaration of a stream of tokens that you can read from
  *
  */
-#pragma once
-#ifndef TOKENSTREAM_H_
-#define TOKENSTREAM_H_
+
+#include pragma once
+#ifndef QUERY_TOKENSTREAM_H_
+#define QUERY_TOKENSTREAM_H_
 
 #include <string>
 #include "expression.h"
-#include <cstring>
 
 
 /**
@@ -46,44 +46,42 @@ void help_message();
 
 
 class TokenStream
-{
-    // The input we receive, with only relevant characters left
-    std::string input;
-    // Where we currently are in the input
-    size_t location { 0 };
-    
+   {
+   // The input we receive, with only relevant characters left
+   std::string input;
+   // Where we currently are in the input
+   size_t location { 0 };
+
 public:
-    
-    void Reset_location( );
-    
+
+   /**
+    * Construct a token stream that uses a copy of the input
+    * that contains only characters relevant to math expressions
+    */
+   TokenStream( const std::string &in );
+
+   /**
+    * Attempt to match and consume a specific character
+    *
+    * Returns true if the char was matched and consumed, false otherwise
+    */
+   bool Match( char c );
+       
+
+   /**
+    * Check whether all the input was consumed
+    */
+   bool AllConsumed( ) const;
+       
+       
     /**
-     * Construct a token stream that uses a copy of the input
-     * that contains only characters relevant to math expressions
-     */
-    TokenStream( const std::string &in );
-    
-    /**
-     * Attempt to match and consume a specific character
-     *
-     * Returns true if the char was matched and consumed, false otherwise
-     */
-    bool Match( char c );
-    
-    
-    /**
-     * Check whether all the input was consumed
-     */
-    bool AllConsumed( ) const;
-    
-    
-    /**
-     * Attempt to match and consume a whole word
-     *
-     * Return a dynamically allocated phrase if successful, nullptr otherwise
-     */
-    
+    * Attempt to match and consume a whole word
+    *
+    * Return a dynamically allocated phrase if successful, nullptr otherwise
+    */
+       
     Phrase *parseWord( );
-    
-};
+
+   };
 
 #endif /* TOKENSTREAM_H_ */

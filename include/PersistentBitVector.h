@@ -9,9 +9,6 @@
 #include "String.h"
 #include "threading.h"
 
-#ifndef O_NOATIME
-#define O_NOATIME 0
-#endif
 
 // File Structure for a PersistentBitVector file.
 // [Size: 64-bit unsigned int][ReadWriteLock 56 bytes][]

@@ -5,10 +5,6 @@
 #include "String.h"
 #include "List.h"
 
-#ifndef O_NOATIME
-#define O_NOATIME 0
-#endif
-
 class TokenStream 
    {
 public:
