@@ -17,7 +17,8 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
 }
 
 
-int LinkFinder::parse(char* html_file) {
+int LinkFinder::parse(char* html_file, String url) {
+    Document.doc_url = url;
     long file_length = strlen(html_file);
     long num = 0;
     long *index = &num;
@@ -190,6 +191,7 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, 
 }
 
 void LinkFinder::get_words(char *html_file, long *index, long file_length, String type) {
+    Vector<String> full_anchor_text;
     while(*index < file_length && html_file[*index] != '<') {
         if(html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != '\r' && html_file[*index] != ' ') {
             String word;
@@ -203,7 +205,10 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, Strin
                     }
                 }
                 (*index)++;
-            }//WHAT KIND OOF WORDS DO WE WANT?
+            }//WHAT KIND OF WORDS DO WE WANT?
+            if(strncmp(type.CString(), "anchor", 6) == 0) {
+                full_anchor_text.push_back(word);
+            }
             Index_object new_obj;
             new_obj.word = word;
             new_obj.type = type;//this is type
@@ -213,6 +218,9 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, Strin
         else {
             (*index)++;
         }
+    }
+    if(strncmp(type.CString(), "anchor", 6) == 0) {
+        Document.anchor_words.push_back(full_anchor_text);
     }
 }
 

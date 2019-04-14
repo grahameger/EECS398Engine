@@ -25,9 +25,10 @@ public:
 };
 
 struct Doc_object {
-    String doc_url;
-    Vector<String> Links;
-    Vector<Index_object> Words;
+    String doc_url; //curr doc url
+    Vector<String> Links; //all links in doc
+    Vector<Index_object> Words; //all words in doc
+    Vector<Vector<String>> anchor_words; //all anchor text words in doc
 };
 
 class LinkFinder {
@@ -40,7 +41,7 @@ public:
     
     //returns -1 if something failed, else returns 0
     //parses html file into title, body, links, and anchor text
-    int parse(char *filename);
+    int parse(char *filename, String url);
     
     void print_all() {
         for(int i = 0; i < Document.Links.size(); i ++) {
@@ -51,7 +52,7 @@ public:
             std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
         }
     }
-    //This is the object that gets sent to index
+    
     Doc_object Document;
     
 private:
