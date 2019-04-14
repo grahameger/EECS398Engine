@@ -1,12 +1,21 @@
 #include <cstring>
 #include "PostingList.h"
 #include "Utf8Uint.h"
+#include "vector.h"
 
 // How many bits we get rid of for our index offset
 const unsigned PostingList::LowEndBits = 16;
 
 
-PostingList::PostingList( ) : newIndices( false ), largestPosting( 0 )
+PostingList::PostingList( ) : newIndices( false ), largestPosting( 0 ),
+      origLargestPosting( 0 )
+   { }
+
+
+PostingList::PostingList( StringView posts, StringView index, 
+      unsigned long long prevLargestPosting ) 
+      : posts( posts ), index( index ), newIndices( false ),
+      largestPosting( prevLargestPosting ), origLargestPosting( prevLargestPosting )
    { }
 
 
@@ -18,6 +27,7 @@ PostingList::PostingList( StringView postingListData ) : newIndices( false )
    // What our largest posting is for this number
    largestPosting =
          postingListData.GetInString< unsigned long long >( 2 * sizeof( unsigned ) );
+   origLargestPosting = largestPosting;
 
    // CString + space for indexLength, postsLength, startLastIndex, and largestPosting
    char* postsStart = postingListData.RawCString( ) + 2 * sizeof( unsigned ) +
@@ -113,3 +123,84 @@ void PostingList::UpdateInPlace( StringView& toUpdate )
    // Add newIndices data
    memcpy( indexStart, newIndices.GetString( ).CString( ), newIndices.Size( ) );
    }
+
+
+Vector< PostingList* > PostingList::Split( unsigned blockSize )
+   {
+   Vector< PostingList* > returnList( 1 );
+
+   // It fits in one block
+   if ( GetByteSize( ) <= blockSize )
+      {
+      returnList.push_back( this );
+      return returnList;
+      }
+
+   // It doesn't fit in one block
+   PostingList* curList = new PostingList( posts, index, origLargestPosting );
+   // Turn OBS into IBS (we're reading not appending now)
+   InputByteStream posts( newPosts.GetString( ) );
+   InputByteStream index( newIndices.GetString( ) );
+
+   unsigned offsetSubtractor = 0;
+   bool firstEntry = true;
+   unsigned long long curLargestPosting = origLargestPosting;
+
+   // While we haven't caught up with data added
+   while ( curLargestPosting != largestPosting )
+      {
+      // TODO: Better way to get Utf8Uint sizes
+      OutputByteStream sizeChecker;
+      Utf8Uint delta, posting, offset;
+      bool hasIndex = false;
+      
+      posts >> delta;
+      sizeChecker << delta;
+
+      // If post has a corresponding index entry
+      if ( curLargestPosting >> LowEndBits != 
+            ( curLargestPosting + delta.GetValue( ) ) >> LowEndBits ||
+            firstEntry )
+         {
+         hasIndex = true;
+         firstEntry = false;
+         index >> posting >> offset;
+         offset = Utf8Uint( offset.GetValue( ) - offsetSubtractor );
+         sizeChecker << posting << offset;
+         }
+
+      unsigned numBytes = sizeChecker.Size( );
+
+      // If these bytes don't fit in current postingList
+      if ( curList->GetByteSize( ) + numBytes > blockSize )
+         {
+         returnList.push_back( curList );
+         curList = new PostingList( );
+         offsetSubtractor += curList->posts.Size( ) + curList->newPosts.Size( );
+
+         if ( !hasIndex )
+            {
+            hasIndex = true;
+            posting = Utf8Uint( curLargestPosting + delta.GetValue( ) );
+            offset = Utf8Uint( 0 );
+            sizeChecker << posting << offset;
+            numBytes = sizeChecker.Size( );
+            }
+         }
+
+      curList->newPosts << delta;
+
+      if ( hasIndex )
+         curList->newIndices << posting << offset;
+
+      curList->largestPosting = curLargestPosting = 
+            curLargestPosting + delta.GetValue( );
+
+      }
+
+   returnList.push_back( curList );
+
+   return returnList;
+   }
+
+

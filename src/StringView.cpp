@@ -74,7 +74,7 @@ template void StringView::SetInString< unsigned long long >
 
 const char StringView::operator[ ] ( int index ) const
    {
-   int newIndex = forwards ? index : ( length - index );
+   int newIndex = forwards ? index : ( length - index - 1 );
    return cString[ newIndex ];
    }
 

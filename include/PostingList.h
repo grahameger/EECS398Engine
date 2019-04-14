@@ -4,6 +4,9 @@
 #include "StringView.h"
 #include "ByteStream.h"
 
+template < typename T >
+class Vector;
+
 // This is a class to manage the functions of our posting lists. To start, you
 //  can create a postingList either from scratch, or by passing it a StringView
 //  of the data it's in.
@@ -59,7 +62,13 @@ class PostingList
       // Update the existing postingListData with the new info in place
       void UpdateInPlace( StringView& postingListData );
 
+      // Split the posting list into n posting lists of maximum size BlockSize
+      Vector< PostingList* > Split( unsigned blockSize );
+
    private:
+      // Used in Split
+      PostingList( StringView posts, StringView index, unsigned long long prevLargest );
+
       // To hold the existing data
       StringView posts;
       StringView index;
@@ -68,6 +77,7 @@ class PostingList
       OutputByteStream newIndices;
 
       unsigned long long largestPosting;
+      unsigned long long origLargestPosting;
 
       static const unsigned LowEndBits;
 

@@ -31,6 +31,9 @@ public:
     
     //EFFECTS: Constructor
     Vector(size_t num);
+
+    //EFFECTS: Constructor
+    Vector( std::initializer_list< T > in_list );
     
     //Custom Destructor;
     ~Vector();
@@ -92,7 +95,13 @@ Vector<T>::Vector(size_t capacity) {
     elements = new T[numAllocated];
 }
 
-
+template< class T >
+Vector< T >::Vector( std::initializer_list< T > in_list )
+      : elements( new T[ in_list.size( ) ] ), numAllocated( in_list.size( ) )
+   {
+   for ( auto iterator = in_list.begin( ); iterator != in_list.end( ); iterator++ )
+      push_back( *iterator );
+   }
 
 //copy constructor
 template<class T>

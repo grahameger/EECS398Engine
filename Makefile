@@ -48,6 +48,11 @@ posting: $(patsubst %,$(BUILDDIR)/%,$(POSTINGOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/posting"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/posting
 
+POSTINGSPLITOBJS := TestPostingListSplit.o Utf8Numbers.o ByteStream.o StringView.o String.o PostingList.o
+split: $(patsubst %,$(BUILDDIR)/%,$(POSTINGSPLITOBJS))
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split
+
 # Spikes
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
