@@ -3,7 +3,7 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-
+startCodeServer.sh
 wd/*
 .ccls-cache/
 .idea/
@@ -74,3 +74,6 @@ DerivedData/
 *.app
 bin/engine
 test/parsed.urls
+
+# Scripts
+startCodeServer.sh

@@ -13,7 +13,10 @@ namespace constants {
     extern const std::string httpsStr;
     extern const std::string port80;
     extern const std::string port443;
+    extern const std::string dotBackSlash;
     extern const std::string robotsTxtString;
+    extern const std::string robotsTxtString2;
+    extern const std::string contentTypeString;
     extern const size_t MAX_CONNECTIONS;
     extern const size_t RECV_SIZE;
     extern const size_t BUFFER_SIZE;

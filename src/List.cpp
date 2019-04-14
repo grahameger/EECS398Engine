@@ -145,6 +145,12 @@ typename List< T >::Iterator List< T >::GetBack( )
    return Iterator( back );
    }
 
+template <typename T>
+typename List<T>::Iterator List< T >::End() 
+   {
+      return Iterator();
+   }
+
 
 template < typename T >
 T&& List< T >::RemoveFront( )
