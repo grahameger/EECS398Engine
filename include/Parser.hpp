@@ -24,6 +24,12 @@ public:
     
 };
 
+struct Doc_object {
+    String doc_url;
+    Vector<String> Links;
+    Vector<Index_object> Words;
+};
+
 class LinkFinder {
 public:
     //constructor
@@ -36,23 +42,17 @@ public:
     //parses html file into title, body, links, and anchor text
     int parse(char *filename);
     
-    int word_count = 0;
-    
-    Vector<Index_object> Document_meta_data_list;
-    
-    Vector<String> Link_vector;
-    
-    void print_meta_objects() {
-        for(int i = 0; i < Document_meta_data_list.size(); i++) {
-            std::cout << Document_meta_data_list[i].position << " : " << Document_meta_data_list[i].word.CString() << " : " << Document_meta_data_list[i].type.CString() << std::endl;
+    void print_all() {
+        for(int i = 0; i < Document.Links.size(); i ++) {
+            std::cout << Document.Links[i].CString() << std::endl;
+        }
+        std::cout << std::endl << std::endl;
+        for(int i = 0; i < Document.Words.size(); i++) {
+            std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
         }
     }
-    
-    void print_links() {
-        for(int i = 0; i < Link_vector.size(); i++) {
-            std::cout << Link_vector[i].CString() << std::endl;
-        }
-    }
+    //This is the object that gets sent to index
+    Doc_object Document;
     
 private:
     //sets index pointer to 1 place after string

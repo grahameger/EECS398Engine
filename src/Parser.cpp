@@ -40,21 +40,21 @@ int LinkFinder::parse(char* html_file) {
                                 }
                                 (*index)++;
                             }
-                            Link_vector.push_back(link);
+                            Document.Links.push_back(link);
                         }
                         
                         //reset index in case link not found
                         reset_index(index, reset_value);
                         
                         //close the a tag
-                        while(html_file[*index] != '>') {
+                        while(*index < file_length && html_file[*index] != '>') {
                             (*index)++;
                         }
                         //set ptr to before >
                         (*index)--;
                         //find a tag close. Parent or </a>
                         find_closing_a_tag(html_file, index, file_length);
-                        while(html_file[*index] != '>') {
+                        while(*index < file_length && html_file[*index] != '>') {
                             (*index)++;
                         }
                         (*index)++;
@@ -64,7 +64,7 @@ int LinkFinder::parse(char* html_file) {
                         goto DEFAULT;
                     }
                     break;
-                   
+                    
                 case 'S'  :
                 case 's'  : //script/style Want to completely skip these
                     if(is_style(html_file, index, file_length)) {
@@ -135,9 +135,9 @@ bool LinkFinder::is_style(char *html_file, long *index, long file_length) {
             return true;
         }
         else if(html_file[*index] == 'S' && html_file[*index+1] == 'T' && html_file[*index+2] == 'Y' && html_file[*index+3] == 'L' && html_file[*index+4] == 'E') {
-                *index += 4;
-                return true;
-            }
+            *index += 4;
+            return true;
+        }
     }
     return false;
 }
@@ -168,7 +168,7 @@ void LinkFinder::find_string(char *html_file, char* find_lower, char* find_upper
         }
         (*index)++;
     }
-        return;
+    return;
 }
 
 bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper, long *index, long file_length) {
@@ -195,18 +195,20 @@ void LinkFinder::get_words(char *html_file, long *index, long file_length, Strin
             String word;
             while(*index < file_length && html_file[*index] != '\n' && html_file[*index] != '\t' && html_file[*index] != ' ' && html_file[*index] != '<' && html_file[*index] != '\r') {
                 if(html_file[*index] != '"' && html_file[*index] != '(' && html_file[*index] != ')' && html_file[*index] != ',' && html_file[*index] != '.') {
-                    word += html_file[*index];
+                    if(isalpha(html_file[*index])) {
+                        word += tolower(html_file[*index]);
+                    }
+                    else {
+                        word += html_file[*index];
+                    }
                 }
                 (*index)++;
-            }
-            if(word.Size() >= 2) {
+            }//WHAT KIND OOF WORDS DO WE WANT?
             Index_object new_obj;
             new_obj.word = word;
             new_obj.type = type;//this is type
-            new_obj.position = word_count;
-            Document_meta_data_list.push_back(new_obj);
-            word_count++;
-            }
+            new_obj.position = (int)Document.Words.size();
+            Document.Words.push_back(new_obj);
         }
         else {
             (*index)++;
@@ -355,7 +357,7 @@ bool LinkFinder::find_open_tag(char *html_file, long *index, long file_length) {
             if(html_file[*index] == '>') {
                 tag_found = true;
             }
-        (*index)--;
+            (*index)--;
         }
         if(!tag_found) { //no parent tag found
             return false;
