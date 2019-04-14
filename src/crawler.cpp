@@ -139,6 +139,8 @@ namespace search {
                 }
                 pthread_mutex_unlock(&waitingForRobotsLock);
                 req.path = "/robots.txt";
+                req.query = "";
+                req.fragment = "";
                 auto newUrl = req.uri();
                 client->SubmitURLSync(newUrl, 0);
                 continue;
@@ -180,7 +182,7 @@ namespace search {
         return nullptr;
     }
 
-    void Crawler::print2(double &prevGiB) {
+    void Crawler::print2(double &prevGiB, time_t& prevTime) {
         time_t now = time(0);
         // size and number of files
         size_t pages = numPages;
@@ -188,20 +190,23 @@ namespace search {
         size_t robots = numRobots;
         const char * time = ctime(&now);
         double GiB = (double)bytes / 1073741824.0;
-        double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
+        double rate = (GiB - (double)prevGiB) / (difftime(now, prevTime)) * 8 * 1024;
         size_t queueSize = readyQueue.size();
         fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Pages: %zu\nTotal Robots: %zu \nItems on Queue: %zu\n\n", time, GiB, rate, pages, robots, queueSize);
+        prevTime = now;
         prevGiB = GiB;
     }
 
     // runs every whatever seconds and prints out the progress of the crawler so far
     void * Crawler::print() {
         double prevGiB = 0;
+        time_t oldTime = time(0);
         while (keep_running) {
-            sleep(10);
-            print2(prevGiB);
+            sleep(30);
+            print2(prevGiB, oldTime);
+            readyQueue.write();
         }
-        print2(prevGiB);
+        print2(prevGiB, oldTime);
         // need to do this so that any threads that are waiting on the
         // thread queue can pop then quit
         // should make a vector of NUM_CRAWLER_THREADS empty strings and push

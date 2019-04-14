@@ -66,6 +66,9 @@ namespace search {
             url[3] == 'l' && url[4] == 't' && url[5] == 'o') {
                 return;
         }
+        if (url.size() >= 5 && url.substr(0, 5) == "data:") {
+            return;
+        }
         static std::regex r(
                 R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
                 std::regex::extended

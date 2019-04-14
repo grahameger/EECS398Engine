@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <map>
 #include "Parser.hpp"
 
@@ -29,11 +30,62 @@ namespace search {
         crawler = crawlerIn;
         robots = &threading::Singleton<RobotsTxt>::getInstance();
 
-        logFd = open("fileWrites.log", O_WRONLY | O_APPEND | O_CREAT, 0755);
+        const char fileWritesLogName[] = "fileWrites.log";
+
+        struct stat st = {0};
+        int oFlags = O_WRONLY | O_APPEND;
+        if (stat(fileWritesLogName, &st) != 0) {
+            oFlags |= O_CREAT;
+        }
+        logFd = open(fileWritesLogName, oFlags, 0755);
         if (logFd < 0) {
             fprintf(stderr, "error opening log file");
             exit(1);
         }
+
+        // initialize the page filter
+        static const char robotsDir[] = "robots";
+        static const char pagesDir[] = "pages";
+        DIR * d;
+        struct dirent * dir;
+        char fullPath[1000];
+        d = opendir(robotsDir);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    fullPath[0] = '\0';
+                    strcat(fullPath, robotsDir);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, dir->d_name);
+                    struct stat st = {0};
+                    if (stat(fullPath, &st) == 0) {
+                        crawler->numBytes = st.st_size;
+                        crawler->numRobots++;
+                        crawler->pageFilter.add(fullPath);
+                    }
+                }
+            }
+        }
+        d = opendir(pagesDir);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG)  {
+                    fullPath[0] = '\0';
+                    strcat(fullPath, robotsDir);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, dir->d_name);
+                    
+                    struct stat st = {0};
+                    if (stat(fullPath, &st) == 0) {
+                        crawler->numBytes = st.st_size;
+                        crawler->numPages++;
+                        crawler->pageFilter.add(fullPath);
+                    }
+                }
+            }
+        }
+
+
 
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
@@ -428,6 +480,10 @@ namespace search {
     // we'll see if this segfaults :)
     bool HTTPClient::writeToFile(const HTTPRequest& req, void * fullRespnose, size_t bytesReceived, size_t headerSize) {
         const auto filename = req.filename();
+        struct stat st = {0};
+        if (stat(filename.c_str(), &st) == 0) {
+            return false;
+        }
         int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0755);
         for (size_t i = 0; i < 5; ++i) {
             fd = open(filename.c_str(), O_RDWR | O_CREAT, 0755);

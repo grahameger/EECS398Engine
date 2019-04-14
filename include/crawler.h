@@ -41,7 +41,7 @@ namespace search {
         ~Crawler();
         void * stub();
         void * print();
-        void print2(double &prevGiB);
+        void print2(double &prevGiB, time_t& prevTime);
         static void * stubHelper(void * context);
         static void * printHelper(void * context);
         bool haveRobots(const std::string &domain);
@@ -52,7 +52,7 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 4000;
+        static const size_t NUM_CRAWLER_THREADS = 600;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 7;
     private:
         friend class HTTPClient;

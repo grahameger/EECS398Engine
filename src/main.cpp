@@ -43,6 +43,15 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	urls.push_back("http://dmoztools.net/");
+
+
+	std::ifstream queue("queue.urls");
+	while (std::getline(queue, line)) {
+		if (line != "") {
+			urls.push_back(line);
+		}
+	}
+
 	// urls.push_back("http://soshesawildflowerxo.tumblr.com/post/173338544891/deep-talks-are-my-favorite-if-you-can-connect#_=_");
 
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);

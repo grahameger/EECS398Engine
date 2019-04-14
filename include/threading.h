@@ -15,6 +15,7 @@
 #include <deque>
 #include <vector>
 #include <random>
+#include <fstream>
 
 namespace threading {
     struct Mutex  {
@@ -83,7 +84,10 @@ namespace threading {
 
         template <typename Iterator>
         void push(Iterator start, Iterator end);
+        
         void push();
+
+        void write();
 
         T pop();
         T popRandom();
@@ -91,6 +95,7 @@ namespace threading {
 
         size_t size();
         bool empty();
+        static const size_t maxSize = 1000000;
     private:
         ThreadQueue(const ThreadQueue<T> &) = delete;
         ThreadQueue& operator=(const ThreadQueue<T>& ) = delete;
@@ -98,7 +103,8 @@ namespace threading {
         std::deque<T> q;
 
         Mutex m;
-        ConditionVariable cv;
+        ConditionVariable cvPop;
+        ConditionVariable cvPush;
     };
 
     class ReadWriteLock {
@@ -114,27 +120,34 @@ namespace threading {
 
     template <typename T> void ThreadQueue<T>::push(const T &d) {
         m.lock();
+        while (d.size() > maxSize) {
+            cvPush.wait(m);
+        }
         q.push_back(d);
-        cv.signal();
+        cvPop.signal();
         m.unlock();
     }
 
     template <typename T> void ThreadQueue<T>::push(const std::vector<T> &d) {
         m.lock();
-        for (auto &i : d) {
-            q.push_back(i);
+        while (d.size() > maxSize) {
+            cvPush.wait(m);
         }
-        cv.signal();
+        for (auto &i : d) {
+                q.push_back(i);
+        }
+        cvPop.signal();
         m.unlock();
     } 
 
     template <typename T> T ThreadQueue<T>::pop() {
         m.lock();
         while (q.empty()) {
-            cv.wait(m);
+            cvPop.wait(m);
         }
         T temp = q.front();
         q.pop_front();
+        cvPush.signal();
         m.unlock();
         return temp;
     }
@@ -142,11 +155,12 @@ namespace threading {
     template <typename T> void ThreadQueue<T>::popAll(std::vector<T> &d) {
         m.lock();
         while (q.empty()) {
-            cv.wait(m);
+            cvPop.wait(m);
         }
         // we own the lock
         d = std::vector<T>(q.begin(), q.end());
         q.clear();
+        cvPush.signal();
         m.unlock();
     }
 
@@ -164,6 +178,24 @@ namespace threading {
         return rv;
     }
 
+    template <typename T> void ThreadQueue<T>::write() {
+        static const std::string fileName = "queue.urls";
+        static const std::string fileNameNew = "queue.urls.swap";
+        static const std::string fileNameOld = "queue.urls.old";
+        std::ofstream newFile(fileNameNew);
+        m.lock();
+        // make a copy of the deque
+        std::deque<T> temp = q;
+        m.unlock();
+        // write it out while not holding the lock
+        for (auto i : temp) {
+            newFile << i << '\n';
+        }
+        std::rename(fileName.c_str(), fileNameOld.c_str());
+        std::rename(fileNameNew.c_str(), fileName.c_str());
+        // atomic write done 
+    }
+
     template <typename T>
     template <typename Iterator>
     void ThreadQueue<T>::push(Iterator start, Iterator end) {
@@ -171,7 +203,7 @@ namespace threading {
         for (auto it = start; it != end; it++) {
             q.push_back(*it);
         }
-        cv.signal();
+        cvPop.signal();
         m.unlock();
     }
 }

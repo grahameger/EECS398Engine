@@ -31,12 +31,12 @@ public:
     // Checks whether an element probably exists in the set, or definitely doesn't.
     bool exists(Key k) {
         size_t h1 = hash::Hash<Key>{}.get(k) % dataSize; 
-        size_t h2 = hash::Hash<Key>{}.get(k + static_cast<char>(39)) % dataSize; 
-        size_t h3 = hash::Hash<Key>{}.get(k + static_cast<char>(198)) % dataSize; 
-        size_t h4 = hash::Hash<Key>{}.get(k + static_cast<char>(171)) % dataSize; 
-        size_t h5 = hash::Hash<Key>{}.get(k + static_cast<char>(270)) % dataSize; 
-        size_t h6 = hash::Hash<Key>{}.get(k + static_cast<char>(150)) % dataSize; 
-        size_t h7 = hash::Hash<Key>{}.get(k + static_cast<char>(181)) % dataSize;
+        size_t h2 = hash::Hash<Key>{}.get(k + static_cast<char>(39)) % dataSize * sizeof(uint8_t); 
+        size_t h3 = hash::Hash<Key>{}.get(k + static_cast<char>(198)) % dataSize * sizeof(uint8_t); 
+        size_t h4 = hash::Hash<Key>{}.get(k + static_cast<char>(171)) % dataSize * sizeof(uint8_t); 
+        size_t h5 = hash::Hash<Key>{}.get(k + static_cast<char>(270)) % dataSize * sizeof(uint8_t); 
+        size_t h6 = hash::Hash<Key>{}.get(k + static_cast<char>(150)) % dataSize * sizeof(uint8_t); 
+        size_t h7 = hash::Hash<Key>{}.get(k + static_cast<char>(181)) % dataSize * sizeof(uint8_t);
         return isBitSet(h1) && isBitSet(h2) && isBitSet(h3) && isBitSet(h4) &&
             isBitSet(h5) && isBitSet(h6) && isBitSet(h7);
     }
