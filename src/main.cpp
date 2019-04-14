@@ -63,6 +63,8 @@ int main(int argc, char *argv[]) {
    pq.insert(String("first"), &locations2);
    locations.push_back(100);
    pq.insert(String("third"), &locations);
+   locations.push_back(100);
+   pq.insert(String("4"), &locations);
    
 
    std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;

@@ -6,6 +6,7 @@
 #include "StringView.h"
 #include "PostingList.h"
 #include "PriorityQueue.h"
+#include "Parser.hpp"
 
 class Index{
 public:
@@ -37,7 +38,8 @@ private:
    unsigned int smallesFit(unsigned int byteSize);
 	//VARIABLES
    PriorityQueue<wordLocations> queue;
-   
+   //need a queue of url docEnd pairs for newDoc()
+
 	struct locationPair{
       int blockNum;
       int offset;
@@ -55,11 +57,16 @@ private:
 	Vector<unsigned int> postingBlockSizes;
 	const int pageEndBlock;
 	const int urlBlock;
-	long currentLocation;//increment at end of addWord and newDoc
+	unsigned long long currentLocation;//increment at end of addWord and newDoc
 	//increment next empty block, if out of blocks make the file bigger
 	int nextEmptyBlock;
 	int numBlocks;
-	int currentDocId;
+	
+   
+   int currentDocId;
+   //reader() waits until its docId = currentWriteDocId to push to the pQueue
+   int currentWriteDocId;
+
    bool doneReadingIn;
    //THREADING
    vector<pthread_t> threads;
@@ -71,7 +78,8 @@ private:
    threading::Mutex currentBlocksLock;
    threading::Mutex mapLock;
    threading::Mutex currentLocationMutex;
-   threading::Mutex currentDocIdMutex;
+   threading::Mutex currentWriteDocIdMutex;
+   threading::Mutex documentQueueLock;
    struct urlMetadata{
 		//not sure what we need here
 	};

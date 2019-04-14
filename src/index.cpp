@@ -40,7 +40,7 @@ Index::~Index(){
    }
 }
 
-	void Index::newDoc(String url){
+void Index::newDoc(String url){
 		//add page end
 		//add url to url list
 		//put page metadata in url list
@@ -65,7 +65,26 @@ Index::~Index(){
 		//step 4 current locaiton++
 		//step 5 find location to place url+metadata
 		//step 6 update url block index
-      locks[pageEndBlock]->writeLock();
+   ScheduleBlock sb = Scheduler::GetPostingList("&&");//write version?
+   PostingList postingList(sb.pl);
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   locks[pageEndBlock]->writeLock();
       char* buf = new char[blockSize];
       readBlock(buf, pageEndBlock);
 		//get newest url block
@@ -181,7 +200,7 @@ Index::~Index(){
       }
 		currentDocId++;
 		delete[] buf;		
-	}
+}
 
 void threadDriver(void* notNeeded){
    //put them in a priority queue that holds wordLocations, sorted by numWords
@@ -193,17 +212,64 @@ void threadDriver(void* notNeeded){
          queueReadCV.wait(&queueLock);
       }
       locations = &(queue.top());
+      //now that locaitons is out of queue we remove the entry
+      queue.pop();
+      queueLock.unlock();
       addWord(locations);
       //unlocked in addWord
    }
    
 }
 
-void reader(){
+void reader(void* documentQueue){
    //could this be threaded?
    //    would have to make sure thread driver only happens when all document older than the newest currently being read are completely read.
    //    reader must add to queue in correct order, has to wait for readers of old docs to finish if necessary
+   while(true){
+      documentQueueLock.lock();
+      while(documentQueue->empty()){
+      }
+      //think about dynamicness
+      docObject* doc = documentQueue->top();
+      documentQueue->pop();
+      unsigned long long startLocation = currentLocation;
+      int docSize = docObject->Words.size();
+      for(unsigned i = 0; i < anchor_words.size(); i++){
+         docSize += anchor_words[i].size();
+      }
+      currentLocation += docSize;
+      int docId = currentDocId;
+      currentDocId++;
+      //can't read in next doc until current location and currentDocId are updated
+      documentQueueLock.unlock();
+      //pass urls and doc ends to newDoc somehow, probably a queue of url, docEnd pairs
 
+      //parse into word, vector<ull>location pairs
+      for(unsigned i = 0; i < docObject->Words.size(); i++){
+         //proabbly going to need a map here
+      }
+      //parse anchor texts
+      for(unsigned i = 0; i < anchor_words.size(); i++){
+         for(unsigned j = 0; j < anchor_words[i].size(); j++){
+            //probably gonna need to use the same map here
+         }
+         //docEnd map here
+      }
+
+      currentWriteDocIdMutex.lock();
+      while(currentWriteDocId != docId){
+         queueWriteCV.wait();
+      }
+      currentWriteDocIdMutex.unlock();
+      documentQueueLock.lock();      
+      //iterate through map and insert into pQueue
+      for(auto it = Iterator(0, &map); it != ;it++){
+
+      }
+
+      documentQueueLock.unlock();      
+      delete docObject;
+   }
 }
 
 void Index::addWord(wordLocations* locations, int queueIndex){
@@ -239,26 +305,29 @@ void Index::addWord(wordLocations* locations, int queueIndex){
    
    //set being used in function that passes locations for concurrency
 
-   //now that locaitons is out of queue we remove the entry
-   queue.pop();
-   queueLock.unlock();
    ScheduleBlock sb = Scheduler::GetPostingList(locations->word);//write version?
    PostingList postingList(sb.pl);
    unsigned int beforeSizeIndex = smallestFit(postingList.GetByteSize());
    for(unsigned i = 0; i < locations->numWords; i++){
       postingList.AddPosting(locations->locations[i]);
    }
+   //we must delete locations here so that the queue lock can be released earlier
+   //if queue.pop() deleted locations we would need to hold the  queue lock longer than necessary 
+   delete locations;
    if(smallestFit(postingList.GetByteSize()) - beforeSizeIndex == 0){
       //it fits
       postingList.UpdateInPlace();
    }
    else{
       //doesn't fit
-      vector <PostingList> split = PostingList::Split(blockSize);
+      //if postingList will fit in one block .split() returns a vector containing itself
+      //otherwise it returns a vector containing at least one blok sized posting list followed by a single pl whic may be smaller
+      vector <PostingList> split = postingList.split(blockSize);
       unsigned blockPointer = 0;
-      for(i = split.size() - 1; i > 0; i++){
+      for(i = split.size() - 1; i > 0; i--){
          blockPointer = Scheduler::GetBlock(split[i], blockPointer);
       }
+      //if the original posting list was already in a full block it updates in place
       sb.sb.UpgradeBlock(split[0], blockPointer);
       
    }
