@@ -202,7 +202,7 @@ namespace search {
         double prevGiB = 0;
         time_t oldTime = time(0);
         while (keep_running) {
-            sleep(30);
+            sleep(600);
             print2(prevGiB, oldTime);
             readyQueue.write();
             // remove domains that have not been hit in the last 10 seconds 

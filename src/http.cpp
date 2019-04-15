@@ -66,6 +66,7 @@ namespace search {
                 }
             }
         }
+        closedir(d);
         d = opendir(pagesDir);
         if (d) {
             while ((dir = readdir(d)) != NULL) {
@@ -84,8 +85,7 @@ namespace search {
                 }
             }
         }
-
-
+        closedir(d);
 
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
@@ -452,6 +452,7 @@ namespace search {
         // write it to a file
         if (!writeToFile(request, fullResponse, bytesReceived, headerSize)) {
             // don't need to free?
+            // definitely need to free
             return;
         }
 
@@ -482,6 +483,7 @@ namespace search {
         const auto filename = req.filename();
         struct stat st = {0};
         if (stat(filename.c_str(), &st) == 0) {
+            free(fullRespnose);
             return false;
         }
         int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0755);
@@ -549,6 +551,7 @@ namespace search {
                 crawler->numPages++;
             }
             dprintf(logFd, "wrote %s to disk.\n", filename.c_str());
+            free(fullRespnose);
             return true;
         }
     }

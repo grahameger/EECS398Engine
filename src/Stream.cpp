@@ -65,6 +65,7 @@ Stream::Stream() {
                 }
             }
         }
+        closedir(dir);
         // if all files are full
         if (backingFiles.rbegin() != backingFiles.rend() &&
             backingFiles.rbegin()->second->fileSize == BACKING_FILE_SIZE) {

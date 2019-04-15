@@ -91,12 +91,15 @@ namespace search {
             return "robots/" + host;
         } else {
             std::string slashesRemoved = host + path;
-            for (size_t i = 0; i < slashesRemoved.size(); ++i) {
-                if (slashesRemoved[i] == '/' || slashesRemoved[i] == '\0') {
-                    slashesRemoved[i] = '_';
-                }
+	    if (!slashesRemoved.empty() && slashesRemoved.back() == '_') {
+		    slashesRemoved.pop_back();
+        }
+        for (size_t i = 0; i < slashesRemoved.size(); ++i) {
+            if (slashesRemoved[i] == '/' || slashesRemoved[i] == '\0') {
+                slashesRemoved[i] = '_';
             }
-            return "pages/" + slashesRemoved;
+        }
+        return "pages/" + slashesRemoved;
         }
     }
 

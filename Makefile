@@ -36,4 +36,8 @@ robots:
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
 
+# install
+install:
+	sudo cp $(TARGET) /usr/local/bin/crawler
+
 .PHONY: clean
