@@ -18,23 +18,11 @@ extern volatile sig_atomic_t keep_running;
 namespace search {
 
     Crawler::Crawler(const std::vector<std::string> &seedUrls) : killFilter(1000000000), pageFilter(1000000000) {
-        
-        // check if the size file exists
-        numBytes = 0;
+
+        // initialize these or we get funky numbers 
         numPages = 0;
         numRobots = 0;
-        struct stat st = {0};
-        if (stat("stats", &st) == 0) {
-            std::ifstream stats("stats");
-            size_t bytes = 0, pages = 0, robots = 0;
-            stats >> bytes >> pages >> robots;
-            numBytes = bytes;
-            numPages = pages;
-            numRobots = robots;
-            remove("stats");
-        }
-        // grab our queue
-
+        numBytes = 0;
 
         // get our HTTP client
         client = new HTTPClient(this);
@@ -57,7 +45,6 @@ namespace search {
         // add the seed urls to the queue
         readyQueue.push(seedUrls);
 
-        // when does this run?
         pthread_create(&printThread, NULL, &Crawler::printHelper, this);
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
@@ -202,10 +189,15 @@ namespace search {
         double prevGiB = 0;
         time_t oldTime = time(0);
         while (keep_running) {
-            sleep(600);
-            print2(prevGiB, oldTime);
-            readyQueue.write();
+            for (size_t i = 0; i < 60; i++) 
+            {
+                // do this once every 10 seconds
+                print2(prevGiB, oldTime);
+                sleep(10);
+            }
+            // do everything in this block once every 10 minutes or so
             // remove domains that have not been hit in the last 10 seconds 
+            readyQueue.write();
             pthread_mutex_lock(&domainMutex);
             auto now = time(NULL);
             for (auto it = lastHitHost.begin(); it != lastHitHost.end();) {
@@ -216,6 +208,9 @@ namespace search {
                 }
             }
             pthread_mutex_unlock(&domainMutex);
+        }
+        while (keep_running) {
+            
         }
         print2(prevGiB, oldTime);
         // need to do this so that any threads that are waiting on the
@@ -250,10 +245,6 @@ namespace search {
             pthread_join(threads[i], NULL);
             fprintf(stderr, "Thread %zu of %zu returned\n", i + 1, NUM_CRAWLER_THREADS);
         }
-        // delete and print the number of bytes and the number of pages to a file
-        std::ofstream stats("stats");
-        stats << numBytes << ' ' << numPages << ' ' << numRobots << '\n';
-        stats.close();
     }
 
     inline void Crawler::domainLock() {

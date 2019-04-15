@@ -59,9 +59,10 @@ namespace search {
                     strcat(fullPath, dir->d_name);
                     struct stat st = {0};
                     if (stat(fullPath, &st) == 0) {
-                        crawler->numBytes = st.st_size;
+                        crawler->numBytes += st.st_size;
                         crawler->numRobots++;
                         crawler->pageFilter.add(fullPath);
+                        // add the file to the robots rules
                     }
                 }
             }
@@ -78,7 +79,7 @@ namespace search {
                     
                     struct stat st = {0};
                     if (stat(fullPath, &st) == 0) {
-                        crawler->numBytes = st.st_size;
+                        crawler->numBytes += st.st_size;
                         crawler->numPages++;
                         crawler->pageFilter.add(fullPath);
                     }
@@ -252,7 +253,7 @@ namespace search {
     // Returns false if there is no Content-Type, or if the Content-Type
     // is not either "text/html" or "text/plain"
     // tested good
-    bool HTTPClient::goodMimeContentType(char * str, ssize_t len) {
+    bool HTTPClient::goodMimeContentType(const char * str, const ssize_t len) {
         // construct a string_view from our pointer and length
         // find "Content-Type" using the case insensitive find function
         // construct a string_view of the mime-type indicated in the header
@@ -270,8 +271,8 @@ namespace search {
             const std::string_view contentType = header.substr(firstTokenStart,
                                              header.find_first_of(" \f\n\r\t\v;", firstTokenStart));
             if (contentType.size() >= 9) {
-                auto firstToken = contentType.substr(0,4);
-                auto secondToken = contentType.substr(5,4);
+                std::string_view firstToken = contentType.substr(0,4);
+                std::string_view secondToken = contentType.substr(5,4);
                 return firstToken == "text" && (secondToken == "html" || secondToken == "plai");
             } else {
                 return false;
@@ -282,8 +283,31 @@ namespace search {
     }
 
 
-    bool HTTPClient::response200or300(char * str, ssize_t len) {
-        return len >= 10 ? str[9] == '2' || str[9] == 3 : false;
+    bool HTTPClient::response200or300(const char * str, ssize_t len) {
+        return len >= 10 ? str[9] == '2' || str[9] == '3' : false;
+    }
+
+
+    // borrows all 
+    bool HTTPClient::headerChecks(const char * header, const size_t headerLen, const HTTPRequest& req, ssize_t& contentLength) {
+        if (!response200or300(header, headerLen)) {
+            auto uri = req.uri();
+            crawler->killFilter.add(uri);
+            fprintf(stderr, "[EXIT] Non 20X or 30X HTTP response code - %s\n", uri.c_str());
+            return false;
+        }
+        if (!req.robots() && !goodMimeContentType(header, headerLen)) {
+            auto uri = req.uri();
+            crawler->killFilter.add(uri);
+            fprintf(stderr, "[EXIT] Bad content type for request %s\n", uri.c_str());
+            return false;
+        }
+        contentLength = getContentLength(std::string_view(header, headerLen));
+        if (contentLength == CHUNKED) {
+            fprintf(stderr, "received a chunked encoding\n");
+            return false;
+        }
+        return true;
     }
 
 
@@ -367,18 +391,8 @@ namespace search {
                 headerPos = view.find("\r\n\r\n");
                 if (headerPos != std::string_view::npos) {
                     headerSize = headerPos + 4;
-                    // once we have the full header check the content type
-                    if (!isARobotsRequest && response200or300(fullResponse, headerSize) && !goodMimeContentType(fullResponse, headerSize)) {
-                        auto uri = request.uri();
-                        crawler->killFilter.add(request.uri());
-                        fprintf(stderr, "Bad content type for url %s\n", uri.c_str());
+                    if (!headerChecks(fullResponse, headerSize, request, contentLength)) {
                         free(fullResponse);
-                        return;
-                    }
-                    // search for "Content-Length"
-                    contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
-                    if (contentLength == CHUNKED) {
-                        fprintf(stderr, "received a chunked encoding\n");
                         return;
                     }
                     if (contentLength != (size_t)-1) {
@@ -430,12 +444,14 @@ namespace search {
 
         char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
         if (redirectUrl) {
-            free(fullResponse);
             // make a non relative url from this 
             std::string newUrl = resolveRelativeUrl(url.c_str(), redirectUrl);
+            free(fullResponse);
             free(redirectUrl);
-            return SubmitURLSync(newUrl, ++redirCount);
+            redirCount++;
+            return SubmitURLSync(newUrl, redirCount);
         }
+
         if (!isARobotsRequest) {
             if (containsGzip(fullResponse, headerSize)) {
                 free(fullResponse);
@@ -461,8 +477,13 @@ namespace search {
             // more optimized way than doing this...
             robots->lock();
             auto filename = request.filename();
-            robots->SubmitRobotsTxt(request.host, filename);
-            robots->unlock();
+            try {
+                robots->SubmitRobotsTxt(request.host, filename);
+                robots->unlock();
+            } catch (...) {
+                fprintf(stderr, "unable to write robots.txt for file %s\n", filename.c_str());
+                robots->unlock();
+            }
             // move all the waiting pages to the readyQueue;
             pthread_mutex_lock(&crawler->waitingForRobotsLock);
             auto it = crawler->waitingForRobots.find(request.host);
@@ -480,6 +501,7 @@ namespace search {
     // write an HTML file to disk
     // we'll see if this segfaults :)
     bool HTTPClient::writeToFile(const HTTPRequest& req, void * fullRespnose, size_t bytesReceived, size_t headerSize) {
+        
         const auto filename = req.filename();
         struct stat st = {0};
         if (stat(filename.c_str(), &st) == 0) {
@@ -571,7 +593,12 @@ namespace search {
         // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
         std::set<std::string> toPush;
         for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
-            toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
+            if (linkFinder.Link_vector[i].Size() < 2083) { // 2083 is the functional limit to a URL length W3C recommends=
+            // perf recorded spending more than 50% of our time resolving relative urls, after investigation there may be a bug finding
+            // links that leads to really really long ones, like hundreds of thousands of characters (aka not real links) being processed
+            // which would slow down the program significantly as resolving is a fairly intensive task, but necessary for legitimate pages.
+                toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
+            }
         }
         crawler->readyQueue.push(toPush.begin(), toPush.end());
     }
@@ -631,7 +658,7 @@ namespace search {
         std::string base(baseUri);
          // remove everything after the last / in the base Uri path unless the last thing is a slash
         base.erase(base.find_last_of('/') + 1, std::string::npos);
-        std::string timBernersLeeBuffer = std::string(base.begin(), base.end());
+        std::string timBernersLeeBuffer(base.begin(), base.end());
         // Is it PascalCase because it's a man's name or camelCase because it's local????
         
         // b) The reference's path component is appended to the buffer string

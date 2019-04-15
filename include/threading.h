@@ -213,18 +213,23 @@ namespace threading {
     }
 
     // if somehow our queue goes to 0, this should introduce some randomness
+    // DO NOT LOCK IN THIS FUNCTION
     template <typename T>
-    void ThreadQueue<T>::loadFromOverflow() {
-        m.lock();
-        size_t numBytes = 8192; 
-        char * line = (char *) malloc (numBytes + 1);
+    void ThreadQueue<T>::loadFromOverflow() {  
+        char * line = NULL;
+        size_t len = 0;
+        ssize_t rv = 0;
         FILE * queue = fdopen(overflowFd, "r");
-        while (getline(&line, &numBytes, queue) > 0) {
-            // push the line to the 
-            q.push_back(line);
+        if (!queue) {
+            fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
         }
-        m.unlock();
+        while ((rv = getline(&line, &len, queue)) != -1) {
+            // push the line to the 
+            q.push_back(line); // line is statically allocated?
+            free(line);
+        }
     }
+
 
     template <typename T> T ThreadQueue<T>::pop() {
         m.lock();
@@ -284,6 +289,10 @@ namespace threading {
         std::rename(fileName.c_str(), fileNameOld.c_str());
         std::rename(fileNameNew.c_str(), fileName.c_str());
         // atomic write done 
+
+
+
+        // std::ofstream
     }
 }
 

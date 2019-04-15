@@ -105,7 +105,8 @@ namespace search {
 
     std::string HTTPRequest::requestString() const {
         std::stringstream ss;
-        ss << constants::getMethod << ' ' << path << ' ' << constants::httpVersion << endl;
+        auto pathStr = (path.size() > 0 && path.front() == '/') ? path : "/";
+        ss << constants::getMethod << ' ' << pathStr << ' ' << constants::httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << userAgents << endl;
         ss << encoding << endl;

@@ -52,7 +52,7 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 1000;
+        static const size_t NUM_CRAWLER_THREADS = 10;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 7;
     private:
         friend class HTTPClient;
@@ -70,9 +70,12 @@ namespace search {
         static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
         std::map<std::string, std::set<std::string> > waitingForRobots;
         inline static pthread_mutex_t waitingForRobotsLock;
-        std::atomic<size_t> numBytes;
-        std::atomic<size_t> numPages;
-        std::atomic<size_t> numRobots;
+        std::atomic<size_t> numBytes; 
+        std::atomic<size_t> numPages; 
+        std::atomic<size_t> numRobots; 
+        // std::atomic<size_t> is the only way I've found to use the ISO C11 atomic intrinsics (stdatomic.h) in a C++ class 
+        // Without actually handwriting the assembly. You can sort of apply extern "C" to a member function via a very convoluted hack,
+        // but it is not portable to all compiler versions.
     };
 }
 

@@ -114,9 +114,10 @@ namespace search {
         void processResponses();
         void process(char* file, size_t len, const std::string &currentUri);
 
-        static bool goodMimeContentType(char * str, ssize_t len);
-        static bool response200or300(char * str, ssize_t len);
+        static bool goodMimeContentType(const char * str, const ssize_t len);
+        static bool response200or300(const char * str, ssize_t len);
         static bool containsGzip(char * p, size_t len);
+        bool headerChecks(const char * header, const size_t len, const HTTPRequest& req, ssize_t& contentLength);
 
         bool writeToFile(const HTTPRequest& req,
                          void * fullRespnose,

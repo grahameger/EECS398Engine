@@ -13,18 +13,8 @@
             }
         },
         {
-            "label": "clean wd",
-            "type": "shell",
-            "command": "rm -rf wd && mkdir wd",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
-        },
-        {
             "label": "build all",
             "dependsOn": [
-                "clean wd",
                 "build engine"
             ]
         }
