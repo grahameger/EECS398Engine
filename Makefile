@@ -53,6 +53,13 @@ split: $(patsubst %,$(BUILDDIR)/%,$(POSTINGSPLITOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split
 
+SCHEDULEROBJS := TestScheduler.o IndexScheduler.o StringView.o
+sked: $(patsubst %,$(BUILDDIR)/%,$(SCHEDULEROBJS))
+	@echo "rm testIndex"
+	@rm testIndex
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/sked"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/sked
+
 # Spikes
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
