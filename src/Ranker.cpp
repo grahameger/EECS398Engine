@@ -58,7 +58,7 @@ unsigned short Ranker::Document::ComputeScore(DecoratedWordISRs& wordISRs)
    return 0;
    }
 
-Ranker::Document::Features::WordStatistics::WordStatistics(ISRWord* isrIn)
+Ranker::Document::WordStatistics(ISRWord* isrIn)
    : isr(isrIn) {}
 
 void Ranker::Document::Features::ComputeFeatures(Vector<ISRWord*> wordISRs)
@@ -67,8 +67,8 @@ void Ranker::Document::Features::ComputeFeatures(Vector<ISRWord*> wordISRs)
    Vector<WordStatistics> wordsStatistics;
    for(int i = 0; i < wordISRs.size(); ++i)
       {
-      WordStatistics currentWordStatistic(wordISRs[i]);
-      wordsStatistics.push_back(currentWordStatistic);
+      WordStatistics currentWordStatistics(wordISRs[i]);
+      wordsStatistics.push_back(currentWordStatistics);
       }
    
    bool allISRsPastEnd = false;
@@ -87,7 +87,7 @@ void Ranker::Document::Features::ComputeFeatures(Vector<ISRWord*> wordISRs)
       }
    }
 
-void Ranker::Document::Features::WordStatistics::SeekNextInstance()
+void Ranker::Document::WordStatistics::SeekNextInstance()
    {
    isr->nextInstance();
    if(!IsPastEnd())

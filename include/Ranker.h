@@ -41,6 +41,18 @@ class Ranker
             //REQUIRES: wordISRs are seeked to beginning of this document
             unsigned short ComputeScore(DecoratedWordISRs& wordISRs);
          private:
+            class WordStatistics
+               {
+               public:
+                  WordStatistics() {}
+                  WordStatistics(ISRWord* isrIn);
+                  void SeekNextInstance();
+                  bool IsPastEnd();
+                  unsigned short Count;
+               private:
+                  ISRWord* isr;
+               };
+
             class Features
                {
                //public variables are the features directly used in ranking{
@@ -51,16 +63,6 @@ class Ranker
                   unsigned short NormalizedSumOfStreamLength;
                   unsigned short NumAnchorTextReferences;
                private:
-                  class WordStatistics
-                     {
-                     public:
-                        WordStatistics(ISRWord* isrIn);
-                        void SeekNextInstance();
-                        bool IsPastEnd();
-                        unsigned short Count;
-                     private:
-                        ISRWord* isr;
-                     };
                };
                   
             struct DecorationFeatures
