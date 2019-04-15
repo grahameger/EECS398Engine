@@ -1,0 +1,1 @@
+nextInstance and nextDocument reutrns nullptr if there are no more
