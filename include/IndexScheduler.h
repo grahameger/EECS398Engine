@@ -1,9 +1,26 @@
 #ifndef INDEXSCHEDULER_H
 #define INDEXSCHEDULER_H
 
+#include "PersistentHashMap.h"
+#include "String.h"
 #include "StringView.h"
 
-class SchedulerBlock;
+class SchedulerSubBlock
+   {
+   public:
+      SchedulerSubBlock( Pair< unsigned, unsigned char > subBlockLoc );
+      SchedulerSubBlock( unsigned blockIndex, unsigned char subBlockIndex );
+
+      unsigned GetBlockIndex( ) const;
+      unsigned char GetSubBlockIndex( ) const;
+
+   private:
+      unsigned blockIndex;
+      unsigned char subBlockIndex;
+      bool inMemory;
+
+   };
+
 
 class IndexScheduler
    {
@@ -22,12 +39,17 @@ class IndexScheduler
    
    // Instance
    public:
-      unsigned NumBlocks( );
-      SchedulerBlock GetPostingList( );
+      unsigned NumBlocks( ) const;
+      unsigned char SmallestSubBlockSize( ) const;
+
+      SchedulerSubBlock GetPostingList( const String& word );
 
    private:
       IndexScheduler( unsigned blockSize, unsigned pagesSize, unsigned numSizes );
       void CreateNewIndexFile( unsigned blockSize, unsigned numSizes );
+
+      Pair< unsigned, unsigned char > GetOpenSubBlock( unsigned subBlockSize );
+
       void IncrementOpenSubBlock( unsigned subBlockSize );
       void IncrementNumBlocks( );
 
@@ -35,6 +57,8 @@ class IndexScheduler
       char** pages;
       int indexFD;
       unsigned nextBlockIndex, blockSize;
+
+      PersistentHashMap< const char*, Pair< unsigned, unsigned char > > subBlockIndex;
 
    };
 

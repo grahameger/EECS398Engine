@@ -46,6 +46,8 @@ const T StringView::GetInString( unsigned offset ) const
    }
 
 // Here are the ones I use
+template const unsigned char
+      StringView::GetInString< unsigned char >( unsigned offset ) const;
 template const unsigned 
       StringView::GetInString< unsigned >( unsigned offset ) const;
 template const unsigned long long 
@@ -66,6 +68,8 @@ void StringView::SetInString( T value, unsigned offset )
    }
 
 // Here are the ones I use
+template void StringView::SetInString< unsigned char >
+      ( unsigned char value, unsigned offset );
 template void StringView::SetInString< unsigned >
       ( unsigned value, unsigned offset );
 template void StringView::SetInString< unsigned long long >

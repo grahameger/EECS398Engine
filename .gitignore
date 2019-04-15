@@ -79,4 +79,4 @@ test/parsed.urls
 .vimrc
 *.swp
 
-testIndex
+testIndex*
