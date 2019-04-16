@@ -1,6 +1,7 @@
 #include "httpRequest.h"
 #include <string>
 #include <sstream>
+#include <iomanip>
 
 namespace search {
 
@@ -11,16 +12,33 @@ namespace search {
     using constants::connClose;
     using constants::userAgents;
     using constants::robotsTxtString;
+    using std::isalnum;
 
-    // parse a well formed url and get the stuff within
-    // URI = scheme:[//authority]path[?query][#fragment]
-    // authority = [userinfo@]host[:port]
-    // uses the RFC 3986 regex suggestion for URL parsing
-    // Using GCC 8.2.0 on Linux the return value is moved
-    // not copied. Therefore it is faster than the heap
-    // based version. 
-    // Bad urls will copy the empty request but will not
-    // run a bunch of std::string constructors
+    // url encode function
+    std::string UrlEncode::encode(const std::string &url) {
+        // make a copy of the url here and transform in place
+        std::ostringstream escaped;
+        escaped.fill('0');
+        for (size_t i = 0; i < url.size(); i++) {
+            const char& c = url[i];
+            if (html5[c]) {
+                escaped << std::uppercase;
+                escaped << '%' << std::setw(2) << html5[c]; 
+                escaped << std::nouppercase;
+            }
+            else {
+                escaped << url[i];
+            }
+        }
+        return escaped.str();
+    }
+
+    HTML5Encode::HTML5Encode() {
+        for (size_t i = 0; i < 256; i++) {
+            table[i] = std::isalnum(i)||i == '*'||i == '-'||i == '.'||i == '_' ? i : (i == ' ') ? '+' : 0;
+        }
+    }
+    
 
 
     static std::string urlDecoder(const std::string& url) {
@@ -55,7 +73,15 @@ namespace search {
         return decoded.str();
     }
 
-
+    // parse a well formed url and get the stuff within
+    // URI = scheme:[//authority]path[?query][#fragment]
+    // authority = [userinfo@]host[:port]
+    // uses the RFC 3986 regex suggestion for URL parsing
+    // Using GCC 8.2.0 on Linux the return value is moved
+    // not copied. Therefore it is faster than the heap
+    // based version. 
+    // Bad urls will copy the empty request but will not
+    // run a bunch of std::string constructors
     HTTPRequest::HTTPRequest(std::string url) {
         url.erase(remove_if(url.begin(), url.end(), isspace), url.end());
         // decode the url before we do anything else
@@ -105,7 +131,12 @@ namespace search {
 
     std::string HTTPRequest::requestString() const {
         std::stringstream ss;
-        auto pathStr = (path.size() > 0 && path.front() == '/') ? path : "/";
+        auto pathStr = (path.size() > 0 && path.front() == '/') ? UrlEncode::encode(path) : "/";
+        if (path.size() == 0) {
+            pathStr = "/";
+        } else if (path.front() != '/') {
+            pathStr = '/' + path;
+        }
         ss << constants::getMethod << ' ' << pathStr << ' ' << constants::httpVersion << endl;
         ss << hostString << ' ' << host << endl;
         ss << userAgents << endl;
@@ -180,15 +211,15 @@ namespace search {
             result += scheme;
             result += "://";
         }
-        result += host;
+        result += UrlEncode::encode(host);
         if (path != "") {
-            result += path;
+            result += UrlEncode::encode(path);
         } else {
             result += "/";
         }
         if (query != "") {
             result += "?";
-            result += "query";
+            result += UrlEncode::encode(query);
         }
         return result;
     }

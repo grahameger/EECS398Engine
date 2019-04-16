@@ -47,4 +47,21 @@ namespace search {
                                                             ".flac"};
         inline static const size_t NUM_BAD_EXTENSIONS = 15;
     };
+
+
+    // encoding table based on the HTML5 specification
+    // using this instead of RFC3986 simply because it is newer
+    // and I anticipate that a majority of the webpages we crawl
+    // will be HTML5.
+    struct HTML5Encode {
+        static const size_t DataSize = 256;
+        char table[256];
+        HTML5Encode();
+        char operator[](const size_t idx) const;
+    };
+
+    struct UrlEncode {
+        static const HTML5Encode html5;
+        static std::string encode(const std::string &url);
+    };
 }

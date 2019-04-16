@@ -282,13 +282,12 @@ namespace search {
         }
     }
 
-
     bool HTTPClient::response200or300(const char * str, ssize_t len) {
         return len >= 10 ? str[9] == '2' || str[9] == '3' : false;
     }
 
 
-    // borrows all 
+    // borrows all arguments
     bool HTTPClient::headerChecks(const char * header, const size_t headerLen, const HTTPRequest& req, ssize_t& contentLength) {
         if (!response200or300(header, headerLen)) {
             auto uri = req.uri();

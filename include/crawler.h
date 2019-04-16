@@ -52,7 +52,7 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 10;
+        static const size_t NUM_CRAWLER_THREADS = 500;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 7;
     private:
         friend class HTTPClient;
