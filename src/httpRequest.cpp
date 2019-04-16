@@ -14,33 +14,6 @@ namespace search {
     using constants::robotsTxtString;
     using std::isalnum;
 
-    // url encode function
-    std::string UrlEncode::encode(const std::string &url) {
-        // make a copy of the url here and transform in place
-        std::ostringstream escaped;
-        escaped.fill('0');
-        for (size_t i = 0; i < url.size(); i++) {
-            const char& c = url[i];
-            if (html5[c]) {
-                escaped << std::uppercase;
-                escaped << '%' << std::setw(2) << html5[c]; 
-                escaped << std::nouppercase;
-            }
-            else {
-                escaped << url[i];
-            }
-        }
-        return escaped.str();
-    }
-
-    HTML5Encode::HTML5Encode() {
-        for (size_t i = 0; i < 256; i++) {
-            table[i] = std::isalnum(i)||i == '*'||i == '-'||i == '.'||i == '_' ? i : (i == ' ') ? '+' : 0;
-        }
-    }
-    
-
-
     static std::string urlDecoder(const std::string& url) {
         std::ostringstream decoded;
         std::string hexBuffer = "00"; 
@@ -95,12 +68,8 @@ namespace search {
         if (url.size() >= 5 && url.substr(0, 5) == "data:") {
             return;
         }
-        static std::regex r(
-                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
-                std::regex::extended
-        );
         std::smatch result;
-        if (std::regex_match(url, result, r)) {
+        if (std::regex_match(url, result, parser->parser)) {
             scheme = result[2];
             host = result[4];
             path = result[5];
@@ -131,7 +100,7 @@ namespace search {
 
     std::string HTTPRequest::requestString() const {
         std::stringstream ss;
-        auto pathStr = (path.size() > 0 && path.front() == '/') ? UrlEncode::encode(path) : "/";
+        auto pathStr = (path.size() > 0 && path.front() == '/') ? path : "/";
         if (path.size() == 0) {
             pathStr = "/";
         } else if (path.front() != '/') {
@@ -211,16 +180,55 @@ namespace search {
             result += scheme;
             result += "://";
         }
-        result += UrlEncode::encode(host);
+        result += host;
         if (path != "") {
-            result += UrlEncode::encode(path);
+            result += path;
         } else {
             result += "/";
         }
         if (query != "") {
             result += "?";
-            result += UrlEncode::encode(query);
+            result += query;
         }
         return result;
+    }
+
+
+    // url encode function
+    std::string UrlEncode::encode(const std::string &url) {
+        // make a copy of the url here and transform in place
+        std::ostringstream escaped;
+        escaped.fill('0');
+        for (size_t i = 0; i < url.size(); i++) {
+            const char& c = url[i];
+            if (html5[c]) {
+                escaped << std::uppercase;
+                escaped << '%' << std::setw(2) << html5[c]; 
+                escaped << std::nouppercase;
+            }
+            else {
+                escaped << url[i];
+            }
+        }
+        return escaped.str();
+    }
+
+    HTML5Encode::HTML5Encode() {
+        for (size_t i = 0; i < 256; i++) {
+            table[i] = std::isalnum(i)||i == '*'||i == '-'||i == '.'||i == '_' ? i : (i == ' ') ? '+' : 0;
+        }
+    }
+
+    const char& HTML5Encode::operator[](const size_t idx) const {
+        return table[idx];
+    }
+
+    UrlParser::UrlParser() {
+        parser = std::regex(
+                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
+                std::regex::extended |
+                std::regex_constants::optimize |
+                std::regex_constants::icase
+        );
     }
 }

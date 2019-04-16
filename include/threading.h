@@ -16,10 +16,13 @@
 #include <vector>
 #include <random>
 #include <fstream>
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <unistd.h>
 #include <cstdio>
+#include <set>
+#include <cassert>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -143,6 +146,22 @@ namespace threading {
             exit(1);
         } else {
             overflowFd = rv;
+        }
+        // read the overflow file in and reset the size to 0
+        FILE * overFlowFile = fdopen(overflowFd, "r+");
+        std::set<std::string> deDuplicator;
+        size_t lineLen;
+        char * line = nullptr;
+        if (overFlowFile) {
+            while ((rv = getline(&line, &lineLen, overFlowFile)) != -1) {
+                deDuplicator.insert(line);
+                free(line); line = nullptr;
+            }
+        }
+        // add the things from the deDuplicator to the queue
+        for (auto i : deDuplicator) {
+            i.erase(std::remove_if(i.begin(), i.end(), isspace), i.end());
+            q.push_back(i);
         }
     }
 

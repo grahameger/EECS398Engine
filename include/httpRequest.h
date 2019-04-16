@@ -7,8 +7,15 @@
 #include <regex>
 
 #include "constants.h"
+#include "threading.h"
 
 namespace search {
+
+    struct UrlParser {
+        UrlParser();
+        std::regex parser;
+    };
+
     struct HTTPRequest {
 
         HTTPRequest(std::string url);
@@ -46,6 +53,8 @@ namespace search {
                                                             ".ogg",
                                                             ".flac"};
         inline static const size_t NUM_BAD_EXTENSIONS = 15;
+
+        inline static UrlParser * parser = &threading::Singleton<UrlParser>::getInstance();
     };
 
 
@@ -55,13 +64,15 @@ namespace search {
     // will be HTML5.
     struct HTML5Encode {
         static const size_t DataSize = 256;
-        char table[256];
         HTML5Encode();
-        char operator[](const size_t idx) const;
+        const char& operator[](const size_t idx) const;
+    private:
+        char table[256];
     };
 
     struct UrlEncode {
-        static const HTML5Encode html5;
         static std::string encode(const std::string &url);
+    private:
+        inline static const HTML5Encode html5;
     };
 }
