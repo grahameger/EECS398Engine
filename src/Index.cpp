@@ -83,7 +83,8 @@ Index::Index( const char* filename, unsigned recSize, unsigned numSizes )
    if ( read( indexFD, &blockSize, sizeof( unsigned ) ) != sizeof( unsigned ) )
       ErrExit( );
    if ( blockSize != recSize )
-      printf( "Warning: using existing blockSize instead of suggested\n" );
+      printf( "Warning: using existing blockSize of %u instead of suggested %u\n", 
+            blockSize, recSize );
    // Set metaData to the mmapped first block
    metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
    // Second num is numBlocks
@@ -96,6 +97,7 @@ void Index::AddPostings( const FixedLengthString& word,
    {
    // GetPostingListSubBlock for this word
    SubBlock plSubBlock = GetPostingListSubBlock( word, true );
+   assert( plSubBlock.subBlockInfo.blockIndex != 0 );
 
    // Turn mmapped area into a stringView
    StringView plStringView( plSubBlock.mmappedArea + plSubBlock.dataOffset, 
@@ -147,7 +149,7 @@ void Index::AddPostings( const FixedLengthString& word,
          {
          printf(", and the old block at (%u, %u) of size %u\n", plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, plSubBlock.subBlockInfo.subBlockSize);
          // Update in place on the old block
-         postingList.UpdateInPlace( plStringView );
+         split[ i - 1 ]->UpdateInPlace( plStringView );
          // Set it's next pointer
          plSubBlock.SetNextPtr( blockIndexPtr );
          // Unmap it
