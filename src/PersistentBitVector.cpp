@@ -37,9 +37,6 @@ PersistentBitVector::PersistentBitVector(String filename) {
     // mmap the data portion
     // the data size should be the number of bits specified, not bytes
     data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
-    if (!fileExists) {
-        memset(data, 0x0, header->dataSize);
-    }
 }
 
 // close and unmap the file with a write lock

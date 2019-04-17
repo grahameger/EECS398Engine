@@ -82,6 +82,7 @@ namespace search {
                         crawler->numBytes += st.st_size;
                         crawler->numPages++;
                         crawler->pageFilter.add(fullPath);
+                        // open the file, parse it, add the links to a set
                     }
                 }
             }
@@ -292,33 +293,60 @@ namespace search {
         if (!response200or300(header, headerLen)) {
             auto uri = req.uri();
             crawler->killFilter.add(uri);
-            fprintf(stderr, "[EXIT] Non 20X or 30X HTTP response code - %s\n", uri.c_str());
+            fprintf(stderr, "[BAD RESPONSE] Non 20X or 30X HTTP response code - %s\n", uri.c_str());
             return false;
         }
         if (!req.robots() && !goodMimeContentType(header, headerLen)) {
             auto uri = req.uri();
             crawler->killFilter.add(uri);
-            fprintf(stderr, "[EXIT] Bad content type for request %s\n", uri.c_str());
+            fprintf(stderr, "[BAD CONTENT TYPE] Bad content type for request %s\n", uri.c_str());
             return false;
         }
         contentLength = getContentLength(std::string_view(header, headerLen));
         if (contentLength == CHUNKED) {
-            fprintf(stderr, "received a chunked encoding\n");
+            fprintf(stderr, "[CHUNKED] received a chunked encoding\n");
             return false;
         }
         return true;
     }
 
+    void HTTPClient::robotsErrorCheck(const HTTPRequest& request) {
+        if (request.robots()) {
+            auto filename = request.filename();
+            // move all the waiting pages to the readyQueue;
+            pthread_mutex_lock(&crawler->waitingForRobotsLock);
+            crawler->robotsDomains.insert(request.host);
+            auto it = crawler->waitingForRobots.find(request.host);
+            if (it != crawler->waitingForRobots.end()) {
+                std::set<std::string> readyToCrawl;
+                readyToCrawl.insert(it->second.begin(), it->second.end());
+                crawler->waitingForRobots.erase(it);
+                pthread_mutex_unlock(&crawler->waitingForRobotsLock);
+                crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
+            } else {
+                pthread_mutex_unlock(&crawler->waitingForRobotsLock);
+            }
+            // create an empty file with the filename
+            int fd = open(filename.c_str(), O_RDWR | O_CREAT, 0755);
+            if (fd != -1) {
+                // write the null character to the file
+                dprintf(fd, "%c", '\0');
+            }
+            close(fd);
+        }
+    }
+
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
-            fprintf(stderr, "Too many redirects ending in host %s\n", url.c_str());
             std::string uri = HTTPRequest(url).uri();
             crawler->killFilter.add(uri);
+            fprintf(stderr, "[TOO MANY REDIRECTS] %s\n", url.c_str());
             return;
         }
         HTTPRequest request(url);
         if (request.host == "") {
+            fprintf(stderr, "[NOHOST] %s\n", url.c_str());
             return;
         }
         std::unique_ptr<Socket> sock;
@@ -332,12 +360,14 @@ namespace search {
             sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
+            fprintf(stderr, "[NOSCHEME] %s\n", url.c_str());
             return;
         }
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
             crawler->killFilter.add(request.uri());
+            fprintf(stderr, "[CONN FAILED] %s\n", url.c_str());
             return; 
         }
         ssize_t rv = sock->setFd(sockfd);
@@ -345,6 +375,7 @@ namespace search {
             // this error message was getting really annoying.
             // fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             crawler->killFilter.add(request.uri());
+            fprintf(stderr, "[SET FD FAILED] %s\n", url.c_str());
             return;
         }
 
@@ -360,8 +391,11 @@ namespace search {
 
         // send request blocking
         const std::string requestStr = request.requestString();
+        const std::string uri = request.uri();
+        //fprintf(stderr, "uri: %s\n%s\n", uri.c_str(), requestStr.c_str());
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-            fprintf(stderr, "error sending request to host for url '%s'\n", url.c_str());
+            fprintf(stderr, "[SEND ERROR] %s\n", url.c_str());
+            robotsErrorCheck(request);
             crawler->killFilter.add(request.uri());
             return;
         }
@@ -375,8 +409,9 @@ namespace search {
             rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
             if (rv < 0) {
                 // error check
-                fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());
                 free(fullResponse);
+                robotsErrorCheck(request);
                 crawler->killFilter.add(request.uri());
                 return;
             } else if (rv == 0) {
@@ -391,6 +426,7 @@ namespace search {
                 if (headerPos != std::string_view::npos) {
                     headerSize = headerPos + 4;
                     if (!headerChecks(fullResponse, headerSize, request, contentLength)) {
+                        robotsErrorCheck(request);
                         free(fullResponse);
                         return;
                     }
@@ -428,7 +464,8 @@ namespace search {
                         } while (rv > 0);
                         if (rv < 0) {
                             free(fullResponse);
-                            fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                            fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());
+                            robotsErrorCheck(request);
                             crawler->killFilter.add(request.uri());
                             return;
                         }
@@ -448,11 +485,14 @@ namespace search {
             free(fullResponse);
             free(redirectUrl);
             redirCount++;
+            fprintf(stderr, "[REDIRECT] %s\n", newUrl.c_str());
             return SubmitURLSync(newUrl, redirCount);
         }
 
         if (!isARobotsRequest) {
             if (containsGzip(fullResponse, headerSize)) {
+                fprintf(stderr, "[GZIP] %s\n", url.c_str());
+                robotsErrorCheck(request);
                 free(fullResponse);
                 return;
             } else {
@@ -468,6 +508,7 @@ namespace search {
         if (!writeToFile(request, fullResponse, bytesReceived, headerSize)) {
             // don't need to free?
             // definitely need to free
+            fprintf(stderr, "[FILE WRITE FAILED] %s\n", url.c_str());
             return;
         }
 
@@ -480,11 +521,12 @@ namespace search {
                 robots->SubmitRobotsTxt(request.host, filename);
                 robots->unlock();
             } catch (...) {
-                fprintf(stderr, "unable to write robots.txt for file %s\n", filename.c_str());
+                fprintf(stderr, "[ROBOTS SUBMIT FAILED] %s\n", url.c_str());
                 robots->unlock();
             }
             // move all the waiting pages to the readyQueue;
             pthread_mutex_lock(&crawler->waitingForRobotsLock);
+            crawler->robotsDomains.insert(request.host);
             auto it = crawler->waitingForRobots.find(request.host);
             std::set<std::string> readyToCrawl;
             if (it != crawler->waitingForRobots.end()) {
@@ -564,11 +606,11 @@ namespace search {
                 return false;
             }
             close(fd);
-            crawler->pageFilter.add(filename);
             crawler->numBytes += bytesWrote;
             if (req.robots()) {
                 crawler->numRobots++;
             } else {
+                crawler->pageFilter.add(filename);
                 crawler->numPages++;
             }
             dprintf(logFd, "wrote %s to disk.\n", filename.c_str());
@@ -586,20 +628,21 @@ namespace search {
 
     // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
-        const char * baseUri = currentUri.c_str();
-        LinkFinder linkFinder; // each thread should probably just have they're own one of these
-        linkFinder.parse(file, len);
-        // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
-        std::set<std::string> toPush;
-        for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
-            if (linkFinder.Link_vector[i].Size() < 2083) { // 2083 is the functional limit to a URL length W3C recommends=
-            // perf recorded spending more than 50% of our time resolving relative urls, after investigation there may be a bug finding
-            // links that leads to really really long ones, like hundreds of thousands of characters (aka not real links) being processed
-            // which would slow down the program significantly as resolving is a fairly intensive task, but necessary for legitimate pages.
-                toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
-            }
-        }
-        crawler->readyQueue.push(toPush.begin(), toPush.end());
+        // turning this off for now
+        // const char * baseUri = currentUri.c_str();
+        // LinkFinder linkFinder; // each thread should probably just have they're own one of these
+        // linkFinder.parse(file, len);
+        // // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
+        // std::set<std::string> toPush;
+        // for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
+        //     if (linkFinder.Link_vector[i].Size() < 2083) { // 2083 is the functional limit to a URL length W3C recommends=
+        //     // perf recorded spending more than 50% of our time resolving relative urls, after investigation there may be a bug finding
+        //     // links that leads to really really long ones, like hundreds of thousands of characters (aka not real links) being processed
+        //     // which would slow down the program significantly as resolving is a fairly intensive task, but necessary for legitimate pages.
+        //         toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
+        //     }
+        // }
+        // crawler->readyQueue.push(toPush.begin(), toPush.end());
     }
 
     std::string HTTPClient::resolveRelativeUrl(const char * baseUri, const char * newUri) {

@@ -52,8 +52,8 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 500;
-        static const size_t DOMAIN_REHIT_WAIT_TIME = 7;
+        static const size_t NUM_CRAWLER_THREADS = 4000;
+        static const size_t DOMAIN_REHIT_WAIT_TIME = 10;
     private:
         friend class HTTPClient;
         threading::ThreadQueue<std::string> readyQueue;
@@ -67,6 +67,7 @@ namespace search {
         // when a page is really bad and we don't want to crawl it again, it meets the killFilter
         BloomFilter<std::string> killFilter; 
         BloomFilter<std::string> pageFilter;
+        std::set<std::string> robotsDomains;
         static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
         std::map<std::string, std::set<std::string> > waitingForRobots;
         inline static pthread_mutex_t waitingForRobotsLock;

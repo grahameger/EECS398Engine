@@ -124,6 +124,8 @@ namespace search {
                          size_t bytesReceived,
                          size_t headerSize);
 
+        void robotsErrorCheck(const HTTPRequest &request);
+
         static char * checkRedirectsHelper(const char * getMessage, size_t len);
 
         // Resolves a relative URL into an absolute path relative to the current request.

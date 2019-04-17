@@ -24,9 +24,6 @@ namespace search {
         numRobots = 0;
         numBytes = 0;
 
-        // get our HTTP client
-        client = new HTTPClient(this);
-
         // initialize mutex
         domainMutex = PTHREAD_MUTEX_INITIALIZER;
         waitingForRobotsLock = PTHREAD_MUTEX_INITIALIZER;
@@ -41,14 +38,15 @@ namespace search {
         // specifically so we don't have to do this
         // O(1) file access, creation in a directory 
         // with an unbounded number of files (2^32-1 really)
-         
-        // add the seed urls to the queue
-        readyQueue.push(seedUrls);
+        client = new HTTPClient(this);
 
+        // add the seed urls to the queue
         pthread_create(&printThread, NULL, &Crawler::printHelper, this);
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
         }
+        fprintf(stderr, "ALL THREADS CREATED: queue size %zu\n", seedUrls.size());
+        readyQueue.push(seedUrls);
     }
 
     void makeDir(const char * name) {
@@ -66,19 +64,24 @@ namespace search {
 
     bool Crawler::havePage(const HTTPRequest& req) {
         auto filename = req.filename();
-        if (pageFilter.exists(req.filename())) {
+        // if (pageFilter.exists(req.filename())) {
             // check the filesystem if the bloom filter tells us to
             struct stat st = {0};
             const char * cStr = filename.c_str();
             return (stat(cStr, &st) == 0);
-        }
-        return false;
+        // }
+        // return false;
     }
 
     bool Crawler::haveRobots(const std::string &host) {
+        return true;
         auto path1 = std::string("robots/" + host);
         auto path2 = std::string("robots/" + ("www." + host)); // unfortunately the web sucks
         struct stat st = {0};
+        if (robotsDomains.find(path1) != robotsDomains.end() ||
+            robotsDomains.find(path2) != robotsDomains.end()) {
+            return true;
+        }
         if (pageFilter.exists(path1) && (stat(path1.c_str(), &st) == 0)) {
             return true;
         }
@@ -103,6 +106,7 @@ namespace search {
             // Once we we add it to the queue and once when we pop from the queue
             // Also check the extension to make sure that it's not on the bad list.
             if (havePage(req) || !req.goodExtension()) {
+                fprintf(stderr, "[DUPLICATE] %s\n", req.filename().c_str());
                 continue;
             }
 
@@ -122,6 +126,7 @@ namespace search {
                     // if there is, just add it to the set
                     it->second.insert(req.uri());
 		            pthread_mutex_unlock(&waitingForRobotsLock);
+                    fprintf(stderr, "[NO ROBOTS] %s\n", req.filename().c_str());
                     continue;
                 }
                 pthread_mutex_unlock(&waitingForRobotsLock);
@@ -129,6 +134,7 @@ namespace search {
                 req.query = "";
                 req.fragment = "";
                 auto newUrl = req.uri();
+                fprintf(stderr, "[SUBMITTING ROBOTS] %s\n", req.filename().c_str());
                 client->SubmitURLSync(newUrl, 0);
                 continue;
             }
@@ -144,6 +150,7 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // submitURLSync();
+                    fprintf(stderr, "[SUBMITTING] %s\n", req.filename().c_str());
                     client->SubmitURLSync(p, 0);
                     // continue
                     continue;
@@ -151,7 +158,8 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // add the page to the back of the Queue
-                    readyQueue.push(p);
+                    fprintf(stderr, "[RATE LIMIT] %s\n", req.filename().c_str());
+                    readyQueue.push(p); 
                     // continue
                     continue;
                 }
@@ -161,6 +169,7 @@ namespace search {
                 // unlock mutex
                 pthread_mutex_unlock(&domainMutex);
                 // submitURLSync
+                fprintf(stderr, "[SUBMITTING] %s\n", req.filename().c_str());
                 client->SubmitURLSync(p, 0);
                 // continue
                 continue;

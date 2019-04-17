@@ -188,20 +188,8 @@ namespace threading {
 
     template <typename T> void ThreadQueue<T>::push(const std::vector<T> &d) {
         m.lock();
-        if (q.size() > maxSize) {
-            // write to the overflow file
-            std::stringstream ss;
-            for (auto i : d) {
-                ss << i << '\n';
-            }
-            auto s = ss.str();
-            dprintf(overflowFd, "%s", s.c_str());
-            cvPop.signal();
-            m.unlock();
-            return;
-        }
         for (auto &i : d) {
-                q.push_back(i);
+            q.push_back(i);
         }
         cvPop.signal();
         m.unlock();

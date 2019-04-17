@@ -225,10 +225,8 @@ namespace search {
 
     UrlParser::UrlParser() {
         parser = std::regex(
-                R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
-                std::regex::extended |
-                std::regex_constants::optimize |
-                std::regex_constants::icase
+            R"(^(([^:\/?#]+):)?(//([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?)",
+            std::regex::extended | std::regex_constants::optimize
         );
     }
 }

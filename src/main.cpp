@@ -21,7 +21,7 @@ static void sig_handler(int _)
     keep_running = 0;
 }
 
-static const char startFile[] = "/data/crawl/seedlist.url";
+static const char startFile[] = "/data/crawl/hn/HNDump/deduped.hn.urls";
 
 int main(int argc, char *argv[]) {
 
@@ -51,8 +51,6 @@ int main(int argc, char *argv[]) {
 			urls.push_back(line);
 		}
 	}
-
-	// urls.push_back("http://soshesawildflowerxo.tumblr.com/post/173338544891/deep-talks-are-my-favorite-if-you-can-connect#_=_");
 
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
