@@ -206,12 +206,12 @@ int LinkFinder::parse(char* html_file) {//String url
                         char find_up[] = "lang=";
                         long reset_value = index;
                         if(find_link(html_file, find_low, find_up)) {
-                            if(index + 6 < file_length) {
-                                if((html_file[index] == '"' || html_file[index] == '\'') && (html_file[index+1] == 'e' && html_file[index+2] == 'n' && html_file[index+1] == '-' && html_file[index+1] == 'U' && html_file[index+1] == 'U')) {
+                            if(index + 3 < file_length) {
+                                if((html_file[index] == '"' || html_file[index] == '\'') && (html_file[index+1] == 'e' && html_file[index+2] == 'n')) {
                                     reset_index(reset_value);
                                     goto DEFAULT;
                                 }
-                                else if(html_file[index] == 'e' && html_file[index+1] == 'n' && html_file[index+2] == '-' && html_file[index+3] == 'U' && html_file[index+4] == 'U') {
+                                else if(html_file[index] == 'e' && html_file[index+1] == 'n') {
                                     reset_index(reset_value);
                                     goto DEFAULT;
                                 }
