@@ -7,13 +7,14 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iterator>
-#include <cassert>
+
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "hash.h"
 #include "mmap.h"
@@ -21,6 +22,9 @@
 #include "String.h"
 #include "PersistentBitVector.h"
 
+#ifndef O_NOATIME
+#define O_NOATIME 0
+#endif
 
 // Linear Probing thread-safe file backed hash map
 template <typename Key, typename Mapped>
@@ -35,6 +39,7 @@ public:
 
     // Constructor
     PersistentHashMap(String filename, double loadFactorIn = 0.7);
+    ~PersistentHashMap();
 
     // Square Brackets Operator
     MappedType& operator[](const KeyType& key);
@@ -42,6 +47,9 @@ public:
 
     // Inserts value into hash table, thread safe.
     void insert(const ValueType& keyVal);
+
+    // Flush function
+    bool flush();
 
     // Erase the item in the table matching the key. 
     // Returns whether an item was deleted.
@@ -73,7 +81,6 @@ private:
     void insertKeyValue(const ValueType& value);
     void noProbeNoRehashInsertKeyValueAtIndex(const ValueType &value, SizeType index);
 
-    // TODO: make this work
     void rehashAndGrow();
 
     bool rehashNeeded();
@@ -148,14 +155,14 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     bool fileExists = (stat(filename.CString(), &buffer) == 0);
 
     // open file with correct flags
-    int openFlags = O_RDWR;
+    int openFlags = O_RDWR | O_NOATIME;
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags, S_IRWXU);
+    fd = open(filename.CString(), openFlags, 0755);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
-        // TODO: more error handling
+        exit(1);
     }
 
     // mmap and setup the header portion
@@ -175,6 +182,27 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
     // we shouldn't memset we should default construct the objects?
     this->header->rwLock.unlock();
+}
+
+template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::~PersistentHashMap() {
+    // unmap buckets
+    munmapWrapper(buckets, this->header->capacity * sizeof(ValueType));
+    // unmap header
+    munmapWrapper(header, sizeof(HeaderType)); 
+}
+
+template <typename Key, typename Mapped> bool PersistentHashMap<Key, Mapped>::flush() {
+    // sync buckets
+    int rv = msyncWrapper(buckets, this->header->capacity * sizeof(ValueType));
+    if (rv != 0) {
+        return false;
+    }
+    // sync header
+    rv = msyncWrapper(header, sizeof(HeaderType));
+    if (rv != 0) {
+        return false;
+    }
+    return true;
 }
 
 // Inserts the value into the hash table at a given indice.
@@ -285,7 +313,6 @@ Mapped& PersistentHashMap<Key, Mapped>::at(const KeyType& key) {
     auto indexForKey = this->probeForExistingKey(key);
     if (indexForKey == this->header->capacity) {
         this->unlock();
-        // TODO: is this what we really want to do here?
         throw std::out_of_range("Key does not exist in hash map");
     }
     auto& rv = this->buckets[indexForKey].second;

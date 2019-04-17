@@ -12,6 +12,8 @@
 #include <stdlib.h>
 // For read
 #include <unistd.h>
+// For assert
+#include <assert.h>
 
 // ################
 // Helper Functions
@@ -82,6 +84,17 @@ Index::Index( const char* filename, unsigned recSize, unsigned numSizes )
    metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
    // Second num is numBlocks
    nextBlockIndex = metaData.GetInString< unsigned >( sizeof( unsigned ) );
+
+   auto wordIt = subBlockIndex.find( 0 );
+
+   if ( wordIt != subBlockIndex.end( ) )
+      printf("butter found!\n");
+   else
+      {
+      subBlockIndex.insert( Pair< unsigned, unsigned >( 0, 7 ) );
+      assert( subBlockIndex.find( 0 ) != subBlockIndex.end( ) );
+      printf("butter not found...\n");
+      }
    }
 
 
