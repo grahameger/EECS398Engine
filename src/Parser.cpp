@@ -16,9 +16,116 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
     return *this;
 }
 
+void LinkFinder::url_parser(String url) {
+    unsigned int num_consonants_in_row = 0;
+    unsigned int num_vowels = 0;
+    String word;
+    for(int i = 0; i < url.Size(); i++) {
+        //character is alpha
+        if(isalpha(url.CString()[i])) {
+            if(is_vowel(url.CString()[i])) {
+                num_vowels++;
+                num_consonants_in_row = 0;
+            }
+            else {
+                num_consonants_in_row++;
+            }
+            word += tolower(url.CString()[i]);
+            //reset if 4 chars in a row
+            if(num_consonants_in_row == 4) {
+                while(i < url.Size() && url.CString()[i] != '-' && url.CString()[i] != '/' && url.CString()[i] != '.' && url.CString()[i] != '_') {
+                    i++;
+                }
+                word = "";//reset word
+                num_consonants_in_row = 0;
+                num_vowels = 0;
+            }
+        }
+        else {
+            if(is_valid_word(word, num_vowels)) {
+                if(strncmp(word.CString(), "gov", 3) == 0 || strncmp(word.CString(), "com", 3) == 0 || strncmp(word.CString(), "edu", 3) == 0 || strncmp(word.CString(), "net", 3) == 0 || strncmp(word.CString(), "org", 3) == 0 || strncmp(word.CString(), "mil", 3) == 0) {
+                    Document.domain_type = word.CString()[0];
+                    //go back 1 and check graham's list'
+                    //char for top 10/100/1000 in grahams list
+                    if(Document.url.size() >= 1) {
+                        //if(Document.url[0].CString() in graham's top list) {
+                        //    is_top_domain = true;
+                        //domain_rank = get_rank(Document.url[0]);
+                        //}
+                    }
+                }
+                Document.url.push_back(word);
+            }
+            if(url.CString()[i] == '/') {
+                Document.num_slash_in_url++;
+            }
+            num_consonants_in_row = 0;//reset all
+            num_vowels = 0;
+            word = ""; //reset word
+            while(i < url.Size() && url.CString()[i] != '-' && url.CString()[i] != '/' && url.CString()[i] != '.' && url.CString()[i] != '_') {
+                i++;
+            }
+        }
+    }
+    if(is_valid_word(word, num_vowels)) {
+        Document.url.push_back(word);
+    }
+    for(int i = 0; i < Document.url.size(); i++) {
+        std::cout << Document.url[i].CString() << std::endl;
+    }
+}
+//rules
+/*
+ 1. 4 cons in a row
+ 2. No vowels
+ 3. Isalpha
+ 4. > 2 chars
+ **5. not stopword
+ aqs, sourceid, chrome, utf, safari, firefox, com, google, search
+ */
+
+/*char get_rank(String domain) {
+ 
+ do domain stuff up here
+ switch(domain) {
+ case : top 10
+ break;
+ case : top 50
+ break;
+ case : top 100
+ break;
+ case : top 250
+ break;
+ case : top 500
+ break;
+ default :
+ return '9';
+ }
+ }*/
+
+bool is_vowel(char c) {
+    switch(c) {
+        case 'a'  :
+        case 'e'  :
+        case 'i'  :
+        case 'o'  :
+        case 'u'  :
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool is_valid_word(String word, unsigned int vowels) {
+    if(word.Size() > 2 && vowels > 0) {
+        return true;
+    }
+    return false;
+}
 
 int LinkFinder::parse(char* html_file) {//String url
     //Document.doc_url = url;
+    //url_parser(url);
     file_length = strlen(html_file);
     while(index < file_length) {//run until end of file
         if(html_file[index] == '<') {
@@ -50,9 +157,9 @@ int LinkFinder::parse(char* html_file) {//String url
                             index++;
                         }
                         //set ptr to before >
-                        index--;
+                        //index--;
                         //find a tag close. Parent or </a>
-                        find_closing_a_tag(html_file);
+                        //find_closing_a_tag(html_file);
                         while(index < file_length && html_file[index] != '>') {
                             index++;
                         }
@@ -92,6 +199,34 @@ int LinkFinder::parse(char* html_file) {//String url
                         goto DEFAULT;
                     }
                     break;
+                case 'H'  :
+                case 'h'  :
+                    if(is_html(html_file)) {
+                        char find_low[] = "lang=";
+                        char find_up[] = "lang=";
+                        long reset_value = index;
+                        if(find_link(html_file, find_low, find_up)) {
+                            if(index + 6 < file_length) {
+                                if((html_file[index] == '"' || html_file[index] == '\'') && (html_file[index+1] == 'e' && html_file[index+2] == 'n' && html_file[index+1] == '-' && html_file[index+1] == 'U' && html_file[index+1] == 'U')) {
+                                    reset_index(reset_value);
+                                    goto DEFAULT;
+                                }
+                                else if(html_file[index] == 'e' && html_file[index+1] == 'n' && html_file[index+2] == '-' && html_file[index+3] == 'U' && html_file[index+4] == 'U') {
+                                    reset_index(reset_value);
+                                    goto DEFAULT;
+                                }
+                                else {
+                                    is_english = false;
+                                    return 0;
+                                }
+                                
+                                
+                            }
+                        }
+                    }
+                    else {
+                        goto DEFAULT;
+                    }
                     
                 DEFAULT:default : //ordinary tag. Just skip everything between <...>
                     char find[] = ">";
@@ -100,14 +235,15 @@ int LinkFinder::parse(char* html_file) {//String url
         }
         //Inside >...< and not script or style, so body. Get it.
         //ignore nothing
-        else if(html_file[index] == '\n' || html_file[index] == ' ' || html_file[index] == '\t' || html_file[index] == '\r') {
-            //do nothing
-            index++;
-        }
+        //else if(html_file[index] == '\n' || html_file[index] == ' ' || html_file[index] == '\t' || html_file[index] == '\r') {
+        //do nothing
+        //  index++;
+        //}
         //grab the body text
         else {
-            String type = "body";
-            get_words(html_file, type);
+            //String type = "body";
+            //get_words(html_file, type);
+            index++;
         }
     }
     return 0;
@@ -121,6 +257,20 @@ bool LinkFinder::is_script(char *html_file) {
         }
         else if(html_file[index] == 'S' && html_file[index+1] == 'C' && html_file[index+2] == 'R' && html_file[index+3] == 'I' && html_file[index+4] == 'P' && html_file[index+5] == 'T') {
             index += 5;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LinkFinder::is_html(char *html_file) {
+    if(index + 3 < file_length) {
+        if(html_file[index] == 'h' && html_file[index+1] == 't' && html_file[index+2] == 'm' && html_file[index+3] == 'l') {
+            index += 3;
+            return true;
+        }
+        else if(html_file[index] == 'H' && html_file[index+1] == 'T' && html_file[index+2] == 'M' && html_file[index+3] == 'L') {
+            index += 3;
             return true;
         }
     }

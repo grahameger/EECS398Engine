@@ -26,9 +26,15 @@ public:
 
 struct Doc_object {
     String doc_url;
+    unsigned short num_slash_in_url = 0;
     Vector<String> Links;
     Vector<Index_object> Words;
     Vector<Vector<Index_object>> anchor_words;
+    Vector<String> url;
+    bool is_top_domain = false; //if in graham's list of top *100* domains.
+    char domain_type = 'x'; // default x. com = c, mil = m, edu = e, none = x, gov = g, etc...
+    unsigned long domain_rank; //1 = top 1, 2 = top 2, 3 = top 3, etc...
+    bool is_https = false;
 };
 
 class LinkFinder {
@@ -38,12 +44,14 @@ public:
     
     //destructor
     ~LinkFinder();
+    bool is_english = true;
     
     //returns -1 if something failed, else returns 0
     //parses html file into title, body, links, and anchor text
     int parse(char *filename);//String url
-    long file_length = 0;
-    long index = 0;
+    
+    unsigned long file_length = 0;
+    unsigned long index = 0;
     
     void print_all() {
         for(int i = 0; i < Document.Links.size(); i ++) {
@@ -55,6 +63,9 @@ public:
         }
     }
     
+    //parses url
+    void url_parser(String url);
+    
     Doc_object Document;
     
 private:
@@ -64,6 +75,7 @@ private:
     //be careful to reset index pointer to ensure still in range
     void find_string(char *html_file, char* find_lower, char* find_upper);
     
+    
     //Look for href= If doesn't exist in <a>, returns false. Else, true.
     bool find_link(char *html_file, char* find_lower, char* find_upper);
     
@@ -71,6 +83,7 @@ private:
     bool is_script(char *html_file);
     bool is_style(char *html_file);
     bool is_title(char *html_file);
+    bool is_html(char *html_file);
     
     //Prints out words line by line and which tag(word) they belong to
     void get_words(char *html_file, String word);
@@ -105,5 +118,8 @@ private:
 
 bool is_space(char c);
 bool is_relevant_char(char c);
+bool is_vowel(char c);
+bool is_valid_word(String word, unsigned int vowels);
+char get_rank(String domain);
 
 #endif /* Parser_hpp_398 */
