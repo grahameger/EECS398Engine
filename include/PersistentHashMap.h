@@ -38,6 +38,7 @@ public:
 
     // Constructor
     PersistentHashMap(String filename, double loadFactorIn = 0.7);
+    ~PersistentHashMap();
 
     // Square Brackets Operator
     MappedType& operator[](const KeyType& key);
@@ -45,6 +46,9 @@ public:
 
     // Inserts value into hash table, thread safe.
     void insert(const ValueType& keyVal);
+
+    // Flush function
+    bool flush();
 
     // Erase the item in the table matching the key. 
     // Returns whether an item was deleted.
@@ -177,6 +181,27 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
     // we shouldn't memset we should default construct the objects?
     this->header->rwLock.unlock();
+}
+
+template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::~PersistentHashMap() {
+    // unmap buckets
+    munmapWrapper(buckets, this->header->capacity * sizeof(ValueType));
+    // unmap header
+    munmapWrapper(header, sizeof(HeaderType)); 
+}
+
+template <typename Key, typename Mapped> bool PersistentHashMap<Key, Mapped>::flush() {
+    // sync buckets
+    int rv = msyncWrapper(buckets, this->header->capacity * sizeof(ValueType));
+    if (rv != 0) {
+        return false;
+    }
+    // sync header
+    rv = msyncWrapper(header, sizeof(HeaderType));
+    if (rv != 0) {
+        return false;
+    }
+    return true;
 }
 
 // Inserts the value into the hash table at a given indice.
