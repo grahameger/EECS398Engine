@@ -110,7 +110,7 @@ private:
     bool find_open_tag(char *html_file);
     
     //If parent tag exists, returns position of parent tag close.
-    long parent_tag_distance(char *html_file, char* tag);
+    unsigned long parent_tag_distance(char *html_file, char* tag);
     
     //Adds character to word if it's a relevant char. Lowers it as well.
     void add_char_to_word(char *html_file, String &word, String type, Vector<Index_object> &v);
