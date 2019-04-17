@@ -1,11 +1,15 @@
 #include "DummyISR.h"
 
 IsrDummy::IsrDummy(vector<Location> matchesIn)
-    : matches(matchesIn), curInd(0) {}
+    : matches(matchesIn), curInd(0), IsrSentinel(ULLONG_MAX) {}
 
 Location IsrDummy::NextInstance()
    {
-   return matches[++curInd];
+   if(HasNextInstance())
+      curLocation = matches[++curInd];
+   else
+      curLocation = ULLONG_MAX;
+   return curLocation;
    }
 
 Location IsrDummy::SeekDocStart(Location docStart)
@@ -19,4 +23,9 @@ Location IsrDummy::SeekDocStart(Location docStart)
 bool IsrDummy::HasNextInstance()
    {
    return curInd < matches.size() - 2;
+   }
+
+Location IsrDummy::GetCurrentLocation()
+   {
+   return curInd;
    }

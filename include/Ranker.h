@@ -1,20 +1,20 @@
-#include "DummyISR.h"
+#include "DummyIsr.h"
 #include "vector.h"
 
 typedef unsigned DocID;
 
-//all ISRs should be flattened and grouped by decoration
+//all Isrs should be flattened and grouped by decoration
 //e.g. for query "Dennis AND (Dan OR Joe)"
 //give me [Dennis Dan Joe], [#Dennis #Dan #Joe], [@Dennis @Dan @Joe], [/Dennis /Dan /Joe]
 //where each of the above terms (e.g. Dennis, #Dennis, /Joe, etc.) are the
-//WordISR* for that term 
+//WordIsr* for that term 
 //Be sure to maintain the original ordering of the flattened query
-struct DecoratedWordISRs
+struct DecoratedWordIsrs
    {
-   Vector<IsrDummy*> AnchorTextISRs;
-   Vector<IsrDummy*> BodyTextISRs;
-   Vector<IsrDummy*> TitleISRs;
-   Vector<IsrDummy*> UrlISRs;
+   Vector<Isr*> AnchorTextIsrs;
+   Vector<Isr*> BodyTextIsrs;
+   Vector<Isr*> TitleIsrs;
+   Vector<Isr*> UrlIsrs;
    };
 
 class Ranker
@@ -22,7 +22,7 @@ class Ranker
    public:
       Ranker();
       //RETURNS: Document IDs ranked from most relevant to least relevant
-      Vector<DocID> Rank(IsrDummy* rootISR, DecoratedWordISRs& wordISRs);
+      Vector<DocID> Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs, IsrDocDummy* docIsr);
    
    private:
       class RankedDocument
@@ -35,17 +35,18 @@ class Ranker
       class Document
          {
          public:
-            Document(DocID idIn);
-            DocID ID;
+            //Seeks docIsr to endDoc location after matchLocation
+            Document(Location matchLocation, IsrEndDoc* docIsr);
             unsigned short Score;
-            //REQUIRES: wordISRs are seeked to beginning of this document
-            unsigned short ComputeScore(DecoratedWordISRs& wordISRs);
+            //REQUIRES: wordIsrs are seeked to beginning of this document
+            unsigned short ComputeScore(DecoratedWordIsrs& wordIsrs);
+            DocID GetDocID();
          private:
             class Features
                {
                //public variables are the features directly used in ranking{
                public: 
-                  void ComputeFeatures(Vector<IsrDummy*> wordISRs);
+                  void ComputeFeatures(Vector<Isr*> wordIsrs);
                   unsigned short TfIdf;
                   unsigned short StaticRank;
                   unsigned short NormalizedSumOfStreamLength;
@@ -54,12 +55,12 @@ class Ranker
                   class WordStatistics
                      {
                      public:
-                        WordStatistics(IsrDummy* isrIn);
+                        WordStatistics(Isr* isrIn);
                         void SeekNextInstance();
                         bool IsPastEnd();
                         unsigned short Count;
                      private:
-                        IsrDummy* isr;
+                        Isr* isr;
                      };
                };
                   
@@ -70,15 +71,17 @@ class Ranker
                Features TitleFeatures;
                Features UrlFeatures;
                };
-
+            
+            DocumentAttributes docInfo;
             DecorationFeatures decorationFeatures;
+            Location docEndLocation;
          };
 
       Vector<RankedDocument> topRankedDocuments;
 
-      void seekDecoratedWordISRs(Location locationToSeek, 
-            DecoratedWordISRs& wordISRs);
-      void seekIsrDummyVector(Vector<IsrDummy*> &isrVec, Location locationToSeek);
+      void seekDecoratedWordIsrs(Location locationToSeek, 
+            DecoratedWordIsrs& wordIsrs);
+      void seekIsrVector(Vector<Isr*> &isrVec, Location locationToSeek);
       void updateTopRankedDocuments(Document& document);
       void clearTopRankedDocments();
       DocID getDocumentID(PostingListIndex* docIndex);

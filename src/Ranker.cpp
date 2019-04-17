@@ -1,22 +1,20 @@
 #include "Ranker.h"
-//PostingListIndex to be created
-class PostingListIndex;
 
-void Ranker::seekIsrDummyVector(Vector<IsrDummy*>& isrVec, Location locationToSeek)
+void Ranker::seekIsrVector(Vector<Isr*>& isrVec, Location locationToSeek)
    {
    for(int i = 0; i < isrVec.size(); ++i)
       {
-      isrVec[i]->SeekDocStart(locationToSeek);
+      isrVec[i]->SeekToLocation(locationToSeek);
       }
    }
 
-void Ranker::seekDecoratedWordISRs(Location locationToSeek, 
-      DecoratedWordISRs& wordISRs)
+void Ranker::seekDecoratedWordIsrs(Location locationToSeek, 
+      DecoratedWordIsrs& wordIsrs)
    {
-   seekIsrDummyVector(wordISRs.AnchorTextISRs, locationToSeek);
-   seekIsrDummyVector(wordISRs.BodyTextISRs, locationToSeek);
-   seekIsrDummyVector(wordISRs.TitleISRs, locationToSeek);
-   seekIsrDummyVector(wordISRs.UrlISRs, locationToSeek);
+   seekIsrVector(wordIsrs.AnchorTextIsrs, locationToSeek);
+   seekIsrVector(wordIsrs.BodyTextIsrs, locationToSeek);
+   seekIsrVector(wordIsrs.TitleIsrs, locationToSeek);
+   seekIsrVector(wordIsrs.UrlIsrs, locationToSeek);
    }
 
 void Ranker::updateTopRankedDocuments(Document& document)
@@ -30,58 +28,92 @@ DocID Ranker::getDocumentID(PostingListIndex* docIndex)
    return 0;
    }
 
-Vector<DocID> Ranker::Rank(IsrDummy* rootISR, DecoratedWordISRs& wordISRs)
+void Ranker::getDocumentAttributes(Location matchLocation, IsrEndDoc* docIsr, 
+      DocumentAttributes &docInfo)
    {
-   PostingListIndex* matchingDocIndex = rootISR->NextInstance();
-   while(matchingDocIndex)
+   Location endDocLocation = docIsr->SeekToLocation(matchLocation);
+   if(endDocLocation == Isr::IsrSentinel)
       {
-      Document document(getDocumentID(matchingDocIndex));
-      Location docStart = rootISR->getDocStartLocation();
-      seekDecoratedWordISRs(docStart, wordISRs);
-      document.ComputeScore(wordISRs);
+      fprintf(stderr, "isrWord has no doc end!")
+      throw(1);
+      }
+
+   //TODO: change to working dummy implementation
+   docInfo = IndexInterface::GetDocumentAttributes(endDocLocation);
+   }
+
+Location getDocStart(DocumentAttributes& docInfo, IsrEndDoc* docIsr)
+   {
+   return docIsr.GetCurrentLocation() - docInfo.DocumentLength;
+   }
+
+Vector<DocID> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
+      IsrEndDoc* docIsr)
+   {
+   Location matchLocation = rootIsr->NextInstance();
+   while(matchLocation != Isr::IsrSentinel)
+      {
+      //get document info from current location
+      Document document(matchLocation, docIsr);
+      //move wordIsrs to beginning of doc
+      Location docStartLocation = getDocStart(docInfo, docIsr);
+      seekDecoratedWordIsrs(docStartLocation, wordIsrs);
+      //score and rank
+      document.ComputeScore(wordIsrs);
       updateTopRankedDocuments(document);
-      matchingDocIndex = rootISR->NextInstance();
+      matchingDocIndex = rootIsr->NextInstance();
       }
    }
 
-Ranker::Document::Document(DocID idIn)
-   : ID(idIn) {}
-
-unsigned short Ranker::Document::ComputeScore(DecoratedWordISRs& wordISRs)
+Ranker::Document::Document(Location matchLocation, IsrEndDoc* docIsr)
+   : docEndLocation(docIsr->GetCurrentLocation());
    {
-   decorationFeatures.AnchorTextFeatures.ComputeFeatures(wordISRs.AnchorTextISRs);
-   decorationFeatures.BodyTextFeatures.ComputeFeatures(wordISRs.BodyTextISRs);
-   decorationFeatures.TitleFeatures.ComputeFeatures(wordISRs.TitleISRs);
-   decorationFeatures.UrlFeatures.ComputeFeatures(wordISRs.UrlISRs);
+   Location endDocLocation = docIsr->SeekToLocation(matchLocation);
+   if(endDocLocation == Isr::IsrSentinel)
+      {
+      fprintf(stderr, "isrWord has no doc end!")
+      throw(1);
+      }
+
+   //TODO: change to working dummy implementation
+   docInfo = IndexInterface::GetDocumentAttributes(endDocLocation);
+   }
+
+unsigned short Ranker::Document::ComputeScore(DecoratedWordIsrs& wordIsrs)
+   {
+   decorationFeatures.AnchorTextFeatures.ComputeFeatures(wordIsrs.AnchorTextIsrs);
+   decorationFeatures.BodyTextFeatures.ComputeFeatures(wordIsrs.BodyTextIsrs);
+   decorationFeatures.TitleFeatures.ComputeFeatures(wordIsrs.TitleIsrs);
+   decorationFeatures.UrlFeatures.ComputeFeatures(wordIsrs.UrlIsrs);
 
    //TODO: combine features with tuned weights
    return 0;
    }
 
-Ranker::Document::Features::WordStatistics::WordStatistics(IsrDummy* isrIn)
+Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn)
    : isr(isrIn) {}
 
-void Ranker::Document::Features::ComputeFeatures(Vector<IsrDummy*> wordISRs)
+void Ranker::Document::Features::ComputeFeatures(Vector<Isr*> wordIsrs)
    {
    //initialize Vector<WordStatistics>
    Vector<WordStatistics> wordsStatistics;
-   for(int i = 0; i < wordISRs.size(); ++i)
+   for(int i = 0; i < wordIsrs.size(); ++i)
       {
-      WordStatistics currentWordStatistic(wordISRs[i]);
+      WordStatistics currentWordStatistic(wordIsrs[i]);
       wordsStatistics.push_back(currentWordStatistic);
       }
    
-   bool allISRsPastEnd = false;
-   while(!allISRsPastEnd)
+   bool allIsrsPastEnd = false;
+   while(!allIsrsPastEnd)
       {
       //calculate term counts. TODO: expand to compute more features in this pass
       for(int i = 0; i < wordsStatistics.size(); ++i)
          {
-         allISRsPastEnd = true;
+         allIsrsPastEnd = true;
          if(wordsStatistics[i].IsPastEnd())
             {
             wordsStatistics[i].SeekNextInstance();
-            allISRsPastEnd = false;
+            allIsrsPastEnd = false;
             }
          }
       }
@@ -92,4 +124,9 @@ void Ranker::Document::Features::WordStatistics::SeekNextInstance()
    isr->NextInstance();
    if(!IsPastEnd())
       Count++;
+   }
+
+bool Ranker::Document::Features::WordStatistics::IsPastEnd()
+   {
+   return isr->GetCurrentLocation() >= docEndLocation;
    }
