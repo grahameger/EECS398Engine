@@ -152,35 +152,6 @@ int LinkFinder::parse(char* html_file, size_t filesize, String url, bool is_http
                         goto DEFAULT;
                     }
                     break;
-                    
-                    /*case 'S'  :
-                     case 's'  : //script/style Want to completely skip these
-                     if(is_style(html_file)) {
-                     char find_up[] = "</STYLE>";
-                     char find_low[] = "</style>";
-                     find_string(html_file, find_low, find_up);
-                     }
-                     else if(is_script(html_file)) {
-                     char find_up[] = "</SCRIPT>";
-                     char find_low[] = "</script>";
-                     find_string(html_file, find_low, find_up);
-                     }
-                     else { //was not script or style tag, treat as ordinary tag
-                     goto DEFAULT;
-                     }
-                     break;*/
-                    
-                    /*case 'T'  :
-                     case 't'  :
-                     //found <t, if <title, get it
-                     if(is_title(html_file)) {
-                     String type = "title";
-                     get_words(html_file, type);
-                     }
-                     else {//was not <title, treat as ordinary tag
-                     goto DEFAULT;
-                     }
-                     break;*/
                 case 'H'  :
                 case 'h'  :
                     if(is_html(html_file)) {
@@ -215,8 +186,6 @@ int LinkFinder::parse(char* html_file, size_t filesize, String url, bool is_http
         }
         //grab the body text
         else {
-            //String type = "body";
-            //get_words(html_file, type);
             index++;
         }
     }
@@ -392,8 +361,8 @@ long LinkFinder::get_max(long index1, long index2) {
 }
 
 void LinkFinder::find_closing_a_tag(char *html_file) {
-    long reset_value = index + 2;
-    long parent_end_position = 0;
+    unsigned long reset_value = index + 2;
+    unsigned long parent_end_position = 0;
     
     //find first open tag
     if(find_open_tag(html_file)) {
@@ -444,7 +413,7 @@ void LinkFinder::find_closing_a_tag(char *html_file) {
 }
 
 
-long LinkFinder::parent_tag_distance(char *html_file, char* tag) {
+unsigned long LinkFinder::parent_tag_distance(char *html_file, char* tag) {
     int string_length = (int)strlen(tag);
     char end_tag[string_length + 2];
     end_tag[0] = '<';
