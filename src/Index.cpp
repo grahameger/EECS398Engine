@@ -32,13 +32,17 @@ void ErrExit( )
 // Other Data Structures
 // #####################
 
-// PostingListSubBlock
+// SubBlock
 
-struct PostingListSubBlock
+struct SubBlock
    {
-   char* subBlock;
+   bool uninitialized;
+   char* mmappedArea;
+   unsigned dataOffset;
    SubBlockInfo subBlockInfo;
-   PostingList postingList;
+
+   void SetNextPtr( unsigned blockIndex );
+   bool operator!= ( const SubBlock& other ) const;
    };
 
 
@@ -51,6 +55,10 @@ const unsigned Index::DefaultBlockSize = 16'384;
 // 8 sizes on default blocks of 16'384 gives us sizes
 // 16'384, 8'192, 4'096, 2'048, 1'024, 512, 256, 128
 const unsigned Index::DefaultNumSizes = 8;
+// data reserved for ptr to next
+const unsigned Index::BlockDataOffset = sizeof( unsigned );
+// Actual blockSize
+unsigned Index::blockSize = Index::DefaultBlockSize;
 
 
 // ######################
@@ -86,11 +94,89 @@ Index::Index( const char* filename, unsigned recSize, unsigned numSizes )
 void Index::AddPostings( const FixedLengthString& word, 
       const Vector< unsigned long long >* postings )
    {
-   PostingListSubBlock plSubBlock = GetPostingList( word, true );
+   // GetPostingListSubBlock for this word
+   SubBlock plSubBlock = GetPostingListSubBlock( word, true );
+
+   // Turn mmapped area into a stringView
+   StringView plStringView( plSubBlock.mmappedArea + plSubBlock.dataOffset, 
+         plSubBlock.subBlockInfo.subBlockSize - plSubBlock.dataOffset );
+
+   // Create a default posting list
+   PostingList postingList;
+   // Fill with stringView if initialized
+   if ( !plSubBlock.uninitialized )
+      postingList = PostingList( plStringView );
+
    // Add each posting
+   for ( unsigned i = 0; i < postings->size( ); i ++ )
+      postingList.AddPosting( postings->at( i ) );
+
+   printf("Added postings to %s posting list at SubBlock: (%u, %u) of size %u.\n", plSubBlock.uninitialized ? "new" : "existing", plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, plSubBlock.subBlockInfo.subBlockSize);
+   printf("Posting list is now %u bytes.\n", postingList.GetByteSize( ));
+
    // Update in place ( if possible ) and return
+   if ( postingList.GetByteSize( ) <= plStringView.Size( ) )
+      {
+      printf("Putting posting list back in place\n");
+      postingList.UpdateInPlace( plStringView );
+      return;
+      }
+
    // split new end posting into x blocks
+   auto split = postingList.Split( blockSize - BlockDataOffset );
+   printf("Putting posting list back into %lu block%s", split.size( ), split.size( ) == 1 ? "" : "s" );
+
    // add x blocks backwards pointing to each other
+   unsigned blockIndexPtr = 0;
+
+   for ( unsigned i = split.size( ); i > 0; i-- )
+      {
+      // Get a block
+      SubBlock newSubBlock;
+      // New blocks being added
+      if ( i > 1 )
+         newSubBlock = GetNewSubBlock( blockSize );
+      // Old block wasn't a full block
+      else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize )
+         {
+         newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
+         subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+         }
+      // Old block was a full block, we don't want to upgrade then
+      else
+         {
+         printf(", and the old block at (%u, %u) of size %u\n", plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, plSubBlock.subBlockInfo.subBlockSize);
+         // Update in place on the old block
+         postingList.UpdateInPlace( plStringView );
+         // Set it's next pointer
+         plSubBlock.SetNextPtr( blockIndexPtr );
+         // Unmap it
+         MunmapSubBlock( plSubBlock );
+         return;
+         }
+
+      printf("%s at (%u, %u) of size %u", i == split.size( ) ? "" : i == 1 ? ", and" : ",", newSubBlock.subBlockInfo.blockIndex, newSubBlock.subBlockInfo.subBlockIndex, newSubBlock.subBlockInfo.subBlockSize);
+
+      // Set it's nextPtr
+      if ( newSubBlock.subBlockInfo.subBlockSize == blockSize )
+         newSubBlock.SetNextPtr( blockIndexPtr );
+
+      // Fill in Posting List data
+      StringView data( newSubBlock.mmappedArea + newSubBlock.dataOffset, 
+            newSubBlock.subBlockInfo.subBlockSize - newSubBlock.dataOffset );
+      split[ i - 1 ]->FullUpdate( data );
+      // Reset nextPtr for next block
+      blockIndexPtr = newSubBlock.subBlockInfo.blockIndex;
+
+      // Unmap this block
+      MunmapSubBlock( newSubBlock );
+      }
+
+   printf("\n");
+
+   // Delete the outgrown subBlock
+   if ( split.size( ) == 1 )
+      DeleteSubBlock( plSubBlock );
    }
 
 
@@ -112,115 +198,150 @@ void Index::CreateNewIndexFile( const char* filename, unsigned blockSize,
    ftruncate( indexFD, blockSize * ( numSizes + 1 ) );
 
    // Open the first block
-   StringView data( ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize );
+   metaData = StringView( ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize );
    unsigned currentOffset = 0;
 
    // Set blockSize in metadata
-   data.SetInString< unsigned >( blockSize );
+   metaData.SetInString< unsigned >( blockSize );
    currentOffset += sizeof( unsigned );
+   Index::blockSize = blockSize;
    // Set numBlocks in metadata
-   data.SetInString< unsigned >( numSizes + 1, currentOffset );
+   metaData.SetInString< unsigned >( numSizes, currentOffset );
    currentOffset += sizeof( unsigned );
    // Set numSizes info in metadata
-   data.SetInString< unsigned >( numSizes, currentOffset );
+   metaData.SetInString< unsigned >( numSizes, currentOffset );
 
    // Set open Blocks/subBlocks for sizes in metadata
-   for ( unsigned block = 1, curSize = blockSize; 
-         block != numSizes + 1; curSize >>= 1, block++ )
+   for ( unsigned block = 1, curSize = blockSize / 2; 
+         block != numSizes; curSize /= 2, block++ )
       {
-      unsigned offset = sizeof( unsigned ) +
-            ( blockSize / curSize * sizeof( unsigned ) * 2 );
-      // Set block for size curSize
-      data.SetInString< unsigned >( block, offset );
-      offset += sizeof( unsigned );
-      // Set subBlock for size curSize
-      data.SetInString< unsigned char >( 0, offset );
+      SubBlockInfo sizeInfo{ curSize, block, 0 };
+      SetOpen( sizeInfo );
+      SetLastUsed( sizeInfo );
       }
 
-   munmapWrapper( data.RawCString( ), data.Size( ) );
+   munmapWrapper( metaData.RawCString( ), metaData.Size( ) );
    }
 
 
-PostingListSubBlock Index::GetPostingList
+SubBlock Index::GetPostingListSubBlock
       ( const FixedLengthString& word, bool endWanted )
    {
    auto wordIt = subBlockIndex.find( word );
 
    // Return the last block in the chain of blocks stored
    if ( wordIt != subBlockIndex.end( ) )
-      {
-      printf("Word already found at Block: %u, SubBlock: %u, with Size: %u\n", ( *wordIt ).second.blockIndex, ( *wordIt ).second.subBlockIndex, ( *wordIt ).second.subBlockSize );
-      return GetPostingListSubBlock( ( *wordIt ).second, endWanted );
-      }
+      return GetSubBlock( ( *wordIt ).second, endWanted );
    // Return a new block
    else
-      return GetNewPostingListSubBlock( word );
+      {
+      SubBlock subBlock = GetNewSubBlock( SmallestSubBlockSize( ) );
+      subBlockIndex.insert( { word, subBlock.subBlockInfo } );
+      return subBlock;
+      }
    }
 
 
-PostingListSubBlock Index::GetNewPostingListSubBlock( const FixedLengthString& word )
+SubBlock Index::GetNewSubBlock( unsigned minSize )
    {
-   SubBlockInfo subBlockInfo = GetOpenSubBlock( SmallestSubBlockSize( ) );
-   // TODO
-   IncrementOpenSubBlock( SmallestSubBlockSize( ) );
+   // TODO: Should I add guards for if minSize < actualSize >> numSizes?
+   unsigned actualSize = blockSize;
+   while ( actualSize / 2 >= minSize ) { actualSize /= 2; }
 
-   subBlockIndex.insert( { word, subBlockInfo } );
+   SubBlockInfo subBlockInfo = GetOpenSubBlock( actualSize );
+   IncrementOpenSubBlock( actualSize );
 
-   return { MmapSubBlock( subBlockInfo ), subBlockInfo, PostingList( ) };
+   SubBlock subBlock = MmapSubBlock( subBlockInfo );
+   subBlock.uninitialized = true;
+
+   return subBlock;
    }
 
 
-PostingListSubBlock Index::GetPostingListSubBlock
-      ( SubBlockInfo subBlockInfo, bool endWanted )
+SubBlock Index::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted )
    {
-   char* subBlock = MmapSubBlock( subBlockInfo );
-
-   unsigned postingListSize = subBlockInfo.subBlockSize;
-   unsigned offset = 0;
+   SubBlock subBlock = MmapSubBlock( subBlockInfo );
 
    // If we need to follow nextPtrs to get to end
    if ( endWanted && subBlockInfo.subBlockSize == blockSize )
       {
-      // We now have an offset / smaller size because of nextPtr
-      offset = sizeof( unsigned ) + sizeof( unsigned char );
-      postingListSize -= offset;
-
       // While nextBlockPtr != 0
       unsigned nextBlockPtr;
-      while ( ( nextBlockPtr = *( unsigned* )subBlock ) != 0 )
+      while ( ( nextBlockPtr = *( unsigned* )subBlock.mmappedArea ) != 0 )
          {
-         // Grab the next sub block ptr too
-         unsigned nextSubBlockPtr = 
-               *( unsigned char* )( subBlock + sizeof( unsigned ) );
-
          // Unmap current sub block
-         MunmapSubBlock( subBlockInfo, subBlock );
+         MunmapSubBlock( subBlock );
          // Change to new sub block
          subBlockInfo.blockIndex = nextBlockPtr;
-         subBlockInfo.subBlockIndex = nextSubBlockPtr;
+         subBlockInfo.subBlockIndex = 0;
          // Map new sub block
          subBlock = MmapSubBlock( subBlockInfo );
          }
       }
 
-   // Get a StringView of the bytes ( minus nextPtr if it exists )
-   StringView postingListString( subBlock + offset, postingListSize );
-
-   return { subBlock, subBlockInfo, PostingList( postingListString ) };
+   return subBlock;
    }
 
 
-unsigned Index::SmallestSubBlockSize( ) const
+// TODO: Figure out how to reset lastUsed? Do I need to?
+void Index::DeleteSubBlock( SubBlock subBlock )
    {
-   unsigned numSizes = metaData.GetInString< unsigned >( 2 * sizeof( unsigned ) );
-   return blockSize >> ( numSizes - 1 );
+   assert( subBlock.subBlockInfo.subBlockSize != blockSize );
+
+   // Get the last used sub block of this size
+   SubBlockInfo lastUsedInfo = 
+         GetLastUsedSubBlock( subBlock.subBlockInfo.subBlockSize );
+   SubBlock lastUsedBlock = GetSubBlock( lastUsedInfo );
+
+   // This was the last subBlock
+   if ( lastUsedInfo != subBlock.subBlockInfo )
+      {
+      // Copy it into current subBlock
+      memcpy( subBlock.mmappedArea, lastUsedBlock.mmappedArea, 
+            lastUsedBlock.subBlockInfo.subBlockSize );
+      }
+
+   // Decrement openSubBlock
+   SetOpen( lastUsedInfo );
+   // Unmap the deleted block
+   MunmapSubBlock( subBlock );
    }
 
 
 SubBlockInfo Index::GetOpenSubBlock( unsigned subBlockSize ) const
    {
-   unsigned offset = sizeof( unsigned ) +
-         ( blockSize / subBlockSize * sizeof( unsigned ) * 2 );
+   if ( subBlockSize == blockSize )
+      return { subBlockSize, nextBlockIndex, 0 };
+
+   // Size of each open/lastused entry
+   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+   // Indexed based on subBlockSize
+   offset *= blockSize / subBlockSize;
+   // Plus the original offset from the other data
+   offset += sizeof( unsigned ) * 2;
+
+   SubBlockInfo returnInfo;
+
+   returnInfo.subBlockSize = subBlockSize;
+   returnInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+   offset += sizeof( unsigned );
+   returnInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+
+   return returnInfo;
+   }
+
+
+SubBlockInfo Index::GetLastUsedSubBlock( unsigned subBlockSize ) const
+   {
+   // Should never be called for blockSize
+   assert( subBlockSize != blockSize );
+
+   // Size of each open/lastused entry
+   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+   // Indexed based on subBlockSize
+   offset *= blockSize / subBlockSize;
+   // Plus the original offset from the other data
+   offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
 
    SubBlockInfo returnInfo;
 
@@ -235,22 +356,94 @@ SubBlockInfo Index::GetOpenSubBlock( unsigned subBlockSize ) const
 
 void Index::IncrementOpenSubBlock( unsigned subBlockSize )
    {
+   if ( subBlockSize == blockSize )
+      return IncrementNumBlocks( );
+
+   SubBlockInfo curOpen = GetOpenSubBlock( subBlockSize );
+   SetLastUsed( curOpen );
+
+   // Increment subBlockIndex
+   ++curOpen.subBlockIndex %= blockSize / curOpen.subBlockSize;
+   // If we spilled into a new block
+   if ( curOpen.subBlockIndex == 0 )
+      curOpen.blockIndex = 0;
+
+   SetOpen( curOpen );
    }
 
 
-char* Index::MmapSubBlock( SubBlockInfo subBlockInfo )
+inline void Index::IncrementNumBlocks( )
+   {
+   metaData.SetInString< unsigned >( ++nextBlockIndex, sizeof( unsigned ) );
+   }
+
+
+void Index::SetLastUsed( SubBlockInfo lastUsed )
+   {
+   // Size of each open/lastused entry
+   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+   // Indexed based on subBlockSize
+   offset *= blockSize / lastUsed.subBlockSize;
+   // Plus the original offset from the other data
+   offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
+
+   // Set last used block for size subBlockSize
+   metaData.SetInString< unsigned >( lastUsed.blockIndex, offset );
+   offset += sizeof( unsigned );
+   // Set last used subBlock for size subBlockSize
+   metaData.SetInString< unsigned char >( lastUsed.subBlockIndex, offset );
+   }
+
+
+void Index::SetOpen( SubBlockInfo open )
+   {
+   // Size of each open/lastused entry
+   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+   // Indexed based on subBlockSize
+   offset *= blockSize / open.subBlockSize;
+   // Plus the original offset from the other data
+   offset += sizeof( unsigned ) * 2;
+
+   // Set open block for size subBlockSize
+   metaData.SetInString< unsigned >( open.blockIndex, offset );
+   offset += sizeof( unsigned );
+   // Set open subBlock for size subBlockSize
+   metaData.SetInString< unsigned char >( open.subBlockIndex, offset );
+   }
+
+
+SubBlock Index::MmapSubBlock( SubBlockInfo subBlockInfo )
    {
    // BlockIndex * blockSize + subBlockIndex * subBlockSize
-   unsigned offset = subBlockInfo.blockIndex * blockSize + 
-         subBlockInfo.subBlockIndex * subBlockInfo.subBlockSize;
+   unsigned blockOffset = subBlockInfo.blockIndex * blockSize;
+   unsigned subBlockOffset = subBlockInfo.subBlockIndex * subBlockInfo.subBlockSize;
 
-   return ( char* )mmapWrapper( indexFD, subBlockInfo.subBlockSize, offset );
+   unsigned dataOffset = 
+         subBlockInfo.subBlockSize == blockSize ? BlockDataOffset : 0;
+
+   SubBlock toReturn = { false, nullptr, dataOffset, subBlockInfo };
+   toReturn.mmappedArea = 
+         ( char* )mmapWrapper( indexFD, blockSize, blockOffset );
+   toReturn.mmappedArea += subBlockOffset;
+
+   return toReturn;
    }
 
 
-inline void Index::MunmapSubBlock( SubBlockInfo subBlockInfo, char* subBlock )
+void Index::MunmapSubBlock( SubBlock subBlock )
    {
-   munmapWrapper( subBlock, subBlockInfo.subBlockSize );
+   char* mmappedArea = subBlock.mmappedArea -
+         subBlock.subBlockInfo.subBlockIndex * subBlock.subBlockInfo.subBlockSize;
+
+   munmapWrapper( mmappedArea, blockSize );
+   subBlock.mmappedArea = nullptr;
+   }
+
+
+unsigned Index::SmallestSubBlockSize( ) const
+   {
+   unsigned numSizes = metaData.GetInString< unsigned >( 2 * sizeof( unsigned ) );
+   return blockSize >> ( numSizes - 1 );
    }
 
 
@@ -280,3 +473,15 @@ bool FixedLengthString::operator== ( const FixedLengthString& other ) const
    }
 
 
+// SubBlock
+
+inline void SubBlock::SetNextPtr( unsigned blockIndex )
+   {
+   *( unsigned* )mmappedArea = blockIndex;
+   }
+
+inline bool SubBlock::operator!= ( const SubBlock& other ) const
+   {
+   return subBlockInfo.blockIndex == other.subBlockInfo.blockIndex && 
+         subBlockInfo.subBlockIndex == other.subBlockInfo.subBlockIndex;
+   }

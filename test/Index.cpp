@@ -5,47 +5,22 @@
 
 using namespace std;
 
-void PrintPL( PostingList* pl, unsigned size );
-
-int main( )
+int main( int argc, char** argv )
    {
-   Index index( ( char* )"testIndex", 128, 3 );
-   Vector< unsigned long long > postings( { 1, 3, 5 } );
-   index.AddPostings( "butter", &postings );
-
-   /*
-   cout << index->NumBlocks( ) << endl;
-
-   auto subBlock = index->GetPostingList( "butter" );
-   cout << subBlock.GetBlockIndex( ) << " " << ( unsigned )subBlock.GetSubBlockIndex( ) << endl;
-
-   PostingList pl;
-   if ( subBlock.GetInitialized( ) )
-      cout << "Already Initialized PostingList" << endl;
-   else
-      cout << "Uninitialized PostingList" << endl;
-
-   pl.AddPosting( 1 );
-   pl.AddPosting( 7 );
-   pl.AddPosting( 92 );
-   pl.AddPosting( 12'804 );
-   pl.AddPosting( 65'536 );
-
-   if ( pl.GetByteSize( ) <= subBlock.GetBlockSize( ) )
+   if ( argc < 2 || argc > 3 )
       {
-      cout << "Update in place. Adding " << pl.GetByteSize( ) << " bytes to a space of " << subBlock.GetBlockSize( ) << " bytes." << endl;
-      StringView subBlockString = subBlock.GetStringView( );
-      //pl.UpdateInPlace( subBlockString );
+      cerr << "Usage: ./bin/index <numPosts> [ <postingStart> ]" << endl;
+      exit( 1 );
       }
-   */
-   }
 
+   Index index( ( char* )"testIndex" );
 
-void PrintPL( PostingList* pl, unsigned size )
-   {
-   StringView data = pl->GetData( size );
+   unsigned long long posting = ( argc == 2 ? 1 : strtoull( argv[ 2 ], nullptr, 10 ) );
 
-   for ( unsigned i = 0; i < size; i++ )
-      cout << hex << ( unsigned )( unsigned char )data.CString( )[ i ] << " ";
-   cout << dec << endl;
+   Vector< unsigned long long > postings;
+
+   for ( unsigned numPosts = strtoul( argv[ 1 ], nullptr, 10 ); numPosts > 0; numPosts-- )
+      postings.push_back( posting++ );
+         
+   index.AddPostings( "butter", &postings );
    }

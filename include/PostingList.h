@@ -58,9 +58,9 @@ class PostingList
       // Get the byte size this will be if printed
       unsigned int GetByteSize( );
       // Get the data placed into a string of a certain size
-      StringView GetData( unsigned int postingListSize );
+      void FullUpdate( StringView& toUpdate );
       // Update the existing postingListData with the new info in place
-      void UpdateInPlace( StringView& postingListData );
+      void UpdateInPlace( StringView& toUpdate );
 
       // Split the posting list into n posting lists of maximum size BlockSize
       Vector< PostingList* > Split( unsigned blockSize );

@@ -69,22 +69,19 @@ unsigned int PostingList::GetByteSize( )
    }
 
 
-StringView PostingList::GetData( unsigned int postingListSize )
+void PostingList::FullUpdate( StringView& toUpdate )
    {
-   char* dataString = new char[ postingListSize ];
-   StringView returnView( dataString, postingListSize );
-
    // Add indexSize and postsSize
-   returnView.SetInString< unsigned >( index.Size( ) + newIndices.Size( ) );
-   returnView.SetInString< unsigned >
+   toUpdate.SetInString< unsigned >( index.Size( ) + newIndices.Size( ) );
+   toUpdate.SetInString< unsigned >
          ( posts.Size( ) + newPosts.Size( ), sizeof( unsigned ) );
    // Add largestPosting
-   returnView.SetInString< unsigned long long >
+   toUpdate.SetInString< unsigned long long >
          ( largestPosting, 2 * sizeof( unsigned ) );
 
-   char* postsStart = dataString + 
+   char* postsStart = toUpdate.RawCString( ) + 
          2 * sizeof( unsigned ) + sizeof( unsigned long long );
-   char* indexStart = dataString + postingListSize - 
+   char* indexStart = toUpdate.RawCString( ) + toUpdate.Size( ) - 
          index.Size( ) - newIndices.Size( );
 
    // Add posts data
@@ -97,8 +94,6 @@ StringView PostingList::GetData( unsigned int postingListSize )
          newPosts.Size( ) );
    // Add newIndices data
    memcpy( indexStart, newIndices.GetString( ).CString( ), newIndices.Size( ) );
-
-   return returnView;
    }
 
 

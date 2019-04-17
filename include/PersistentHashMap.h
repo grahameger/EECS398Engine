@@ -121,7 +121,7 @@ public:
     // it's on the programmer to know if their iterator has been invalidated
     Pair<Key, Mapped>& operator*() {
         assert(!this->persistentHashMap->isGhost.at(this->index));
-        assert(!this->persistentHashMap->isFilled.at(this->index));
+        assert(this->persistentHashMap->isFilled.at(this->index));
         return this->persistentHashMap->buckets[this->index];
     }
 
@@ -301,7 +301,7 @@ Mapped& PersistentHashMap<Key, Mapped>::operator[] (const KeyType& key) {
     }
     // get key and return val at that location
     indexForKey = this->probeForExistingKey(key);
-    auto rv = this->buckets[indexForKey].second;
+    auto& rv = this->buckets[indexForKey].second;
     this->unlock();
     return rv;
 }

@@ -5,7 +5,7 @@
 #include "PersistentHashMap.h"
 
 class ParsedDocument;
-class PostingListSubBlock;
+class SubBlock;
 
 template < typename T >
 class Vector;
@@ -32,6 +32,12 @@ struct SubBlockInfo
    unsigned subBlockSize;
    unsigned blockIndex;
    unsigned char subBlockIndex;
+
+   bool operator!= ( const SubBlockInfo& other )
+      { 
+      return blockIndex == other.blockIndex && 
+            subBlockIndex == other.subBlockIndex; 
+      }
    };
 
 
@@ -49,31 +55,40 @@ class Index
       void CreateNewIndexFile( const char* filename, unsigned blockSize, 
             unsigned numSizes );
 
-      PostingListSubBlock GetPostingList
+      SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
-      PostingListSubBlock GetNewPostingListSubBlock( const FixedLengthString& word );
-      PostingListSubBlock GetPostingListSubBlock
-            ( SubBlockInfo subBlockInfo, bool endWanted = false );
+
+      SubBlock GetNewSubBlock( unsigned minSize );
+      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted = false );
+      void DeleteSubBlock( SubBlock subBlock );
 
       SubBlockInfo GetOpenSubBlock( unsigned subBlockSize ) const;
-      void IncrementOpenSubBlock( unsigned subBlockSize );
+      SubBlockInfo GetLastUsedSubBlock( unsigned subBlockSize ) const;
 
-      char* MmapSubBlock( SubBlockInfo subBlockInfo );
-      void MunmapSubBlock( SubBlockInfo subBlockInfo, char* subBlock );
+      void IncrementOpenSubBlock( unsigned subBlockSize );
+      void IncrementNumBlocks( );
+
+      void SetLastUsed( SubBlockInfo lastUsed );
+      void SetOpen( SubBlockInfo open );
+
+      SubBlock MmapSubBlock( SubBlockInfo subBlockInfo );
+      void MunmapSubBlock( SubBlock subBlock );
 
       unsigned SmallestSubBlockSize( ) const;
 
       // Data
       StringView metaData;
       unsigned nextBlockIndex;
-      unsigned blockSize;
       int indexFD;
 
       PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
 
+      static unsigned blockSize;
+      static const unsigned BlockDataOffset;
       static const unsigned DefaultBlockSize;
       static const unsigned DefaultNumSizes;
 
+   friend SubBlock;
    };
 
 #endif
