@@ -35,6 +35,10 @@ int munmapWrapper(void * addr, size_t size) {
     return rv;
 }
 
+int msyncWrapper(void * addr, size_t size) {
+    return msync(addr, size, MS_SYNC);
+}
+
 void * streamMmapWrapper(int fd, size_t size) {
     if (getFileSize(fd) < size) {
         // no need for rounding here, always going to be the same size
