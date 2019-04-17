@@ -5,18 +5,40 @@
 #include "String.h"
 #include "StringView.h"
 
+class FixedLengthString
+   {
+   public:
+      FixedLengthString( const char* cstring );
+
+      bool operator== ( const FixedLengthString& other ) const;
+
+   private:
+      static const unsigned MaxLength = 19;
+      char characters[ MaxLength + 1 ];
+
+   };
+
+
+using SubBlockLoc = Pair< unsigned, unsigned char >;
+using SubBlockInfo = Pair< unsigned, SubBlockLoc >;
+
 class SchedulerSubBlock
    {
    public:
-      SchedulerSubBlock( Pair< unsigned, unsigned char > subBlockLoc );
-      SchedulerSubBlock( unsigned blockIndex, unsigned char subBlockIndex );
+      SchedulerSubBlock( SubBlockInfo subBlockInfo, bool initialized = true );
+      ~SchedulerSubBlock( );
 
+      bool GetInitialized( ) const;
+      unsigned GetBlockSize( ) const;
       unsigned GetBlockIndex( ) const;
       unsigned char GetSubBlockIndex( ) const;
+      StringView GetStringView( );
 
    private:
       unsigned blockIndex;
       unsigned char subBlockIndex;
+      unsigned blockSize;
+      bool initialized;
       bool inMemory;
 
    };
@@ -42,14 +64,17 @@ class IndexScheduler
       unsigned NumBlocks( ) const;
       unsigned char SmallestSubBlockSize( ) const;
 
-      SchedulerSubBlock GetPostingList( const String& word );
+      SchedulerSubBlock GetPostingList( const FixedLengthString& word );
 
    private:
       IndexScheduler( unsigned blockSize, unsigned pagesSize, unsigned numSizes );
       void CreateNewIndexFile( unsigned blockSize, unsigned numSizes );
 
-      Pair< unsigned, unsigned char > GetOpenSubBlock( unsigned subBlockSize );
+      SubBlockInfo GetOpenSubBlock( unsigned subBlockSize );
+      StringView GetSubBlockString( SubBlockLoc subBlockLoc );
 
+      void DecrementSubBlockReferences( SubBlockLoc subBlockLoc );
+      void IncrementSubBlockReferences( SubBlockLoc subBlockLoc );
       void IncrementOpenSubBlock( unsigned subBlockSize );
       void IncrementNumBlocks( );
 
@@ -58,8 +83,9 @@ class IndexScheduler
       int indexFD;
       unsigned nextBlockIndex, blockSize;
 
-      PersistentHashMap< const char*, Pair< unsigned, unsigned char > > subBlockIndex;
+      PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
 
+   friend SchedulerSubBlock;
    };
 
 #endif

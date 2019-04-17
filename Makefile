@@ -53,12 +53,12 @@ split: $(patsubst %,$(BUILDDIR)/%,$(POSTINGSPLITOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split
 
-SCHEDULEROBJS := TestScheduler.o IndexScheduler.o StringView.o String.o PersistentBitVector.o mmap.o threading.o
-sked: $(patsubst %,$(BUILDDIR)/%,$(SCHEDULEROBJS))
+INDEXOBJS := TestIndex.o Index.o StringView.o String.o PersistentBitVector.o mmap.o threading.o PostingList.o ByteStream.o Utf8Numbers.o
+index: $(patsubst %,$(BUILDDIR)/%,$(INDEXOBJS))
 	@echo "rm -f testIndex*"
 	@rm -f testIndex*
-	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/sked"
-	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/sked
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/index"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/index
 
 # Spikes
 ticket:

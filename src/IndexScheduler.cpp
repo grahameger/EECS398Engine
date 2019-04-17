@@ -11,24 +11,59 @@
 // Other Data Structures
 // #####################
 
-SchedulerSubBlock::SchedulerSubBlock( Pair< unsigned, unsigned char > subBlockLoc )
-      : blockIndex( subBlockLoc.first ), subBlockIndex( subBlockLoc.second ),
-      inMemory( false )
+// FixedLengthString
+
+FixedLengthString::FixedLengthString( const char* cstring )
+   {
+   strncpy( characters, cstring, MaxLength );
+   characters[ MaxLength ] = 0;
+   }
+
+
+bool FixedLengthString::operator== ( const FixedLengthString& other ) const
+   {
+   for ( unsigned i = 0; i < MaxLength; i++ )
+      {
+      if ( characters[ i ] != other.characters[ i ] )
+         return false;
+      if ( characters[ i ] == 0 )
+         return true;
+      }
+   return true;
+   }
+
+
+// SchedulerSubBlock
+
+SchedulerSubBlock::SchedulerSubBlock( SubBlockInfo subBlockInfo, bool initialized )
+      : blockIndex( subBlockInfo.second.first ), 
+      subBlockIndex( subBlockInfo.second.second ), blockSize( subBlockInfo.first ),
+      initialized( initialized ), inMemory( false )
    { }
 
 
-SchedulerSubBlock::SchedulerSubBlock
-      ( unsigned blockIndex, unsigned char subBlockIndex )
-      : blockIndex( blockIndex ), subBlockIndex( subBlockIndex ), inMemory( false )
-   { }
+SchedulerSubBlock::~SchedulerSubBlock( )
+   {
+   }
 
+
+bool SchedulerSubBlock::GetInitialized( ) const
+   { return initialized; }
+
+unsigned SchedulerSubBlock::GetBlockSize( ) const
+   { return blockSize; }
 
 unsigned SchedulerSubBlock::GetBlockIndex( ) const
    { return blockIndex; }
-      
 
 unsigned char SchedulerSubBlock::GetSubBlockIndex( ) const
    { return subBlockIndex; }
+
+StringView SchedulerSubBlock::GetStringView( )
+   {
+   IndexScheduler* scheduler = IndexScheduler::GetScheduler( );
+   return scheduler->GetSubBlockString( SubBlockLoc( blockIndex, subBlockIndex ) );
+   }
 
 
 // ################
@@ -78,20 +113,26 @@ unsigned char IndexScheduler::SmallestSubBlockSize( ) const
    }
 
 
-SchedulerSubBlock IndexScheduler::GetPostingList( const String& word )
+// TODO: find returns correctly on first run (added assert after insert and it passed)
+// but on subsequent runs of the same stuff, it doesn't...
+SchedulerSubBlock IndexScheduler::GetPostingList( const FixedLengthString& word )
    {
-   auto wordIt = subBlockIndex.find( word.CString( ) );
+   auto wordIt = subBlockIndex.find( word );
 
-   // word not found
+   // word found
    if ( wordIt != subBlockIndex.end( ) )
       {
+      SubBlockInfo subBlockInfo = (*wordIt).second;
+      return SchedulerSubBlock( subBlockInfo );
       }
 
-   auto subBlockLoc = GetOpenSubBlock( SmallestSubBlockSize( ) );
-   subBlockIndex.insert( Pair( word.CString( ), subBlockLoc ) );
+   // word not found
+   SubBlockInfo subBlockInfo = GetOpenSubBlock( SmallestSubBlockSize( ) );
+   subBlockIndex.insert( Pair( word, subBlockInfo ) );
 
    IncrementOpenSubBlock( SmallestSubBlockSize( ) );
-   return SchedulerSubBlock( subBlockLoc );
+
+   return SchedulerSubBlock( subBlockInfo, false );
    }
 
 
@@ -163,19 +204,26 @@ void IndexScheduler::CreateNewIndexFile( unsigned blockSize, unsigned numSizes )
    }
 
 
-Pair< unsigned, unsigned char > IndexScheduler::GetOpenSubBlock
-      ( unsigned subBlockSize )
+// TODO: Write map data structure
+StringView IndexScheduler::GetSubBlockString( SubBlockLoc subBlockLoc )
+   {
+   return { nullptr, 0 };
+   }
+
+
+SubBlockInfo IndexScheduler::GetOpenSubBlock( unsigned subBlockSize )
    {
    unsigned offset = sizeof( unsigned ) +
          ( blockSize / subBlockSize * sizeof( unsigned ) * 2 );
 
-   Pair< unsigned, unsigned char > returnPair;
+   SubBlockInfo returnInfo;
 
-   returnPair.first = metaData.GetInString< unsigned >( offset );
+   returnInfo.second.first = metaData.GetInString< unsigned >( offset );
    offset += sizeof( unsigned );
-   returnPair.second = metaData.GetInString< unsigned char >( offset );
+   returnInfo.second.second = metaData.GetInString< unsigned char >( offset );
+   returnInfo.first = subBlockSize;
 
-   return returnPair;
+   return returnInfo;
    }
 
 
