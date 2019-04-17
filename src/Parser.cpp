@@ -84,25 +84,6 @@ void LinkFinder::url_parser(String url) {
  aqs, sourceid, chrome, utf, safari, firefox, com, google, search
  */
 
-/*char get_rank(String domain) {
- 
- do domain stuff up here
- switch(domain) {
- case : top 10
- break;
- case : top 50
- break;
- case : top 100
- break;
- case : top 250
- break;
- case : top 500
- break;
- default :
- return '9';
- }
- }*/
-
 bool is_vowel(char c) {
     switch(c) {
         case 'a'  :
@@ -123,10 +104,11 @@ bool is_valid_word(String word, unsigned int vowels) {
     return false;
 }
 
-int LinkFinder::parse(char* html_file) {//String url
-    //Document.doc_url = url;
+int LinkFinder::parse(char* html_file, size_t filesize, String url, bool is_https) {//String url
+    Document.doc_url = url;
+    Document.is_https = is_https;
     //url_parser(url);
-    file_length = strlen(html_file);
+    file_length = filesize;
     while(index < file_length) {//run until end of file
         if(html_file[index] == '<') {
             (index)++;
@@ -171,39 +153,39 @@ int LinkFinder::parse(char* html_file) {//String url
                     }
                     break;
                     
-                case 'S'  :
-                case 's'  : //script/style Want to completely skip these
-                    if(is_style(html_file)) {
-                        char find_up[] = "</STYLE>";
-                        char find_low[] = "</style>";
-                        find_string(html_file, find_low, find_up);
-                    }
-                    else if(is_script(html_file)) {
-                        char find_up[] = "</SCRIPT>";
-                        char find_low[] = "</script>";
-                        find_string(html_file, find_low, find_up);
-                    }
-                    else { //was not script or style tag, treat as ordinary tag
-                        goto DEFAULT;
-                    }
-                    break;
+                    /*case 'S'  :
+                     case 's'  : //script/style Want to completely skip these
+                     if(is_style(html_file)) {
+                     char find_up[] = "</STYLE>";
+                     char find_low[] = "</style>";
+                     find_string(html_file, find_low, find_up);
+                     }
+                     else if(is_script(html_file)) {
+                     char find_up[] = "</SCRIPT>";
+                     char find_low[] = "</script>";
+                     find_string(html_file, find_low, find_up);
+                     }
+                     else { //was not script or style tag, treat as ordinary tag
+                     goto DEFAULT;
+                     }
+                     break;*/
                     
-                case 'T'  :
-                case 't'  :
-                    //found <t, if <title, get it
-                    if(is_title(html_file)) {
-                        String type = "title";
-                        get_words(html_file, type);
-                    }
-                    else {//was not <title, treat as ordinary tag
-                        goto DEFAULT;
-                    }
-                    break;
+                    /*case 'T'  :
+                     case 't'  :
+                     //found <t, if <title, get it
+                     if(is_title(html_file)) {
+                     String type = "title";
+                     get_words(html_file, type);
+                     }
+                     else {//was not <title, treat as ordinary tag
+                     goto DEFAULT;
+                     }
+                     break;*/
                 case 'H'  :
                 case 'h'  :
                     if(is_html(html_file)) {
                         char find_low[] = "lang=";
-                        char find_up[] = "lang=";
+                        char find_up[] = "LANG=";
                         long reset_value = index;
                         if(find_link(html_file, find_low, find_up)) {
                             if(index + 3 < file_length) {
@@ -219,8 +201,6 @@ int LinkFinder::parse(char* html_file) {//String url
                                     is_english = false;
                                     return 0;
                                 }
-                                
-                                
                             }
                         }
                     }
@@ -233,12 +213,6 @@ int LinkFinder::parse(char* html_file) {//String url
                     find_string(html_file, find, find);
             }
         }
-        //Inside >...< and not script or style, so body. Get it.
-        //ignore nothing
-        //else if(html_file[index] == '\n' || html_file[index] == ' ' || html_file[index] == '\t' || html_file[index] == '\r') {
-        //do nothing
-        //  index++;
-        //}
         //grab the body text
         else {
             //String type = "body";
@@ -249,20 +223,6 @@ int LinkFinder::parse(char* html_file) {//String url
     return 0;
 }
 
-bool LinkFinder::is_script(char *html_file) {
-    if(index + 5 < file_length) {
-        if(html_file[index] == 's' && html_file[index+1] == 'c' && html_file[index+2] == 'r' && html_file[index+3] == 'i' && html_file[index+4] == 'p' && html_file[index+5] == 't') {
-            index += 5;
-            return true;
-        }
-        else if(html_file[index] == 'S' && html_file[index+1] == 'C' && html_file[index+2] == 'R' && html_file[index+3] == 'I' && html_file[index+4] == 'P' && html_file[index+5] == 'T') {
-            index += 5;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool LinkFinder::is_html(char *html_file) {
     if(index + 3 < file_length) {
         if(html_file[index] == 'h' && html_file[index+1] == 't' && html_file[index+2] == 'm' && html_file[index+3] == 'l') {
@@ -271,6 +231,20 @@ bool LinkFinder::is_html(char *html_file) {
         }
         else if(html_file[index] == 'H' && html_file[index+1] == 'T' && html_file[index+2] == 'M' && html_file[index+3] == 'L') {
             index += 3;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LinkFinder::is_script(char *html_file) {
+    if(index + 5 < file_length) {
+        if(html_file[index] == 's' && html_file[index+1] == 'c' && html_file[index+2] == 'r' && html_file[index+3] == 'i' && html_file[index+4] == 'p' && html_file[index+5] == 't') {
+            index += 5;
+            return true;
+        }
+        else if(html_file[index] == 'S' && html_file[index+1] == 'C' && html_file[index+2] == 'R' && html_file[index+3] == 'I' && html_file[index+4] == 'P' && html_file[index+5] == 'T') {
+            index += 5;
             return true;
         }
     }
@@ -357,7 +331,7 @@ bool is_space(char c) {
 }
 
 bool is_relevant_char(char c) {
-    if(c == '#' || c== '@' || c == '*' || c == '$' || c == '&' || c == '|' || c == '"' || c == '(' || c == ')' || c == ',' || c == '.' || c == '[' || c == ']' || c == '/' || c == '!' || c == '>' || c == '<' || c == ':' || c == ';' || c == '_' || c == '=' || c == '?') {
+    if(c == '#' || c== '@' || c == '*' || c == '$' || c == '&' || c == '|' || c == '"' || c == '(' || c == ')' || c == ',' || c == '.' || c == '[' || c == ']' || c == '/' || c == '!' || c == '>' || c == '<' || c == ':' || c == ';' || c == '_' || c == '=' || c == '?' || c == '}' || c == '{') {
         return false;
     }
     return true;

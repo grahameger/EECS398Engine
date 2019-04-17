@@ -48,7 +48,7 @@ public:
     
     //returns -1 if something failed, else returns 0
     //parses html file into title, body, links, and anchor text
-    int parse(char *filename);//String url
+    int parse(char *filename, size_t filesize, String url, bool is_https);//String url
     
     unsigned long file_length = 0;
     unsigned long index = 0;
@@ -120,6 +120,5 @@ bool is_space(char c);
 bool is_relevant_char(char c);
 bool is_vowel(char c);
 bool is_valid_word(String word, unsigned int vowels);
-char get_rank(String domain);
 
 #endif /* Parser_hpp_398 */
