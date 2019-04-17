@@ -80,3 +80,5 @@ test/parsed.urls
 *.swp
 
 testIndex*
+dummy
+output
