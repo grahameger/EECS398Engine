@@ -43,6 +43,7 @@ struct SubBlock
 
    void SetNextPtr( unsigned blockIndex );
    bool operator!= ( const SubBlock& other ) const;
+   StringView ToStringView( );
    };
 
 
@@ -95,17 +96,12 @@ Index::Index( const char* filename, unsigned recSize, unsigned numSizes )
 void Index::AddPostings( const FixedLengthString& word, 
       const Vector< unsigned long long >* postings )
    {
-   // GetPostingListSubBlock for this word
+   // Get a stringView for where the postingList of this word goes
    SubBlock plSubBlock = GetPostingListSubBlock( word, true );
-   assert( plSubBlock.subBlockInfo.blockIndex != 0 );
+   StringView plStringView = plSubBlock.ToStringView( );
 
-   // Turn mmapped area into a stringView
-   StringView plStringView( plSubBlock.mmappedArea + plSubBlock.dataOffset, 
-         plSubBlock.subBlockInfo.subBlockSize - plSubBlock.dataOffset );
-
-   // Create a default posting list
+   // Create the posting list for this word
    PostingList postingList;
-   // Fill with stringView if initialized
    if ( !plSubBlock.uninitialized )
       postingList = PostingList( plStringView );
 
@@ -113,72 +109,35 @@ void Index::AddPostings( const FixedLengthString& word,
    for ( unsigned i = 0; i < postings->size( ); i ++ )
       postingList.AddPosting( postings->at( i ) );
 
-   printf("Added postings to %s posting list at SubBlock: (%u, %u) of size %u.\n", plSubBlock.uninitialized ? "new" : "existing", plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, plSubBlock.subBlockInfo.subBlockSize);
+   #ifdef TEST
+   printf("Added postings to %s posting list at SubBlock: (%u, %u) of size %u.\n", 
+         plSubBlock.uninitialized ? "new" : "existing", 
+         plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, 
+         plSubBlock.subBlockInfo.subBlockSize);
    printf("Posting list is now %u bytes.\n", postingList.GetByteSize( ));
+   #endif
 
    // Update in place ( if possible ) and return
    if ( postingList.GetByteSize( ) <= plStringView.Size( ) )
       {
+      #ifdef TEST
       printf("Putting posting list back in place\n");
+      #endif
+
       postingList.UpdateInPlace( plStringView );
       return;
       }
 
-   // split new end posting into x blocks
+   // Split new end posting into x blocks
    auto split = postingList.Split( blockSize - BlockDataOffset );
-   printf("Putting posting list back into %lu block%s", split.size( ), split.size( ) == 1 ? "" : "s" );
 
-   // add x blocks backwards pointing to each other
-   unsigned blockIndexPtr = 0;
+   #ifdef TEST
+   printf("Putting posting list back into %lu block%s", split.size( ), 
+         split.size( ) == 1 ? "" : "s" );
+   #endif
 
-   for ( unsigned i = split.size( ); i > 0; i-- )
-      {
-      // Get a block
-      SubBlock newSubBlock;
-      // New blocks being added
-      if ( i > 1 )
-         newSubBlock = GetNewSubBlock( blockSize );
-      // Old block wasn't a full block
-      else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize )
-         {
-         newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
-         subBlockIndex[ word ] = newSubBlock.subBlockInfo;
-         }
-      // Old block was a full block, we don't want to upgrade then
-      else
-         {
-         printf(", and the old block at (%u, %u) of size %u\n", plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, plSubBlock.subBlockInfo.subBlockSize);
-         // Update in place on the old block
-         split[ i - 1 ]->UpdateInPlace( plStringView );
-         // Set it's next pointer
-         plSubBlock.SetNextPtr( blockIndexPtr );
-         // Unmap it
-         MunmapSubBlock( plSubBlock );
-         return;
-         }
-
-      printf("%s at (%u, %u) of size %u", i == split.size( ) ? "" : i == 1 ? ", and" : ",", newSubBlock.subBlockInfo.blockIndex, newSubBlock.subBlockInfo.subBlockIndex, newSubBlock.subBlockInfo.subBlockSize);
-
-      // Set it's nextPtr
-      if ( newSubBlock.subBlockInfo.subBlockSize == blockSize )
-         newSubBlock.SetNextPtr( blockIndexPtr );
-
-      // Fill in Posting List data
-      StringView data( newSubBlock.mmappedArea + newSubBlock.dataOffset, 
-            newSubBlock.subBlockInfo.subBlockSize - newSubBlock.dataOffset );
-      split[ i - 1 ]->FullUpdate( data );
-      // Reset nextPtr for next block
-      blockIndexPtr = newSubBlock.subBlockInfo.blockIndex;
-
-      // Unmap this block
-      MunmapSubBlock( newSubBlock );
-      }
-
-   printf("\n");
-
-   // Delete the outgrown subBlock
-   if ( split.size( ) == 1 )
-      DeleteSubBlock( plSubBlock );
+   // Save the new split postingLists
+   SaveSplitPostingList( plSubBlock, plStringView, split, word );
    }
 
 
@@ -223,6 +182,73 @@ void Index::CreateNewIndexFile( const char* filename, unsigned blockSize,
       }
 
    munmapWrapper( metaData.RawCString( ), metaData.Size( ) );
+   }
+
+
+void Index::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
+      Vector< PostingList* >& split, const FixedLengthString& word )
+   {
+   unsigned blockIndexPtr = 0;
+
+   for ( unsigned i = split.size( ); i > 0; i-- )
+      {
+      SubBlock newSubBlock;
+
+      // This is a completely new block for the overflow data
+      if ( i > 1 )
+         newSubBlock = GetNewSubBlock( blockSize );
+
+      // The old block wasn't full sized and needs to be upgraded
+      else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize )
+         {
+         newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
+         subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+         }
+
+      // The old block was a full sized block and just needs to be updated
+      else
+         {
+         #ifdef TEST
+         printf(", and the old block at (%u, %u) of size %u\n", 
+               plSubBlock.subBlockInfo.blockIndex, 
+               plSubBlock.subBlockInfo.subBlockIndex, 
+               plSubBlock.subBlockInfo.subBlockSize);
+         #endif
+
+         split[ i - 1 ]->UpdateInPlace( plStringView );
+         plSubBlock.SetNextPtr( blockIndexPtr );
+         MunmapSubBlock( plSubBlock );
+         return;
+         }
+
+      #ifdef TEST
+      printf("%s at (%u, %u) of size %u", 
+            i == split.size( ) ? "" : i == 1 ? ", and" : ",", 
+            newSubBlock.subBlockInfo.blockIndex, 
+            newSubBlock.subBlockInfo.subBlockIndex, 
+            newSubBlock.subBlockInfo.subBlockSize);
+      #endif
+
+      // Set it's nextPtr
+      if ( newSubBlock.subBlockInfo.subBlockSize == blockSize )
+         newSubBlock.SetNextPtr( blockIndexPtr );
+
+      // Fill in Posting List data
+      StringView data( newSubBlock.mmappedArea + newSubBlock.dataOffset, 
+            newSubBlock.subBlockInfo.subBlockSize - newSubBlock.dataOffset );
+      split[ i - 1 ]->FullUpdate( data );
+
+      blockIndexPtr = newSubBlock.subBlockInfo.blockIndex;
+      MunmapSubBlock( newSubBlock );
+      }
+
+   #ifdef TEST
+   printf("\n");
+   #endif
+
+   // Delete the outgrown subBlock
+   if ( split.size( ) == 1 )
+      DeleteSubBlock( plSubBlock );
    }
 
 
@@ -482,8 +508,15 @@ inline void SubBlock::SetNextPtr( unsigned blockIndex )
    *( unsigned* )mmappedArea = blockIndex;
    }
 
+
 inline bool SubBlock::operator!= ( const SubBlock& other ) const
    {
    return subBlockInfo.blockIndex == other.subBlockInfo.blockIndex && 
          subBlockInfo.subBlockIndex == other.subBlockInfo.subBlockIndex;
+   }
+
+
+inline StringView SubBlock::ToStringView( )
+   {
+   return { mmappedArea + dataOffset, subBlockInfo.subBlockSize - dataOffset };
    }

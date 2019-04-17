@@ -4,8 +4,8 @@
 #include "StringView.h"
 #include "PersistentHashMap.h"
 
-class ParsedDocument;
 class SubBlock;
+class PostingList;
 
 template < typename T >
 class Vector;
@@ -54,6 +54,8 @@ class Index
       // Methods
       void CreateNewIndexFile( const char* filename, unsigned blockSize, 
             unsigned numSizes );
+      void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
+            Vector< PostingList* >& split, const FixedLengthString& word );
 
       SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
