@@ -8,6 +8,7 @@
 
 #include "constants.h"
 #include "threading.h"
+#include "Blacklist.h"
 
 namespace search {
 
@@ -27,6 +28,7 @@ namespace search {
         bool robots() const;
         void print() const;
         bool goodExtension() const;
+        bool goodHost() const;
         inline static const std::string method = constants::getMethod; // only GET needed
         std::string   host; // hostname
         std::string   path; // easy enough
@@ -36,23 +38,26 @@ namespace search {
         std::string   scheme; // http://, https:// etc
         int           port;         // note 0 defaults to 80
 
+        static Blacklist blacklist;
+
         // if you update one, update both.
-        inline static const std::string BAD_EXTENSIONS[] = {".png",
-                                                            ".jpg",
-                                                            ".jpeg",
-                                                            ".gif",
-                                                            ".tiff",
-                                                            ".bmp",
-                                                            ".webm",
-                                                            ".mp4",
-                                                            ".webp",
-                                                            ".js",
-                                                            ".css",
-                                                            ".mp3",
-                                                            ".m4a",
-                                                            ".ogg",
-                                                            ".flac"};
-        inline static const size_t NUM_BAD_EXTENSIONS = 15;
+        inline static const std::vector<std::string> BAD_EXTENSIONS =  {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".tiff",
+            ".bmp",
+            ".webm",
+            ".mp4",
+            ".webp",
+            ".js",
+            ".css",
+            ".mp3",
+            ".m4a",
+            ".ogg",
+            ".flac"
+        };
 
         inline static UrlParser * parser = &threading::Singleton<UrlParser>::getInstance();
     };

@@ -137,7 +137,7 @@ namespace search {
     // we're specifically trying to avoid javascript, css, and images
     // everything else is fair game
     bool HTTPRequest::goodExtension() const {
-        for (size_t i = 0; i < NUM_BAD_EXTENSIONS; ++i) {
+        for (size_t i = 0; i < BAD_EXTENSIONS.size(); ++i) {
             const std::string& badExtension = BAD_EXTENSIONS[i];
             if (path.size() > badExtension.size()) {
                 // check the last badExtension.size() characters and see if they match, if any of them match completely
@@ -156,6 +156,10 @@ namespace search {
             }
         } 
         return true;
+    }
+
+    bool HTTPRequest::goodHost() const {
+        return !blacklist.blacklisted(host);
     }
 
     std::string HTTPRequest::uri() const {

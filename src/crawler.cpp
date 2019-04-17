@@ -101,11 +101,22 @@ namespace search {
             std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
 
+            
+
+            // check that the host is on our whitelist
+            if (!req.goodHost()) {
+                fprintf(stderr, "[BLACKLISTED HOST] %s\n", req.host.c_str());
+                continue;
+            }
+            // Also check the extension to make sure that it's not on the bad list.
+            if (!req.goodExtension()) {
+                fprintf(stderr, "[BAD EXTENSION] %s\n", req.uri().c_str());
+                continue;
+            }
             // no duplicates, we're only going to be checking this here to
             // prevent going to the filesystem twice.
             // Once we we add it to the queue and once when we pop from the queue
-            // Also check the extension to make sure that it's not on the bad list.
-            if (havePage(req) || !req.goodExtension()) {
+            if (havePage(req)) {
                 fprintf(stderr, "[DUPLICATE] %s\n", req.filename().c_str());
                 continue;
             }
