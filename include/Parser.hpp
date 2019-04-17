@@ -35,6 +35,7 @@ struct Doc_object {
     char domain_type = 'x'; // default x. com = c, mil = m, edu = e, none = x, gov = g, etc...
     unsigned long domain_rank; //1 = top 1, 2 = top 2, 3 = top 3, etc...
     bool is_https = false;
+    Doc_object() : Links(200), Words(5000), anchor_words(200), url(5) { } //Feel free to adjust for speed
 };
 
 class LinkFinder {
