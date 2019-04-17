@@ -21,7 +21,7 @@ PersistentBitVector::PersistentBitVector(String filename) {
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags, 0666);
+    fd = open(filename.CString(), openFlags, 0755);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
         // TODO: more error handling
@@ -29,10 +29,7 @@ PersistentBitVector::PersistentBitVector(String filename) {
 
     // mmap and setup the header portion
     header = (Header*)mmapWrapper(fd, sizeof(Header), 0);
-    if (header->dataSize == 0) {
-        // just run the mutex constructor ourselves, I'm sorry C++ gods. 
-        header->mutex = PTHREAD_MUTEX_INITIALIZER;
-    }
+    header->mutex = PTHREAD_MUTEX_INITIALIZER;
     if (!fileExists) {
         header->dataSize = DEFAULT_SIZE_BYTES;
     }
@@ -40,18 +37,34 @@ PersistentBitVector::PersistentBitVector(String filename) {
     // mmap the data portion
     // the data size should be the number of bits specified, not bytes
     data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
-    // zero out the page? seriously why is this not working?
-    memset(data, 0x0, header->dataSize);
+    if (!fileExists) {
+        memset(data, 0x0, header->dataSize);
+    }
 }
 
 // close and unmap the file with a write lock
 PersistentBitVector::~PersistentBitVector() {
+    flush();
     // get a write lock so that all reads and writes finish up
     // 2 unmaps
     munmapWrapper(data, header->dataSize);
     // we reset the lock on a reconstruction of this data structure so shouldn't be a problem
     munmapWrapper(header, sizeof(Header));
     close(fd);
+}
+
+bool PersistentBitVector::flush() {
+    // sync the header
+    int rv = msyncWrapper(header, sizeof(Header));
+    if (rv == -1) {
+        return false;
+    }
+    // sync the data
+    rv = msyncWrapper(data, header->dataSize);
+    if (rv == -1) {
+        return false;
+    }
+    return true;
 }
 
 bool PersistentBitVector::at(size_t idx) {

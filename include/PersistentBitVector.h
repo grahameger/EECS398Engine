@@ -28,6 +28,7 @@ public:
 private:
     int fd;
     static const size_t DEFAULT_SIZE_BYTES = 8;
+    bool flush();
 
     // byte order shouldn't matter here?
     struct Header {
