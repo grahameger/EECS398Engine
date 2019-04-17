@@ -1,4 +1,6 @@
 #include "mmap.h"
+#include "vector.h"
+#include "PostingList.h"
 #include "Index.h"
 // For open( )
 #include <fcntl.h>
@@ -30,19 +32,13 @@ void ErrExit( )
 // Other Data Structures
 // #####################
 
-// FixedLengthString
+// PostingListSubBlock
 
-class FixedLengthString
+struct PostingListSubBlock
    {
-   public:
-      FixedLengthString( const char* cstring );
-
-      bool operator== ( const FixedLengthString& other ) const;
-
-   private:
-      static const unsigned MaxLength = 19;
-      char characters[ MaxLength + 1 ];
-
+   char* subBlock;
+   SubBlockInfo subBlockInfo;
+   PostingList postingList;
    };
 
 
@@ -84,17 +80,17 @@ Index::Index( const char* filename, unsigned recSize, unsigned numSizes )
    metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
    // Second num is numBlocks
    nextBlockIndex = metaData.GetInString< unsigned >( sizeof( unsigned ) );
+   }
 
-   auto wordIt = subBlockIndex.find( 0 );
 
-   if ( wordIt != subBlockIndex.end( ) )
-      printf("butter found!\n");
-   else
-      {
-      subBlockIndex.insert( Pair< unsigned, unsigned >( 0, 7 ) );
-      assert( subBlockIndex.find( 0 ) != subBlockIndex.end( ) );
-      printf("butter not found...\n");
-      }
+void Index::AddPostings( const FixedLengthString& word, 
+      const Vector< unsigned long long >* postings )
+   {
+   PostingListSubBlock plSubBlock = GetPostingList( word, true );
+   // Add each posting
+   // Update in place ( if possible ) and return
+   // split new end posting into x blocks
+   // add x blocks backwards pointing to each other
    }
 
 
@@ -142,6 +138,119 @@ void Index::CreateNewIndexFile( const char* filename, unsigned blockSize,
       }
 
    munmapWrapper( data.RawCString( ), data.Size( ) );
+   }
+
+
+PostingListSubBlock Index::GetPostingList
+      ( const FixedLengthString& word, bool endWanted )
+   {
+   auto wordIt = subBlockIndex.find( word );
+
+   // Return the last block in the chain of blocks stored
+   if ( wordIt != subBlockIndex.end( ) )
+      {
+      printf("Word already found at Block: %u, SubBlock: %u, with Size: %u\n", ( *wordIt ).second.blockIndex, ( *wordIt ).second.subBlockIndex, ( *wordIt ).second.subBlockSize );
+      return GetPostingListSubBlock( ( *wordIt ).second, endWanted );
+      }
+   // Return a new block
+   else
+      return GetNewPostingListSubBlock( word );
+   }
+
+
+PostingListSubBlock Index::GetNewPostingListSubBlock( const FixedLengthString& word )
+   {
+   SubBlockInfo subBlockInfo = GetOpenSubBlock( SmallestSubBlockSize( ) );
+   // TODO
+   IncrementOpenSubBlock( SmallestSubBlockSize( ) );
+
+   subBlockIndex.insert( { word, subBlockInfo } );
+
+   return { MmapSubBlock( subBlockInfo ), subBlockInfo, PostingList( ) };
+   }
+
+
+PostingListSubBlock Index::GetPostingListSubBlock
+      ( SubBlockInfo subBlockInfo, bool endWanted )
+   {
+   char* subBlock = MmapSubBlock( subBlockInfo );
+
+   unsigned postingListSize = subBlockInfo.subBlockSize;
+   unsigned offset = 0;
+
+   // If we need to follow nextPtrs to get to end
+   if ( endWanted && subBlockInfo.subBlockSize == blockSize )
+      {
+      // We now have an offset / smaller size because of nextPtr
+      offset = sizeof( unsigned ) + sizeof( unsigned char );
+      postingListSize -= offset;
+
+      // While nextBlockPtr != 0
+      unsigned nextBlockPtr;
+      while ( ( nextBlockPtr = *( unsigned* )subBlock ) != 0 )
+         {
+         // Grab the next sub block ptr too
+         unsigned nextSubBlockPtr = 
+               *( unsigned char* )( subBlock + sizeof( unsigned ) );
+
+         // Unmap current sub block
+         MunmapSubBlock( subBlockInfo, subBlock );
+         // Change to new sub block
+         subBlockInfo.blockIndex = nextBlockPtr;
+         subBlockInfo.subBlockIndex = nextSubBlockPtr;
+         // Map new sub block
+         subBlock = MmapSubBlock( subBlockInfo );
+         }
+      }
+
+   // Get a StringView of the bytes ( minus nextPtr if it exists )
+   StringView postingListString( subBlock + offset, postingListSize );
+
+   return { subBlock, subBlockInfo, PostingList( postingListString ) };
+   }
+
+
+unsigned Index::SmallestSubBlockSize( ) const
+   {
+   unsigned numSizes = metaData.GetInString< unsigned >( 2 * sizeof( unsigned ) );
+   return blockSize >> ( numSizes - 1 );
+   }
+
+
+SubBlockInfo Index::GetOpenSubBlock( unsigned subBlockSize ) const
+   {
+   unsigned offset = sizeof( unsigned ) +
+         ( blockSize / subBlockSize * sizeof( unsigned ) * 2 );
+
+   SubBlockInfo returnInfo;
+
+   returnInfo.subBlockSize = subBlockSize;
+   returnInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+   offset += sizeof( unsigned );
+   returnInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+
+   return returnInfo;
+   }
+
+
+void Index::IncrementOpenSubBlock( unsigned subBlockSize )
+   {
+   }
+
+
+char* Index::MmapSubBlock( SubBlockInfo subBlockInfo )
+   {
+   // BlockIndex * blockSize + subBlockIndex * subBlockSize
+   unsigned offset = subBlockInfo.blockIndex * blockSize + 
+         subBlockInfo.subBlockIndex * subBlockInfo.subBlockSize;
+
+   return ( char* )mmapWrapper( indexFD, subBlockInfo.subBlockSize, offset );
+   }
+
+
+inline void Index::MunmapSubBlock( SubBlockInfo subBlockInfo, char* subBlock )
+   {
+   munmapWrapper( subBlock, subBlockInfo.subBlockSize );
    }
 
 

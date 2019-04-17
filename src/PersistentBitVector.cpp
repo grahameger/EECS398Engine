@@ -11,18 +11,17 @@
 #include "mmap.h"
 
 
-// TODO: reduce code duplication
 PersistentBitVector::PersistentBitVector(String filename) {
     // check if the file exists
     struct stat buffer;
     bool fileExists = (stat(filename.CString(), &buffer) == 0);
     
     // open file with correct flags
-    int openFlags = O_RDWR;
+    int openFlags = O_RDWR | O_NOATIME;
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags, S_IRWXU);
+    fd = open(filename.CString(), openFlags, 0666);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
         // TODO: more error handling
@@ -41,8 +40,6 @@ PersistentBitVector::PersistentBitVector(String filename) {
     // mmap the data portion
     // the data size should be the number of bits specified, not bytes
     data = (uint8_t*)mmapWrapper(fd, header->dataSize, sizeof(Header));
-    // zero out the page? seriously why is this not working?
-    memset(data, 0x0, header->dataSize);
 }
 
 // close and unmap the file with a write lock

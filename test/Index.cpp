@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Index.h"
 #include "PostingList.h"
+#include "vector.h"
 
 using namespace std;
 
@@ -9,6 +10,8 @@ void PrintPL( PostingList* pl, unsigned size );
 int main( )
    {
    Index index( ( char* )"testIndex", 128, 3 );
+   Vector< unsigned long long > postings( { 1, 3, 5 } );
+   index.AddPostings( "butter", &postings );
 
    /*
    cout << index->NumBlocks( ) << endl;
