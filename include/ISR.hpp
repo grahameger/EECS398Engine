@@ -9,7 +9,6 @@
 #ifndef constraint_solver_hpp
 #define constraint_solver_hpp
 #include <stdio.h>
-#include "string.h"
 #include "index.hpp"
 
 
@@ -34,30 +33,36 @@ class DocumentAttributes{
 
 class ISR{
 public:
-    
-    Vector<String> parseQuery(String &query);
+    Vector<ISRWord*> parseQuery(String &query);
     ISR (String &query){
         parseQuery(query);
     }
+    ISR (){
+        
+    }
+    Vector<ISR*> queries;
     ISR* docEnd;
-    virtual PostingListIndex* nextInstance();
-    virtual PostingListIndex* nextDocument();
-    virtual PostingListIndex* seekDocStart(Location docStart);
-    virtual Location getDocStartLocation();
-    virtual Location getDocEndLocation();
+    virtual Location nextInstance();
+    virtual Location nextDocument();
+    virtual Location seekDocStart(Location docStart);
+    virtual Location getPostsStartLocation();
+    virtual Location getPostsEndLocation();
     virtual ISR* getDocISR();
 };
 
 class ISRWord : public ISR{
 public:
-    PostingListIndex* nextInstance();
-    PostingListIndex* nextDocument();
-    PostingListIndex* seekDocStart(Location docStart);
-    PostingListIndex* getCurrentPost();
-    Location getDocStartLocation();
-    Location getDocEndLocation();
-    ISR* getDocISR();
     String word;
+    ISRWord(String wordToInsert){
+        word = wordToInsert;
+    }
+    Location nextInstance();
+    Location nextDocument();
+    Location seekDocStart(Location docStart);
+    Location getCurrentPost();
+    Location getPostsStartLocation();
+    Location getPostsEndLocation();
+    ISR* getDocISR();
     unsigned getDocumentCount();
     unsigned getNumberOfOccurences();
 };
@@ -65,13 +70,15 @@ public:
 
 class ISROr : public ISR{
 public:
-    ISR** terms;
-    unsigned numOfTerms;
-    Location getStartLocation();
-    Location getEndLocation();
-    PostingListIndex* seekDocStart(Location target);
-    PostingListIndex* nextInstance();
-    PostingListIndex* nextDocument();
+    Vector<ISR*> terms;
+    ISROr(Vector<ISR> phrasesToInsert);
+    void insert(ISR termToInsert);
+    Location getPostsStartLocation();
+    Location getPostsEndLocation();
+    Location seekDocStart(Location target);
+    Location nextInstance();
+    Location nextDocument();
+    unsigned numOfTerms = 0;
 private:
     unsigned nearestTerm;
     Location nearestStartLocation, nearestEndLocation;
@@ -79,8 +86,9 @@ private:
 
 class ISRAnd : public ISR{
 public:
-    ISR** terms;
-    unsigned numOfTerms;
+    Vector<ISR*> terms;
+    ISRAnd(Vector<ISR> phrasesToInsert);
+    unsigned numOfTerms = 0;
     PostingListIndex* seekDocStart(Location target);
     PostingListIndex* nextInstance();
 private:
@@ -90,10 +98,12 @@ private:
 
 class ISRPhrase : public ISR{
 public:
-    ISRWord** terms;
-    unsigned numOfTerms;
+    Vector<ISR*> terms;
+    ISRPhrase(String phraseToStore);
+    unsigned numOfTerms = 0;
     PostingListIndex* seekDocStart(Location target);
     PostingListIndex* nextInstance();
+    //Make getter for nearestStartLocation, nearestEndLocation
 private:
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
@@ -108,7 +118,7 @@ class ISREndDoc : public ISR {
 class ISRContainer : public ISR {
 public:
     ISR** contained, excluded;
-    ISREndDoc* endDoc;
+    ISREndDoc* docEnd;
     unsigned countContained, countExcluded;
     //Location Next();
     PostingListIndex* seek(Location target);
