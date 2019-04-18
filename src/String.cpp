@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // Created by Jason Setting
 // Graham Eger added additional string concatenation functions on 4/2
 

@@ -1,5 +1,4 @@
 #include <iostream>
-<<<<<<< HEAD
 #include <vector>
 #include <string>
 #include <cassert>

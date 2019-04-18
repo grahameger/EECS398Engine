@@ -3,7 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
-#include <list>
+#include "List.h"
 #include "String.h"
 
 
@@ -21,21 +21,21 @@ public:
 
   void saveIndex(String indexFilename, String tableFilename);
 
+   struct hashStruct{
+      String key;
+      T* offset;
+   };
+	static const int numBuckets = 4096;
+   List<hashStruct> array[numBuckets];
 private:
-  struct hashStruct{
-	  String key;
-	  T* offset;
-  };
 	//my very own hash function
 	long hash(String key);
 	//number of keys in the table
-  int entries = 0;
+   int entries = 0;
 	//number of bytes a char* would be to hold the index, not this table
-  int byteLength;
-	static const int numBuckets = 4096;
-  String index;
-  bool pointers = true;
-	std::list<hashStruct> array[numBuckets];
+   int byteLength;
+   String index;
+   bool pointers = true;
 };
  
   
@@ -48,8 +48,8 @@ private:
   hash_table<T>::~hash_table(){
 		if(pointers == true){
 			for(int i=0; i<numBuckets; i++){
-				for(hashStruct entry : array[i]){
-					delete entry.offset;
+				for(auto it = array[i].GetFront(); it!=array[i].End(); it++){
+					delete (*it).offset;
 				}
 			}
 		}
@@ -69,7 +69,7 @@ private:
 		//create a new entry
 		T* offset = new T;
 		hashStruct new_entry = {key, offset};
-    array[hashed].push_back(new_entry);
+    array[hashed].AddToBack(new_entry);
 		entries++;
 		return offset;
 	}
@@ -100,10 +100,10 @@ private:
 			std::memcpy(&objectsPerBucket, buf + location, sizeof(objectsPerBucket));
 			location += sizeof(objectsPerBucket);
 			//free heap thats about to be written over
-			for(auto it = array[i].begin(); it!=array[i].end(); it++){
+			for(auto it = array[i].GetFront(); it!=array[i].End(); it++){
 				delete (*it).offset;
 			}
-			array[i].clear();
+			//array[i].clear();our list doesnt have clear
 			for(int j = 0; j<objectsPerBucket; j++){
 				//read in the key
 				for(int k = 0; k < 30; k++){
@@ -122,7 +122,7 @@ private:
 				std::memcpy(&holder, buf + location, sizeof(holder));
 				location += sizeof(holder);
 				offset.offset = holder;
-				array[i].push_back(offset);			
+				array[i].addToBack(offset);			
 
 			}
 		}
@@ -138,9 +138,9 @@ private:
 		tableFile.write(reinterpret_cast<const char*>(&entries), sizeof(entries));
 		long location = 0;
 		for(int i = 0; i < numBuckets; i++){
-			int sizeHolder = array[i].size();
+			int sizeHolder = 0;//array[i].size();out list doesnt have .size()
 			tableFile.write(reinterpret_cast<const char*>(&sizeHolder), sizeof(sizeHolder));
-			for(auto j = array[i].begin(); j!=array[i].end(); j++){
+			for(auto j = array[i].GetFront(); j!=array[i].End(); j++){
 				tableFile << ((*j).key).CString();
 			  tableFile << '\0';
 				tableFile.write(reinterpret_cast<const char*>(&location), sizeof(location));

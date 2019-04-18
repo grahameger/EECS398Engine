@@ -7,12 +7,13 @@
 #include "PostingList.h"
 #include "PriorityQueue.h"
 #include "Parser.hpp"
-
+#include "hash_table.hpp"
+#include "List.h"
 class Index{
 public:
 	Index(String filename);
 	~Index();
-   void addWord(String word,String wordData);
+   void addWord(wordLocations* locations,int queueIndex);
 	void newDoc(String url);
 
 private:
@@ -21,11 +22,10 @@ private:
 	//returns blocks that contains word's posting list
 	//if posting list does not exist creates it, immediately updates blocks word index to hold this word
 	void threadDriver(void* notNeeded);
-	void reader();
+	void reader(List<Doc_object*>* documentQueue);
    int incrementNextEmptyBlock();
    //returns the block and sub block that the next posting list of size postingBlockSizes[index] will be moved into
    //CALLS TO THIS MUST BEnew LOCKED WITH currentBlocksLock
-   locationPair getCurrentBlock(unsigned index);
    //reading and writing functions
    void readBlock(char* buf, int blockNum);
    void readLocation(char* buf, int blockNum, int offset, int length);
@@ -37,7 +37,8 @@ private:
    //returns the index of smallest posting list block that string of length byte size will fit in
    unsigned int smallesFit(unsigned int byteSize);
 	//VARIABLES
-   PriorityQueue<wordLocations> queue;
+   List<Pair<String, int> >docEndQueue;//holds url, docEnd location pairs
+   PriorityQueue queue;
    //need a queue of url docEnd pairs for newDoc()
 
 	struct locationPair{
@@ -47,10 +48,10 @@ private:
       locationPair(const locationPair& copy):blockNum(copy.blockNum), offset(copy.offset){}
       locationPair(int blockNumber, int off):blockNum(blockNumber), offset(off){}
    };
+   locationPair getCurrentBlock(unsigned index);
 	//map will prob be moved to scheduler
    PersistentHashMap<String, locationPair> map;
 	const int blockSize;
-	int parserFd;
 	int fd;
 	int numOfPostingSizes;
 	Vector<locationPair> currentBlocks;
@@ -69,7 +70,7 @@ private:
 
    bool doneReadingIn;
    //THREADING
-   vector<pthread_t> threads;
+   Vector<pthread_t> threads;
    Vector<threading::ReadWriteLock*> locks;
    threading::ConditionVariable queueReadCV;
    threading::ConditionVariable queueWriteCV;
