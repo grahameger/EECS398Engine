@@ -88,13 +88,7 @@ Phrase *TokenStream::parseWord( )
     }
     string val = "";
     size_t start = location;
-    bool parenth = true;
-    int k = 0;
-    while(location < input.size() && CharIsRelevant(input[location]) && input[location] != ' ' && input[location] != '"' && input[location] != '&' && input[location] != '|') {
-        if(k == 0 && input[location] == ')') {
-            return nullptr;//
-        }
-        k++;
+    while(location < input.size() && CharIsRelevant(input[location]) && input[location] != ' ' && input[location] != '"' && input[location] != '&' && input[location] != '|' && input[location] != ')' && input[location] != '(') {
         if(is_char(input[location])) {
             val += tolower(input[location]);
         }
@@ -108,23 +102,6 @@ Phrase *TokenStream::parseWord( )
         return nullptr;
     }
     
-    if(location > 0 && input[--location] != ')') {
-        parenth = false;
-        location++;
-    }
-    int i = 1; //get all ) in a row )))))
-    while(location + i < input.length() && input[location + i] == ')' && !parenth) {
-        val += ')';
-        i++;
-    }
-    parenth = false;
-    while(input[location] == ')') { //Find first ) in a series of ))))
-        location--;
-        parenth = true;
-    }
-    if(parenth) {//increase pointer to ) so I can check if it's closed later
-        location++;
-    }
     while(location < input.size() && input[location] == ' ') {
         location++;//get rid of whitespace
     }
@@ -141,10 +118,10 @@ bool TokenStream::last_char() {
 }
 
 void help_message() {
-    std::cout << "You entered an invalid character. Valid characters are:\n";
-    std::cout << "[A-Z], [a,z], [0-9], #, @, &, $, -, * |\n\n";
-    std::cout << "Make sure phrase are in double qoutes: \"word0 word1\" not word0 word 1\n\n";
+    std::cout << "You entered an invalid query. Remember to close all tags. Valid characters are:\n";
+    std::cout << "[A-Z], [a,z], [0-9], #, @, &, $, -, * |, (, ), \"\n\n";
     std::cout << "To AND two phrases, use &. To OR two phrases, use |\n\n";
+    std::cout << "To exclude a word or phrase from your search prepend -\n";
     std::cout << "To search for words in title, prepend #\n";
     std::cout << "To search for words in url, prepend @\n";
     std::cout << "To search for words in anchor text, prepend $\n";
