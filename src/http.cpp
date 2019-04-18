@@ -802,6 +802,19 @@ namespace search {
         }
     }
 
+    HTTPClient::SecureSocket::SecureSocket() : ssl(nullptr) {}
+    HTTPClient::Socket::Socket() : sockfd(-1) {}
+
+    HTTPClient::SecureSocket::~SecureSocket() {
+        if (ssl) {
+            close();
+        }
+    }
+
+    HTTPClient::Socket::~Socket() {
+        ::close(sockfd);
+    }
+
     int HTTPClient::Socket::setFd(int fd_in) {
         if (fd_in < 3) {
             return -1;

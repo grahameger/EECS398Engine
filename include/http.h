@@ -149,11 +149,8 @@ namespace search {
 
         struct Socket {
         public:
-            Socket() : sockfd(-1) {}
-
-            virtual ~Socket() {
-                ::close(sockfd);
-            }
+            Socket();
+            virtual ~Socket();
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);
@@ -164,12 +161,8 @@ namespace search {
         
         struct SecureSocket : public Socket {
         public:
-            SecureSocket() : ssl(nullptr) {}
-            virtual ~SecureSocket() {
-                if (ssl) {
-                    close(); 
-                }
-            }
+            SecureSocket();
+            virtual ~SecureSocket();
             virtual int setFd(int fd_in);
             virtual ssize_t send(const char * buf, size_t len);
             virtual ssize_t recv(char * buf, size_t len, int flags);

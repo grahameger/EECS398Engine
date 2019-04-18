@@ -29,6 +29,7 @@ namespace search {
         void print() const;
         bool goodExtension() const;
         bool goodHost() const;
+        bool good() const;
         inline static const std::string method = constants::getMethod; // only GET needed
         std::string   host; // hostname
         std::string   path; // easy enough
@@ -38,7 +39,7 @@ namespace search {
         std::string   scheme; // http://, https:// etc
         int           port;         // note 0 defaults to 80
 
-        static Blacklist blacklist;
+        inline static Blacklist blacklist;
 
         // if you update one, update both.
         inline static const std::vector<std::string> BAD_EXTENSIONS =  {

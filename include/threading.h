@@ -176,7 +176,7 @@ namespace threading {
             std::stringstream ss;
             ss << d;
             auto s = ss.str();
-            dprintf(overflowFd, "%s", s.c_str());
+            dprintf(overflowFd, "%s\n", s.c_str());
             cvPop.signal();
             m.unlock();
             return;

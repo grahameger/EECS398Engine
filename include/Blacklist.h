@@ -16,7 +16,7 @@ private:
         BlacklistConstant();
         std::set<std::string> list;
     };
-    const static BlacklistConstant blacklist;
+    inline static const BlacklistConstant blacklist;
 };
 
 #endif

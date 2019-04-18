@@ -162,6 +162,10 @@ namespace search {
         return !blacklist.blacklisted(host);
     }
 
+    bool HTTPRequest::good() const {
+        return goodHost() && goodExtension();
+    }
+
     std::string HTTPRequest::uri() const {
         // Pseudocode from RFC 2396
         // result = ""
