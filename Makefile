@@ -58,7 +58,7 @@ split: $(patsubst %,$(BUILDDIR)/%,$(POSTINGSPLITOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split
 
-INDEXOBJS := TestIndex.o DebugIndex.o StringView.o String.o PersistentBitVector.o mmap.o threading.o PostingList.o ByteStream.o Utf8Numbers.o
+INDEXOBJS := TestIndex.o DebugIndex.o StringView.o String.o PersistentBitVector.o mmap.o threading.o PostingList.o ByteStream.o Utf8Numbers.o ISR.o
 index: $(patsubst %,$(BUILDDIR)/%,$(INDEXOBJS))
 	@echo "rm -f testIndex*"
 	@rm -f testIndex*

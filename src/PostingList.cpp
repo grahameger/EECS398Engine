@@ -7,19 +7,21 @@
 const unsigned PostingList::LowEndBits = 16;
 
 
-PostingList::PostingList( ) : newIndices( false ), largestPosting( 0 ),
-      origLargestPosting( 0 )
+PostingList::PostingList( ) : newIndices( false ), postsOut( nullptr ), 
+      indexOut( nullptr ), largestPosting( 0 ), origLargestPosting( 0 )
    { }
 
 
 PostingList::PostingList( StringView posts, StringView index, 
       unsigned long long prevLargestPosting ) 
-      : posts( posts ), index( index ), newIndices( false ),
-      largestPosting( prevLargestPosting ), origLargestPosting( prevLargestPosting )
+      : posts( posts ), index( index ), newIndices( false ), postsOut( nullptr ), 
+      indexOut( nullptr ), largestPosting( prevLargestPosting ), 
+      origLargestPosting( prevLargestPosting )
    { }
 
 
-PostingList::PostingList( StringView postingListData ) : newIndices( false )
+PostingList::PostingList( StringView postingListData )
+      : newIndices( false ), postsOut( nullptr ), indexOut( nullptr )
    {
    unsigned indexLength = postingListData.GetInString< unsigned >( );
    unsigned postsLength = 
@@ -59,6 +61,53 @@ void PostingList::AddPosting( unsigned long long posting )
 
    // Update largestPosting
    largestPosting = posting;
+   }
+
+
+unsigned long long PostingList::GetPosting( unsigned long long after )
+   {
+   unsigned long long startingFrom = 0;
+
+   if ( after != 0 )
+      {
+      delete indexOut;
+      indexOut = new InputByteStream( index );
+
+      Utf8Uint posting, offset;
+      do {
+         if ( indexOut->Size( ) != 0 )
+            *indexOut >> posting >> offset;
+         else
+            return 0;
+      } while ( posting.GetValue( ) >> LowEndBits != after >> LowEndBits );
+
+      startingFrom = posting.GetValue( );
+
+      unsigned postsOffset = ( unsigned )offset.GetValue( );
+      StringView narrowPosts( posts.RawCString( ) + postsOffset,
+            posts.Size( ) - postsOffset );
+
+      delete postsOut;
+      postsOut = new InputByteStream( narrowPosts );
+      }
+
+   if ( postsOut == nullptr )
+      postsOut = new InputByteStream( posts );
+
+   Utf8Uint posting;
+   *postsOut >> posting;
+
+   while ( startingFrom < after )
+      {
+      if ( postsOut->Size( ) == 0 )
+         return 0;
+
+      *postsOut >> posting;
+
+      startingFrom += posting.GetValue( );
+      }
+
+   return startingFrom;
    }
 
 

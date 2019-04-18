@@ -6,6 +6,7 @@
 
 class SubBlock;
 class PostingList;
+class WordISR;
 
 template < typename T >
 class Vector;
@@ -44,18 +45,32 @@ struct SubBlockInfo
 // Index class
 class Index 
    {
+   // Static
    public:
-      Index( const char* filename, unsigned blockSize = DefaultBlockSize,
-            unsigned numSizes = DefaultNumSizes );
+      static Index* GetIndex( );
+
+   private:
+      static Index* CurIndex;
+      static unsigned blockSize;
+      static const unsigned BlockDataOffset;
+      static const unsigned DefaultBlockSize;
+      static const unsigned DefaultNumSizes;
+      static const char* Filename;
+
+   // Instance
+   public:
       void AddPostings( const FixedLengthString& word, 
             const Vector< unsigned long long >* postings );
 
    private:
       // Methods
-      void CreateNewIndexFile( const char* filename, unsigned blockSize, 
-            unsigned numSizes );
+      Index( );
+
+      void CreateNewIndexFile( );
       void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
             Vector< PostingList* >& split, const FixedLengthString& word );
+
+      PostingList* GetPostingList( const FixedLengthString& word );
 
       SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
@@ -85,12 +100,8 @@ class Index
 
       PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
 
-      static unsigned blockSize;
-      static const unsigned BlockDataOffset;
-      static const unsigned DefaultBlockSize;
-      static const unsigned DefaultNumSizes;
-
    friend SubBlock;
+   friend WordISR;
    };
 
 #endif

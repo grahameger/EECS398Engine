@@ -54,6 +54,8 @@ class PostingList
 
       // Add a posting to this posting list
       void AddPosting( unsigned long long posting );
+      // Get the next posting from this posting list
+      unsigned long long GetPosting( unsigned long long after = 0 );
 
       // Get the byte size this will be if printed
       unsigned int GetByteSize( );
@@ -75,6 +77,9 @@ class PostingList
       // To hold the new data
       OutputByteStream newPosts;
       OutputByteStream newIndices;
+      // To output the existing data
+      InputByteStream* postsOut;
+      InputByteStream* indexOut;
 
       unsigned long long largestPosting;
       unsigned long long origLargestPosting;

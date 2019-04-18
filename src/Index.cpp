@@ -2,6 +2,8 @@
 #include "vector.h"
 #include "PostingList.h"
 #include "Index.h"
+#include "ISR.h"
+
 // For open( )
 #include <fcntl.h>
 // For errno
@@ -60,36 +62,22 @@ const unsigned Index::DefaultNumSizes = 8;
 const unsigned Index::BlockDataOffset = sizeof( unsigned );
 // Actual blockSize
 unsigned Index::blockSize = Index::DefaultBlockSize;
+// Default Filename
+const char* Index::Filename = "testIndex";
+// The singleton variable
+Index* Index::CurIndex = nullptr;
 
 
 // ######################
 // Public Index Functions
 // ######################
 
-Index::Index( const char* filename, unsigned recSize, unsigned numSizes )
-      : indexFD( open( filename, O_RDWR ) ),
-      subBlockIndex( String( filename ) + "_hash" )
+Index* Index::GetIndex( )
    {
-   // Failed to open
-   if ( indexFD == -1 )
-      {
-      // Not because file doesn't exist
-      if ( errno != ENOENT )
-         ErrExit( );
+   if ( CurIndex == nullptr )
+      CurIndex = new Index( );
 
-      CreateNewIndexFile( filename, recSize, numSizes );
-      }
-
-   // Read in the blockSize being used
-   if ( read( indexFD, &blockSize, sizeof( unsigned ) ) != sizeof( unsigned ) )
-      ErrExit( );
-   if ( blockSize != recSize )
-      printf( "Warning: using existing blockSize of %u instead of suggested %u\n", 
-            blockSize, recSize );
-   // Set metaData to the mmapped first block
-   metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
-   // Second num is numBlocks
-   nextBlockIndex = metaData.GetInString< unsigned >( sizeof( unsigned ) );
+   return CurIndex;
    }
 
 
@@ -145,18 +133,43 @@ void Index::AddPostings( const FixedLengthString& word,
 // Private Index Functions
 // #######################
 
-void Index::CreateNewIndexFile( const char* filename, unsigned blockSize, 
-      unsigned numSizes )
+Index::Index( ) : indexFD( open( Filename, O_RDWR ) ),
+      subBlockIndex( String( Filename ) + "_hash" )
+   {
+   // Failed to open
+   if ( indexFD == -1 )
+      {
+      // Not because file doesn't exist
+      if ( errno != ENOENT )
+         ErrExit( );
+
+      CreateNewIndexFile( );
+      }
+
+   // Read in the blockSize being used
+   if ( read( indexFD, &blockSize, sizeof( unsigned ) ) != sizeof( unsigned ) )
+      ErrExit( );
+   if ( blockSize != DefaultBlockSize )
+      printf( "Warning: using existing blockSize of %u instead of suggested %u\n", 
+            blockSize, DefaultBlockSize );
+   // Set metaData to the mmapped first block
+   metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
+   // Second num is numBlocks
+   nextBlockIndex = metaData.GetInString< unsigned >( sizeof( unsigned ) );
+   }
+
+
+void Index::CreateNewIndexFile( )
    {
    // Create the file
-   indexFD = open( filename, O_RDWR | O_CREAT, S_IRWXU );
+   indexFD = open( Filename, O_RDWR | O_CREAT, S_IRWXU );
 
    // If couldn't create
    if ( indexFD == -1 )
       ErrExit( );
 
    // Set it to the correct size (1 for metadata, 1 for each size)
-   ftruncate( indexFD, blockSize * ( numSizes + 1 ) );
+   ftruncate( indexFD, blockSize * ( DefaultNumSizes + 1 ) );
 
    // Open the first block
    metaData = StringView( ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize );
@@ -165,16 +178,15 @@ void Index::CreateNewIndexFile( const char* filename, unsigned blockSize,
    // Set blockSize in metadata
    metaData.SetInString< unsigned >( blockSize );
    currentOffset += sizeof( unsigned );
-   Index::blockSize = blockSize;
    // Set numBlocks in metadata
-   metaData.SetInString< unsigned >( numSizes, currentOffset );
+   metaData.SetInString< unsigned >( DefaultNumSizes, currentOffset );
    currentOffset += sizeof( unsigned );
    // Set numSizes info in metadata
-   metaData.SetInString< unsigned >( numSizes, currentOffset );
+   metaData.SetInString< unsigned >( DefaultNumSizes, currentOffset );
 
    // Set open Blocks/subBlocks for sizes in metadata
    for ( unsigned block = 1, curSize = blockSize / 2; 
-         block != numSizes; curSize /= 2, block++ )
+         block != DefaultNumSizes; curSize /= 2, block++ )
       {
       SubBlockInfo sizeInfo{ curSize, block, 0 };
       SetOpen( sizeInfo );
@@ -249,6 +261,22 @@ void Index::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView,
    // Delete the outgrown subBlock
    if ( split.size( ) == 1 )
       DeleteSubBlock( plSubBlock );
+   }
+
+
+// TODO: PostingList that needs to look at next
+PostingList* Index::GetPostingList( const FixedLengthString& word )
+   {
+   // Get a stringView for where the postingList of this word goes
+   SubBlock plSubBlock = GetPostingListSubBlock( word );
+   StringView plStringView = plSubBlock.ToStringView( );
+
+   // Create the posting list for this word
+   PostingList* postingList;
+   if ( !plSubBlock.uninitialized )
+      postingList = new PostingList( plStringView );
+
+   return postingList;
    }
 
 
