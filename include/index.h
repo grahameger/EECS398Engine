@@ -9,6 +9,8 @@
 #include "Parser.hpp"
 #include "hash_table.hpp"
 #include "List.h"
+
+
 class Index{
 public:
 	Index(String filename);
