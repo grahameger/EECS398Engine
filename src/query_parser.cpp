@@ -58,13 +58,19 @@ Expression *Parser::FindAnd() {
     {
         ANDExpression *self = new ANDExpression( );
         self->addTerm( left );
-        while ( stream.Match( '&' ) )
+        while ( (left = FindSimple( )) || stream.Match( '&' ))
         {
-            left = FindSimple( );
+            if(stream.match_and) {
+                left = FindSimple( );
+                stream.match_and = false;
+            }
             if( !left ) {
                 return nullptr;
             }
             self->addTerm( left );
+            if(stream.last_char()) {
+                return self;
+            }
             // ...
         }
         return self;
