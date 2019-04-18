@@ -9,7 +9,7 @@
 #include <string>
 #include "threading.h"
 #include "String.h"
-#include "LRUCache.hpp"
+#include "LRUCacheCrawler.hpp"
 #include "DomainRules.h"
 #include "DirectoryRules.h"
 #include "http.h"
@@ -54,7 +54,7 @@ public:
    void unlock();
  
 private:
-   LRUCache<string, DomainRules*> domainRulesCache;
+   LRUCacheCrawler<string, DomainRules*> domainRulesCache;
    void ReadRulesFromDisc(FILE *file, vector<DirectoryRules*> &rules);
    bool TransferRulesFromDiscToCache(string &domain);
    DirectoryRules *CreateDirectoryRules(char *directoryName, 

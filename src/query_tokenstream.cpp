@@ -1,9 +1,8 @@
 /*
- * query_tokenstream.cpp
+ * tokenstream.cpp
  *
- * Implementation of query_tokenstream.h
+ * Implementation of tokenstream.h
  *
- * Lab3: You do not have to modify this file, but you may choose to do so
  */
 
 #include <assert.h>
@@ -18,10 +17,12 @@ bool CharIsRelevant( char c )
 {
     switch ( c )
     {
-        case '@':
-        case '#':
-        case '$':
+        case '@': //anchor text
+        case '#': //title
+        case '$': //url
         case '&':
+        case '-':
+        case '*': //body
         case '(':
         case ')':
         case '|':
@@ -62,6 +63,14 @@ bool TokenStream::Match( char c )
     return false;
 }
 
+void TokenStream::Reset_location( )
+{
+    while(input[location] != '"')
+    {
+        location--;
+    }
+}
+
 bool TokenStream::AllConsumed( ) const
 {
     return location == input.size( );
@@ -75,8 +84,8 @@ Phrase *TokenStream::parseWord( )
     }
     string val = "";
     size_t start = location;
-    while(is_char(input[location]) || isdigit(input[location]) || input[location] == '@' || input[location] == '#' || input[location] == '$') {
-        if(input[location] != '@' && input[location] != '#' && input[location] != '$') {
+    while(location < input.size() && CharIsRelevant(input[location]) && input[location] != ' ' && input[location] != '"' && input[location] != '&' && input[location] != '|') {
+        if(is_char(input[location])) {
             val += tolower(input[location]);
         }
         else {
@@ -88,6 +97,10 @@ Phrase *TokenStream::parseWord( )
     if(location == start) {
         return nullptr;
     }
+    if(input[--location] != ')') {
+        location++;
+    }
+    
     while(location < input.size() && input[location] == ' ') {
         location++;//get rid of whitespace
     }

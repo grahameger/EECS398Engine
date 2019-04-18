@@ -6,7 +6,9 @@
 
 void * mmapWrapper(int fd, size_t size, size_t offset);
 int munmapWrapper(void * addr, size_t size);
-size_t fileSize(int fd);
+void * streamMmapWrapper(int fd, size_t size);
+int streamMunmapWrapper(void *addr, size_t size);
+size_t getFileSize(int fd);
 void extendFile(int fd, size_t newSize);
 
 

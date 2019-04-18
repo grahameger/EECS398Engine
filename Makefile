@@ -10,8 +10,8 @@ TARGET := bin/engine
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CPPFLAGS := -g3 -Wall -std=c++17 -march=native
-LIB := -pthread -lssl -lcrypto
+CPPFLAGS := -O2 -Wall -std=c++17 -march=native 
+LIB := -pthread -lssl -lcrypto 
 INC := -I include
 
 $(TARGET): $(OBJECTS)
@@ -51,6 +51,5 @@ posting: $(patsubst %,$(BUILDDIR)/%,$(POSTINGOBJS))
 # Spikes
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
-
 
 .PHONY: clean

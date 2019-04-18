@@ -1,3 +1,5 @@
+// Created by Graham Eger on 02/01/2019
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -7,84 +9,48 @@
 //#include "index.h"
 #include "String.h"
 #include "PriorityQueue.h"
+#include <signal.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "crawler.h"
+#include "PersistentHashMap.h"
 int main(int argc, char *argv[]) {
 
-	// std::cout << sizeof(size_t) << '\n';
+// used to gracefully shut down and run all of our destructors
+volatile sig_atomic_t keep_running = 1;
 
-	// std::vector<std::string> urls;
-	// urls.reserve(1000000);
-	// std::ifstream start_list("../test/bigTest.url");
-	// std::string line;
+static void sig_handler(int _)
+{
+    (void)_;
+    keep_running = 0;
+}
 
-	// while (std::getline(start_list, line)) {
-	// 	urls.push_back(line);
-	// }
-	// search::Crawler crawler(urls);
-   /*
-	PersistentBitVector v("testVector");
-	v.set(0, true);
-	v.set(15, true);
-	assert(v.at(0) && v.at(15));
-	bool fifteen = v.at(15);
-	bool zero = v.at(0);
-	bool ten = v.at(10);
-	assert(fifteen && zero && !ten);
+static const char startFile[] = "/data/crawl/seedlist.url";
 
-	const ssize_t maxVal = 100000;
-	PersistentHashMap<ssize_t, ssize_t> map(String("test"));
-	Pair<ssize_t, ssize_t> insert;
-	for (ssize_t i = 0; i < maxVal; i++) {
-		insert.first = i;
-		insert.second = i * -1;
-		map.insert(insert);
-		if ( i % 10000 == 0 ) {
-			std::cout << i << std::endl;
+int main(int argc, char *argv[]) {
+
+	// register our signal handler
+	struct sigaction sa;
+    memset( &sa, 0, sizeof(sa) );
+    sa.sa_handler = sig_handler;
+    sigfillset(&sa.sa_mask);
+    sigaction(SIGINT,&sa,NULL);
+
+
+	std::vector<std::string> urls;
+	std::ifstream start_list(startFile);
+	std::string line;
+
+	while (std::getline(start_list, line)) {
+		if (line != "") {
+			urls.push_back(line);
 		}
 	}
-	// run it back
-	for (ssize_t i = 0; i < maxVal; i++) {
-		auto datum = map.at(i);
-		assert(datum == -1 * i);
-	}
-   */
-   PriorityQueue pq; 
+	urls.push_back("http://dmoztools.net/");
+	// urls.push_back("http://soshesawildflowerxo.tumblr.com/post/173338544891/deep-talks-are-my-favorite-if-you-can-connect#_=_");
 
-   Vector<unsigned long long> locations;
-   for(unsigned i = 0; i < 10; i++){
-      locations.push_back(i);
-   }
-   pq.insert(String("first"), &locations);
-   locations.push_back(100);
-   pq.insert(String("second"), &locations);
-   Vector<unsigned long long> locations2;
-   for(unsigned i = 0; i < 10; i++){
-      locations2.push_back(i);
-   }
-   pq.insert(String("first"), &locations2);
-   locations.push_back(100);
-   pq.insert(String("third"), &locations);
-   locations.push_back(100);
-   pq.insert(String("4"), &locations);
-   
-
-   std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;
-   delete pq.top();
-   pq.pop();
-   std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;
-   delete pq.top();
-   pq.pop();
-   std::cout<< pq.top()->word.CString()<<std::endl <<pq.top()->numWords<<std::endl;
-   delete pq.top();
-   pq.pop();
-   std::cout<<"end"<<std::endl;
-   /*
-   String file = "index.bin";
-   // Index index(file);
-   int fd = open(file.CString(), O_RDWR|O_CREAT);
-
-   PostingList pl(fd, 0, 64);
-   pl.update(7);
-   pl.update(10);
-   pl.update(66000);
-   */
+	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
+	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
+	search::Crawler crawler(urls);
+>>>>>>> 26d8ffec05e8713a7610bb7db6f1d3f7aa11479a
 }
