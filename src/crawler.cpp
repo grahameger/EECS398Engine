@@ -9,6 +9,7 @@
 // Updated by Graham Eger a lot. 
 
 #include "crawler.h"
+#include "Debug.h"
 #include <dirent.h>
 #include <unistd.h>
 #include <ctime>
@@ -55,10 +56,10 @@ namespace search {
         if (stat(name, &st) == -1) {
             int rv = mkdir(name, 0755);
             if (rv == -1) {
-                fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));
+                D(fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));)
                 exit(1);
             } else {
-                fprintf(stdout, "created directory %s\n", name);
+                D(fprintf(stdout, "created directory %s\n", name);)
             }
         }
     }
@@ -107,19 +108,19 @@ namespace search {
 
             // check that the host is on our whitelist
             if (!req.goodHost()) {
-                fprintf(stderr, "[BLACKLISTED HOST] %s\n", req.host.c_str());
+                D(fprintf(stderr, "[BLACKLISTED HOST] %s\n", req.host.c_str());)
                 continue;
             }
             // Also check the extension to make sure that it's not on the bad list.
             if (!req.goodExtension()) {
-                fprintf(stderr, "[BAD EXTENSION] %s\n", req.uri().c_str());
+                D(fprintf(stderr, "[BAD EXTENSION] %s\n", req.uri().c_str());)
                 continue;
             }
             // no duplicates, we're only going to be checking this here to
             // prevent going to the filesystem twice.
             // Once we we add it to the queue and once when we pop from the queue
             if (havePage(req)) {
-                fprintf(stderr, "[DUPLICATE] %s\n", req.filename().c_str());
+                D(fprintf(stderr, "[DUPLICATE] %s\n", req.filename().c_str());)
                 continue;
             }
 
@@ -139,7 +140,7 @@ namespace search {
                     // if there is, just add it to the set
                     it->second.insert(req.uri());
 		            pthread_mutex_unlock(&waitingForRobotsLock);
-                    fprintf(stderr, "[NO ROBOTS] %s\n", req.filename().c_str());
+                    D(fprintf(stderr, "[NO ROBOTS] %s\n", req.filename().c_str());)
                     continue;
                 }
                 pthread_mutex_unlock(&waitingForRobotsLock);
@@ -147,7 +148,7 @@ namespace search {
                 req.query = "";
                 req.fragment = "";
                 auto newUrl = req.uri();
-                fprintf(stderr, "[SUBMITTING ROBOTS] %s\n", req.filename().c_str());
+                D(fprintf(stderr, "[SUBMITTING ROBOTS] %s\n", req.filename().c_str());)
                 client->SubmitURLSync(newUrl, 0);
                 continue;
             }
@@ -163,7 +164,7 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // submitURLSync();
-                    fprintf(stderr, "[SUBMITTING] %s\n", req.filename().c_str());
+                    D(fprintf(stderr, "[SUBMITTING] %s\n", req.filename().c_str());)
                     client->SubmitURLSync(p, 0);
                     // continue
                     continue;
@@ -171,7 +172,7 @@ namespace search {
                     // unlock mutex
                     pthread_mutex_unlock(&domainMutex);
                     // add the page to the back of the Queue
-                    fprintf(stderr, "[RATE LIMIT] %s\n", req.filename().c_str());
+                    D(fprintf(stderr, "[RATE LIMIT] %s\n", req.filename().c_str());)
                     readyQueue.push(p); 
                     // continue
                     continue;
@@ -182,7 +183,7 @@ namespace search {
                 // unlock mutex
                 pthread_mutex_unlock(&domainMutex);
                 // submitURLSync
-                fprintf(stderr, "[SUBMITTING] %s\n", req.filename().c_str());
+                D(fprintf(stderr, "[SUBMITTING] %s\n", req.filename().c_str());)
                 client->SubmitURLSync(p, 0);
                 // continue
                 continue;
@@ -201,7 +202,7 @@ namespace search {
         double GiB = (double)bytes / 1073741824.0;
         double rate = (GiB - (double)prevGiB) / (difftime(now, prevTime)) * 8 * 1024;
         size_t queueSize = readyQueue.size();
-        fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Pages: %zu\nTotal Robots: %zu \nItems on Queue: %zu\n\n", time, GiB, rate, pages, robots, queueSize);
+        D(fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Pages: %zu\nTotal Robots: %zu \nItems on Queue: %zu\n\n", time, GiB, rate, pages, robots, queueSize);)
         prevTime = now;
         prevGiB = GiB;
     }

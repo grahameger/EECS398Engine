@@ -23,6 +23,7 @@
 #include <dirent.h>
 #include <map>
 #include "Parser.hpp"
+#include "Debug.h"
 
 namespace search {
 
@@ -130,10 +131,10 @@ namespace search {
             }
         }
         if (rv == EAI_AGAIN) {
-            fprintf(stderr, "getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));
+            D(fprintf(stderr, "getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));)
         } else if (rv != 0) {
             return -1;
-            fprintf(stderr, "getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));
+            D(fprintf(stderr, "getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));)
         }
 
 
@@ -150,7 +151,7 @@ namespace search {
             if (!blocking) {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
-                    fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
+                    D(fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));)
                     close(sockfd);
                     freeaddrinfo(servinfo);
                     return -1;
@@ -159,13 +160,13 @@ namespace search {
             // timeout section of the show
             timeval tm = {constants::TIMEOUTSECONDS, constants::TIMEOUTUSECONDS};
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
-                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                D(fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
                 close(sockfd);
                 freeaddrinfo(servinfo);
                 return -1;
             }
             if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
-                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                D(fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
                 close(sockfd);
                 freeaddrinfo(servinfo);
                 return -1;
@@ -180,7 +181,7 @@ namespace search {
         }
         // end of list with no connection
         if (p == nullptr) {  
-            fprintf(stderr, "unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));
+            D(fprintf(stderr, "unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));)
             freeaddrinfo(servinfo);
             return -1;
         }
@@ -293,18 +294,18 @@ namespace search {
         if (!response200or300(header, headerLen)) {
             auto uri = req.uri();
             crawler->killFilter.add(uri);
-            fprintf(stderr, "[BAD RESPONSE] Non 20X or 30X HTTP response code - %s\n", uri.c_str());
+            D(fprintf(stderr, "[BAD RESPONSE] Non 20X or 30X HTTP response code - %s\n", uri.c_str());)
             return false;
         }
         if (!req.robots() && !goodMimeContentType(header, headerLen) && header[9] != '3') {
             auto uri = req.uri();
             crawler->killFilter.add(uri);
-            fprintf(stderr, "[BAD CONTENT TYPE] Bad content type for request %s\n", uri.c_str());
+            D(fprintf(stderr, "[BAD CONTENT TYPE] Bad content type for request %s\n", uri.c_str());)
             return false;
         }
         contentLength = getContentLength(std::string_view(header, headerLen));
         if (contentLength == CHUNKED) {
-            fprintf(stderr, "[CHUNKED] received a chunked encoding\n");
+            D(fprintf(stderr, "[CHUNKED] received a chunked encoding\n");)
             return false;
         }
         return true;
@@ -341,12 +342,12 @@ namespace search {
         if (redirCount > REDIRECT_MAX) {
             std::string uri = HTTPRequest(url).uri();
             crawler->killFilter.add(uri);
-            fprintf(stderr, "[TOO MANY REDIRECTS] %s\n", url.c_str());
+            D(fprintf(stderr, "[TOO MANY REDIRECTS] %s\n", url.c_str());)
             return;
         }
         HTTPRequest request(url);
         if (request.host == "") {
-            fprintf(stderr, "[NOHOST] %s\n", url.c_str());
+            D(fprintf(stderr, "[NOHOST] %s\n", url.c_str());)
             return;
         }
         std::unique_ptr<Socket> sock;
@@ -360,14 +361,14 @@ namespace search {
             sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
-            fprintf(stderr, "[NOSCHEME] %s\n", url.c_str());
+            D(fprintf(stderr, "[NOSCHEME] %s\n", url.c_str());)
             return;
         }
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
             crawler->killFilter.add(request.uri());
-            fprintf(stderr, "[CONN FAILED] %s\n", url.c_str());
+            D(fprintf(stderr, "[CONN FAILED] %s\n", url.c_str());)
             return; 
         }
         ssize_t rv = sock->setFd(sockfd);
@@ -375,7 +376,7 @@ namespace search {
             // this error message was getting really annoying.
             // fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             crawler->killFilter.add(request.uri());
-            fprintf(stderr, "[SET FD FAILED] %s\n", url.c_str());
+            D(fprintf(stderr, "[SET FD FAILED] %s\n", url.c_str());)
             return;
         }
 
@@ -394,7 +395,7 @@ namespace search {
         const std::string uri = request.uri();
         //fprintf(stderr, "uri: %s\n%s\n", uri.c_str(), requestStr.c_str());
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-            fprintf(stderr, "[SEND ERROR] %s\n", url.c_str());
+            D(fprintf(stderr, "[SEND ERROR] %s\n", url.c_str());)
             robotsErrorCheck(request);
             crawler->killFilter.add(request.uri());
             return;
@@ -409,7 +410,7 @@ namespace search {
             rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
             if (rv < 0) {
                 // error check
-                fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());
+                D(fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());)
                 free(fullResponse);
                 robotsErrorCheck(request);
                 crawler->killFilter.add(request.uri());
@@ -464,7 +465,7 @@ namespace search {
                         } while (rv > 0);
                         if (rv < 0) {
                             free(fullResponse);
-                            fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());
+                            D(fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());)
                             robotsErrorCheck(request);
                             crawler->killFilter.add(request.uri());
                             return;
@@ -485,13 +486,13 @@ namespace search {
             free(fullResponse);
             free(redirectUrl);
             redirCount++;
-            fprintf(stderr, "[REDIRECT] %s\n", newUrl.c_str());
+            D(fprintf(stderr, "[REDIRECT] %s\n", newUrl.c_str());)
             return SubmitURLSync(newUrl, redirCount);
         }
 
         if (!isARobotsRequest) {
             if (containsGzip(fullResponse, headerSize)) {
-                fprintf(stderr, "[GZIP] %s\n", url.c_str());
+                D(fprintf(stderr, "[GZIP] %s\n", url.c_str());)
                 robotsErrorCheck(request);
                 free(fullResponse);
                 return;
@@ -508,7 +509,7 @@ namespace search {
         if (!writeToFile(request, fullResponse, bytesReceived, headerSize)) {
             // don't need to free?
             // definitely need to free
-            fprintf(stderr, "[FILE WRITE FAILED] %s\n", url.c_str());
+            D(fprintf(stderr, "[FILE WRITE FAILED] %s\n", url.c_str());)
             return;
         }
 
@@ -521,7 +522,7 @@ namespace search {
                 robots->SubmitRobotsTxt(request.host, filename);
                 robots->unlock();
             } catch (...) {
-                fprintf(stderr, "[ROBOTS SUBMIT FAILED] %s\n", url.c_str());
+                D(fprintf(stderr, "[ROBOTS SUBMIT FAILED] %s\n", url.c_str());)
                 robots->unlock();
             }
             // move all the waiting pages to the readyQueue;
@@ -832,14 +833,12 @@ namespace search {
         ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
-            fprintf(stderr, "Error creating new SSL struct\n");
-            fflush(stderr);
+            D(fprintf(stderr, "Error creating new SSL struct\n");)
             return -1;
         }
         int rv = ::SSL_set_fd(ssl, sockfd);
         if (rv != 1) {
-            fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);
-            fflush(stderr);
+            D(fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);)
             return -1;
         }
         connect:
@@ -851,7 +850,7 @@ namespace search {
             case SSL_ERROR_WANT_CONNECT:
                 goto connect;
             case SSL_ERROR_SYSCALL:
-                // fprintf(stderr, "SSL syscall error %s\n", strerror(errno));
+                D(fprintf(stderr, "SSL syscall error %s\n", strerror(errno));)
                 return -1;
             case SSL_ERROR_ZERO_RETURN:
             case SSL_ERROR_WANT_READ:
@@ -862,7 +861,7 @@ namespace search {
             case SSL_ERROR_WANT_CLIENT_HELLO_CB:
             case SSL_ERROR_SSL:
             default:
-                // fprintf(stderr, "%s", "SSL connect other error\n");
+                D(fprintf(stderr, "%s", "SSL connect other error\n");)
                 return -1;
         }
         return rv;
