@@ -265,18 +265,37 @@ void Index::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView,
 
 
 // TODO: PostingList that needs to look at next
-PostingList* Index::GetPostingList( const FixedLengthString& word )
+Pair< unsigned, PostingList* > Index::GetPostingList
+      ( const FixedLengthString& word )
    {
    // Get a stringView for where the postingList of this word goes
    SubBlock plSubBlock = GetPostingListSubBlock( word );
    StringView plStringView = plSubBlock.ToStringView( );
+
+   unsigned nextPtr = plSubBlock.subBlockInfo.subBlockSize != blockSize ? 0 :
+         *( unsigned* )plSubBlock.mmappedArea;
 
    // Create the posting list for this word
    PostingList* postingList;
    if ( !plSubBlock.uninitialized )
       postingList = new PostingList( plStringView );
 
-   return postingList;
+   return { nextPtr, postingList };
+   }
+
+
+Pair< unsigned, PostingList* > Index::GetPostingList
+      ( unsigned blockIndex )
+   {
+   // Grab that block
+   SubBlock plSubBlock = GetSubBlock( { blockSize, blockIndex, 0 } );
+   StringView plStringView = plSubBlock.ToStringView( );
+
+   unsigned nextPtr = *( unsigned* )plSubBlock.mmappedArea;
+
+   PostingList* postingList = new PostingList( plStringView );
+
+   return { nextPtr, postingList };
    }
 
 
@@ -300,7 +319,6 @@ SubBlock Index::GetPostingListSubBlock
 
 SubBlock Index::GetNewSubBlock( unsigned minSize )
    {
-   // TODO: Should I add guards for if minSize < actualSize >> numSizes?
    unsigned actualSize = blockSize;
    while ( actualSize / 2 >= minSize ) { actualSize /= 2; }
 

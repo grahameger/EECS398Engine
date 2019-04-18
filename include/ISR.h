@@ -29,7 +29,8 @@ class WordISR : ISR
       unsigned long long NextInstance( unsigned long long after = 0 ) override;
 
    private:
-      PostingList* postingList;
+      Vector< PostingList* > postingLists;
+      unsigned nextPtr;
 
    };
 

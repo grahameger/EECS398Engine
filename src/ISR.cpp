@@ -18,16 +18,37 @@ unsigned long long ISR::NextInstance( unsigned long long after )
 
 
 WordISR::WordISR( String& word )
-      : postingList( Index::GetIndex( )->GetPostingList( word.CString( ) ) )
-   { }
+   { 
+   auto returnPair = Index::GetIndex( )->GetPostingList( word.CString( ) );
+   nextPtr = returnPair.first;
+   postingLists.push_back( returnPair.second );
+   }
 
 
 unsigned long long WordISR::NextInstance( unsigned long long after )
    {
-   if ( !postingList )
+   if ( postingLists.empty( ) )
       return 0;
 
-   return postingList->GetPosting( after );
+   for ( unsigned i = 0; i < postingLists.size( ); i++ )
+      {
+      unsigned long long posting = postingLists[ i ]->GetPosting( after );
+      if ( posting != 0 )
+         return posting;
+      }
+
+   while ( nextPtr != 0 )
+      {
+      auto returnPair = Index::GetIndex( )->GetPostingList( nextPtr );
+      nextPtr = returnPair.first;
+      postingLists.push_back( returnPair.second );
+
+      unsigned long long posting = returnPair.second->GetPosting( after );
+      if ( posting != 0 )
+         return posting;
+      }
+
+   return 0;
    }
 
 

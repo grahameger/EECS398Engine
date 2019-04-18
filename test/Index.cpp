@@ -32,5 +32,5 @@ int main( int argc, char** argv )
    String wordString( word );
    WordISR wordISR( wordString );
 
-   cout << wordISR.NextInstance( 11000 ) << endl;
+   cout << wordISR.NextInstance( 18000 ) << endl;
    }

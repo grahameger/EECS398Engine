@@ -70,7 +70,10 @@ class Index
       void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
             Vector< PostingList* >& split, const FixedLengthString& word );
 
-      PostingList* GetPostingList( const FixedLengthString& word );
+      Pair< unsigned, PostingList* > GetPostingList
+            ( const FixedLengthString& word );
+      Pair< unsigned, PostingList* > GetPostingList
+            ( unsigned blockIndex );
 
       SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
