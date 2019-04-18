@@ -171,6 +171,11 @@ namespace threading {
 
     template <typename T> void ThreadQueue<T>::push(const T &d) {
         m.lock();
+        if (d == T()) {
+            cvPop.signal();
+            m.unlock();
+            return;
+        }
         if (q.size() > maxSize) {
             // write to the overflow file
             std::stringstream ss;
@@ -223,18 +228,18 @@ namespace threading {
     // DO NOT LOCK IN THIS FUNCTION
     template <typename T>
     void ThreadQueue<T>::loadFromOverflow() {  
-        char * line = NULL;
-        size_t len = 0;
-        ssize_t rv = 0;
-        FILE * queue = fdopen(overflowFd, "r");
-        if (!queue) {
-            fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
-        }
-        while ((rv = getline(&line, &len, queue)) != -1) {
-            // push the line to the 
-            q.push_back(line); // line is statically allocated?
-            free(line);
-        }
+        // char * line = NULL;
+        // size_t len = 0;
+        // ssize_t rv = 0;
+        // FILE * queue = fdopen(overflowFd, "r");
+        // if (!queue) {
+        //     fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
+        // }
+        // while ((rv = getline(&line, &len, queue)) != -1) {
+        //     // push the line to the 
+        //     q.push_back(line); // line is statically allocated?
+        //     free(line);
+        // }
     }
 
 
@@ -242,7 +247,7 @@ namespace threading {
         m.lock();
         while (q.empty()) {
             loadFromOverflow();
-            if (q.empty()) {
+            while (q.empty()) {
                 cvPop.wait(m);
             }
         }
@@ -256,7 +261,7 @@ namespace threading {
         m.lock();
         while (q.empty()) {
             loadFromOverflow();
-            if (q.empty()) {
+            while (q.empty()) {
                 cvPop.wait(m);
             }
         }

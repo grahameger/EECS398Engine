@@ -17,19 +17,20 @@
 //  * <Phrase>  ::= '"' { <SearchWord> } '"'
 //  */
 
-Expression *Parser::FindPhrase( )
+Expression *Parser::FindPhrase( ) // "bill (nye|gates)" turn into??
 {
-    Expression *word = FindSimple( );
+    Expression *word = stream.parseWord();
     if( word ) {
         AddExpression *self = new AddExpression( );
         self->addTerm( word );
-        while( ( !stream.Match( '"' ) && ( word = FindSimple( ) ))) {
+        while( ( word = stream.parseWord() )) {
             self->addTerm( word );
         }
-        stream.Reset_location();//if match matches, it eats up word so reset
         return self;
     }
+    
     return nullptr;
+    
 }
 
 Expression *Parser::FindOr() {
@@ -58,13 +59,19 @@ Expression *Parser::FindAnd() {
     {
         ANDExpression *self = new ANDExpression( );
         self->addTerm( left );
-        while ( stream.Match( '&' ) )
+        while ( (left = FindSimple( )) || stream.Match( '&' ))
         {
-            left = FindSimple( );
+            if(stream.match_and) {
+                left = FindSimple( );
+                stream.match_and = false;
+            }
             if( !left ) {
                 return nullptr;
             }
             self->addTerm( left );
+            if(stream.last_char()) {
+                return self;
+            }
             // ...
         }
         return self;

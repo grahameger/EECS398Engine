@@ -296,7 +296,7 @@ namespace search {
             fprintf(stderr, "[BAD RESPONSE] Non 20X or 30X HTTP response code - %s\n", uri.c_str());
             return false;
         }
-        if (!req.robots() && !goodMimeContentType(header, headerLen)) {
+        if (!req.robots() && !goodMimeContentType(header, headerLen) && header[9] != '3') {
             auto uri = req.uri();
             crawler->killFilter.add(uri);
             fprintf(stderr, "[BAD CONTENT TYPE] Bad content type for request %s\n", uri.c_str());
@@ -628,6 +628,7 @@ namespace search {
 
     // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
+        crawler->readyQueue.push("");
         // turning this off for now
         // const char * baseUri = currentUri.c_str();
         // LinkFinder linkFinder; // each thread should probably just have they're own one of these

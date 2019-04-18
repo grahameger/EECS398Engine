@@ -40,13 +40,14 @@ namespace search {
         // with an unbounded number of files (2^32-1 really)
         client = new HTTPClient(this);
 
+        readyQueue.push(seedUrls);
+
         // add the seed urls to the queue
         pthread_create(&printThread, NULL, &Crawler::printHelper, this);
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++) {
             pthread_create(&threads[i], NULL, &Crawler::stubHelper, this);
         }
         fprintf(stderr, "ALL THREADS CREATED: queue size %zu\n", seedUrls.size());
-        readyQueue.push(seedUrls);
     }
 
     void makeDir(const char * name) {
@@ -99,9 +100,10 @@ namespace search {
     void * Crawler::stub() {
         while (keep_running) {
             std::string p = readyQueue.pop();
+            if (p == "") {
+                continue;
+            }
             auto req = HTTPRequest(p);
-
-            
 
             // check that the host is on our whitelist
             if (!req.goodHost()) {
