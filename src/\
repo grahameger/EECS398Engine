@@ -3,9 +3,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "Utf8Uint.h"
-#include <list>
+
 Index::Index(String filename)
-   :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), urlMap("urlTable"), metaMap("metaTable"), currentBlocks(numOfPostingSizes), threads(10), doneReadingIn(false) {
+   :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), currentBlocks(numOfPostingSizes), threads(10), doneReadingIn(false) {
 
 
    fd = open(filename.CString(), O_RDWR | O_CREAT);
@@ -28,7 +28,7 @@ Index::Index(String filename)
    for(unsigned i = 0; i < threads.size(); i++){
       //pthread_create(&threads[i], NULL, &Index::threadDriver, (void*)nullptr);
    }
-   std::list<Doc_object> docQueue;
+   List<Doc_object*> docQueue;
    //read in
    reader(&docQueue);
 }
@@ -185,7 +185,7 @@ void Index::newDoc(String url){
       	//update index
       	memcpy(buf + indexPointer, newIndex.string().CString(), newIndex.size());
          writeBlock(buf, nextBlock);
-		   locks[nextBlock]->unlock();charconv: No such file or directory
+		   locks[nextBlock]->unlock();
 		}
 		else{
          //already added url
@@ -221,22 +221,25 @@ void Index::threadDriver(void* notNeeded){
    
 }
 
-void Index::reader(std::list<Doc_object>* documentQueue){
+void Index::reader(List<Doc_object*>* documentQueue){
    //could this be threaded?
    //    would have to make sure thread driver only happens when all document older than the newest currently being read are completely read.
    //    reader must add to queue in correct order, has to wait for readers of old docs to finish if necessary
    while(true){
       documentQueueLock.lock();
-      while(documentQueue->empty()){
+      while(documentQueue->Empty()){
       }
       //think about dynamicness
-      Doc_object doc = documentQueue->front();
+      auto it = documentQueue->GetFront();
+      Doc_object* d = it[0];
+      Doc_object* doc = (documentQueue->GetFront())[0];
+      documentQueue->RemoveFront();
       unsigned long long startLocation = currentLocation;
-      int docSize = doc.Words.size();
-      //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
-      docSize += doc.anchor_words.size() + 1;
-      for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         docSize += doc.anchor_words[i].size();
+      int docSize = doc->Words.size();
+      //every doc end is its own location, 1 for regular doc + 1 for each anchor text
+      docSize += doc->anchor_words.size() + 1;
+      for(unsigned i = 0; i < doc->anchor_words.size(); i++){
+         docSize += doc->anchor_words[i].size();
       }
       currentLocation += docSize;
       int docId = currentDocId;
@@ -246,71 +249,67 @@ void Index::reader(std::list<Doc_object>* documentQueue){
       hash_table<Vector<unsigned long long> > localMap;
       //pass urls and doc ends to newDoc somehow, probably a queue of url, docEnd pairs
       //parse into word, vector<ull>location pairs
-      for(unsigned i = 0; i < doc.url.size(); i++){
-         (*(localMap[String("$") + doc.url[i]])).push_back(startLocation);
+      for(unsigned i = 0; i < doc->url.size(); i++){
+         (*(localMap[String("$") + doc->url[i]])).push_back(startLocation);
          startLocation++;
       }
-      for(unsigned i = 0; i < doc.Words.size(); i++){
+      for(unsigned i = 0; i < doc->Words.size(); i++){
          //proabbly going to need a map here
          //if statement for where in the doc this occured
          //@-anchor
          //#-title
          //$-url
          //*-body
-         if(doc.Words[i].type.Compare(String("title")) == true){
-            (*(localMap[String("#") + doc.Words[i].word])).push_back(startLocation);
+         if(doc->Words[i].type.Compare(String("title")) == true){
+            *(localMap[String("#") + doc->Words[i].word]).push_back(startLocation);
             startLocation++;
          }
          else{
-            (*(localMap[String("*") + doc.Words[i].word])).push_back(startLocation);
+            *(localMap[String("*") + doc->Words[i].word]).push_back(startLocation);
             startLocation++;
          }
       }
       //docEnd
-      (*(localMap[String("")])).push_back(startLocation);
-      urlMap[startLocation] = doc.doc_url;
+      int endLocation = startLocation;
       startLocation++;
       //parse anchor texts
-      for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         for(unsigned j = 0; j < doc.anchor_words[i].size(); j++){
+      Vector<int> anchorLocations;
+      for(unsigned i = 0; i < doc->anchor_words.size(); i++){
+         for(unsigned j = 0; j < doc->anchor_words[i].size(); j++){
             //probably gonna need to use the same map here
-            (*(localMap[String("&") + doc.Words[i].word])).push_back(startLocation);
+            *(localMap[String("&") + doc->Words[i].word]).push_back(startLocation);
             startLocation++;
             
          }
          //docEnd map here
-         (*(localMap[String("")])).push_back(startLocation);
-         urlMap[startLocation] = doc.Links[i];
+         anchorLocations.push_back(startLocation);
          startLocation++;
       }
-      int urlSlashes = 0;
-      for(unsigned i = 0; i < doc.doc_url.Size(); i++){
-         if(doc.doc_url[i] == '/') urlSlashes++;
-      }
-      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), urlSlashes, doc.anchor_words.size());
+
       currentWriteDocIdMutex.lock();
       while(currentWriteDocId != docId){
          queueWriteCV.wait(currentWriteDocIdMutex);
       }
       currentWriteDocIdMutex.unlock();
       documentQueueLock.lock();
-      //url -> metadata
-      metaMap[doc.doc_url] = metadata;
-      for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         metaMap[doc.Links[i]].inLinks++;
+      //docEndQueue.AddToBack(Pair<doc->doc_url, endLocation>);
+      for(unsigned i = 0; i < doc->anchor_words.size(); i++){
+         Pair<String, int> docEndPair(doc->Links[i], anchorLocations[i]);
+         docEndQueue.AddToBack(docEndPair);
+         
       }
-
       //iterate through map and insert into pQueue
       for(unsigned i = 0; i < localMap.numBuckets; i++){
-         auto it = localMap.array[i].begin();
-         while(it != localMap.array[i].end()){
+         auto it = localMap.array[i].GetFront();
+         while(it != localMap.array[i].End()){
             //add word vector<ull>location pair to priority queue
-            queue.insert((*it).key, (*it).offset);
+            queue.insert((it[0]).key, (it[0]).offset);
             it++;
          }
       }
 
       documentQueueLock.unlock();
+      delete doc;
    }
 }
 

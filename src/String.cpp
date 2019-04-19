@@ -7,13 +7,8 @@
 
 const char* String::nullString = "";
 
-String::String( const int length ) : cstring( nullptr ), size( length )
+String::String( ) : cstring( nullptr ), size( 0 )
    {
-   if ( size > 0 )
-      {
-      cstring = new char[ size + 1 ];
-      cstring[ size ] = 0;
-      }
    }
 
 String::String( const char single_char ) : size( 1 )
@@ -217,5 +212,4 @@ String operator+ ( String lhs, const char * toCat )
    return lhs;
    }
 
-String::String() : cstring(nullptr), size(0) {}
 

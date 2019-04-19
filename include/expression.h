@@ -99,7 +99,7 @@ public:
     
     string stringEval( ) const override
     {
-        string phrase = "(" + terms[ 0 ]->stringEval( );
+        string phrase = terms[ 0 ]->stringEval( );
         for ( size_t i = 1;  i < terms.size( );  ++i ) {
             phrase += " " + terms[ i ]->stringEval( );
         }

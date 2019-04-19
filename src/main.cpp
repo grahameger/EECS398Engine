@@ -12,9 +12,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "crawler.h"
 #include "PersistentHashMap.h"
-int main(int argc, char *argv[]) {
 
 // used to gracefully shut down and run all of our destructors
 volatile sig_atomic_t keep_running = 1;
@@ -28,7 +26,7 @@ static void sig_handler(int _)
 static const char startFile[] = "/data/crawl/seedlist.url";
 
 int main(int argc, char *argv[]) {
-
+/*
 	// register our signal handler
 	struct sigaction sa;
     memset( &sa, 0, sizeof(sa) );
@@ -52,5 +50,5 @@ int main(int argc, char *argv[]) {
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
 	search::Crawler crawler(urls);
->>>>>>> 26d8ffec05e8713a7610bb7db6f1d3f7aa11479a
+*/
 }
