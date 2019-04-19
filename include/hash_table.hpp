@@ -3,7 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
-#include "List.h"
+#include <list>
 #include "String.h"
 
 
@@ -26,7 +26,7 @@ public:
       T* offset;
    };
 	static const int numBuckets = 4096;
-   List<hashStruct> array[numBuckets];
+   std::list<hashStruct> array[numBuckets];
 private:
 	//my very own hash function
 	long hash(String key);
@@ -48,7 +48,7 @@ private:
   hash_table<T>::~hash_table(){
 		if(pointers == true){
 			for(int i=0; i<numBuckets; i++){
-				for(auto it = array[i].GetFront(); it!=array[i].End(); it++){
+				for(auto it = array[i].begin(); it!=array[i].end(); it++){
 					delete (*it).offset;
 				}
 			}
@@ -60,16 +60,16 @@ private:
 		long hashed = hash(key);
 		hashed = hashed%numBuckets;
 		//std::cout<<key.CString()<<" "<<hashed<<std::endl;
-		for(hashStruct entry : array[hashed]){
-			if(entry.key.Compare(key)){
+		for(auto it = array[hashed].begin(); it!=array[hashed].end(); it++){
+			if((*it).key.Compare(key)){
 				//key already exists
-				return entry.offset;
+				return (*it).offset;
 			}
 		}
 		//create a new entry
 		T* offset = new T;
 		hashStruct new_entry = {key, offset};
-    array[hashed].AddToBack(new_entry);
+      array[hashed].push_back(new_entry);
 		entries++;
 		return offset;
 	}

@@ -9,7 +9,6 @@ class String
    {
    public:
       String( );
-      String( const int length = 0 );
       String( const char single_char );
       String( const char* toCopy, int length = -1 );
       String( char*&& toMove, int length = -1 );

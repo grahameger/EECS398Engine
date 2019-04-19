@@ -8,7 +8,7 @@
 #include "PriorityQueue.h"
 #include "Parser.hpp"
 #include "hash_table.hpp"
-#include "List.h"
+#include <list>
 
 
 class Index{
@@ -24,7 +24,7 @@ private:
 	//returns blocks that contains word's posting list
 	//if posting list does not exist creates it, immediately updates blocks word index to hold this word
 	void threadDriver(void* notNeeded);
-	void reader(List<Doc_object*>* documentQueue);
+	void reader(std::list<Doc_object>* documentQueue);
    int incrementNextEmptyBlock();
    //returns the block and sub block that the next posting list of size postingBlockSizes[index] will be moved into
    //CALLS TO THIS MUST BEnew LOCKED WITH currentBlocksLock
@@ -39,7 +39,6 @@ private:
    //returns the index of smallest posting list block that string of length byte size will fit in
    unsigned int smallesFit(unsigned int byteSize);
 	//VARIABLES
-   List<Pair<String, int> >docEndQueue;//holds url, docEnd location pairs
    PriorityQueue queue;
    //need a queue of url docEnd pairs for newDoc()
 
@@ -51,8 +50,23 @@ private:
       locationPair(int blockNumber, int off):blockNum(blockNumber), offset(off){}
    };
    locationPair getCurrentBlock(unsigned index);
+   struct urlMetadata{
+	   int length;
+      int urlLength;
+      int urlSlashes;
+      int inLinks;
+      int outLinks;
+      urlMetadata()
+         :length(0), urlLength(0), urlSlashes(0), inLinks(0), outLinks(0){}
+      urlMetadata(int length, int urlLength, int urlSlashes, int outLinks)
+         :length(length), urlLength(urlLength), urlSlashes(urlSlashes), inLinks(0), outLinks(outLinks){}
+      urlMetadata(const urlMetadata& u)
+         :length(u.length), urlLength(u.urlLength), urlSlashes(u.urlSlashes), inLinks(u.inLinks), outLinks(u.outLinks){}
+   };
 	//map will prob be moved to scheduler
    PersistentHashMap<String, locationPair> map;
+   PersistentHashMap<unsigned long long, String> urlMap;
+   PersistentHashMap<String, urlMetadata> metaMap;
 	const int blockSize;
 	int fd;
 	int numOfPostingSizes;
@@ -83,9 +97,6 @@ private:
    threading::Mutex currentLocationMutex;
    threading::Mutex currentWriteDocIdMutex;
    threading::Mutex documentQueueLock;
-   struct urlMetadata{
-		//not sure what we need here
-	};
 };
 /*
 class PostingListIndex{
