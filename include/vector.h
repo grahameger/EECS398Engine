@@ -1,19 +1,18 @@
 // Graham Eger added a resize() function that takes an argument on 04/08/2019
+// Jacob changed original numAllocated from 400 to 1 on 04/20/2019
 
 #pragma once
 #include <algorithm>
 template<class T>
 class Vector {
     //OVERVIEW: A container that provides random access to
-    //          any element by its index.  Indices start at 0.
-    //          The capacity (maximum size) of an IntVector is
-    //          100 elements.
+    //          any element by its index.
     
 private:
     
     T *elements; //pointer to dynamic array
     size_t numElements = 0;  //Current capacity
-    size_t numAllocated = 400; //capacity of array
+    size_t numAllocated = 1; //capacity of array
     
 public:
     
