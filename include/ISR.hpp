@@ -10,7 +10,7 @@
 #define constraint_solver_hpp
 #include <stdio.h>
 #include "index.hpp"
-
+#include "expression.h"
 
 typedef unsigned long long Location;
 typedef size_t FileOffset;
@@ -34,7 +34,7 @@ class DocumentAttributes{
 class ISR{
 public:
     Vector<ISRWord*> parseQuery(String &query);
-    ISR (String &query){
+    ISR (Vector<Expression> &query){
         parseQuery(query);
     }
     ISR (){
@@ -75,7 +75,7 @@ public:
     ISRWord(String wordToInsert){
         word = wordToInsert;
     }
-    
+    k
     //Points to the current location on a document
     Location getCurrentPost();
     
@@ -112,8 +112,16 @@ public:
     }
     
     //Move all ISRs to the first occurrence of their respective word at 'target' or later
-    //Returns ULONG_MAX if there is no match
+    //Returns ULLONG_MAX if there is no match
     Location seek(Location target);
+    //TODO:
+    // 1. Seek all the ISRs to the first occurrence beginning at
+    //    the target location.
+    // 2. Move the document end ISR to just past the furthest
+    //    word, then calculate the document begin location.
+    // 3. Seek all the other terms to past the document begin.
+    // 4. If any term is past the document end, return to step 2
+    // 5. If any ISR reaches the end, there is no match.
     
     //Find the next instance of ANY of the words in 'terms'
     Location nextInstance();
@@ -139,7 +147,7 @@ public:
     //Constructor for ISRAnd
     ISRAnd(Vector<ISR> phrasesToInsert);
     
-    Location seek(Location target){
+    Location seek(Location target);
         //TODO:
         // 1. Seek all the ISRs to the first occurrence beginning at
         //    the target location.
@@ -148,7 +156,6 @@ public:
         // 3. Seek all the other terms to past the document begin.
         // 4. If any term is past the document end, return to step 2
         // 5. If any ISR reaches the end, there is no match.
-    }
     
     //Finds next instance of all terms in a page
     Location nextInstance(){
@@ -171,14 +178,13 @@ public:
     //Constructor for ISRPhrase
     ISRPhrase(String phraseToStore);
     
-    Location seek(location target){
+    Location seek(Location target);
         //TODO
         // 1. Seek all ISRs to the first occurrence beginning at the target location.
         // 2. Pick the furthest term and attempt to seek all the other terms to the
         //first location beginning where they should appear relative to the furthest term.
         // 3. If any term is past the desired location, return to step 2.
         // 4. If any ISR reaches the end, there is no match.
-    }
     
     //Finds next instance of phrase match
     Location nextInstance(){
