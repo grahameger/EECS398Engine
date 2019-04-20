@@ -19,7 +19,7 @@ class FixedLengthString
       FixedLengthString( const char* cstring );
 
       bool operator== ( const FixedLengthString& other ) const;
-
+      FixedLengthString();
    private:
       static const unsigned MaxLength = 19;
       char characters[ MaxLength + 1 ];

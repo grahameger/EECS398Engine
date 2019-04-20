@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "Utf8Uint.h"
-#include <list>
+#include <deque>
 
 
 void* readerWrapper(void* index){
@@ -11,27 +11,28 @@ void* readerWrapper(void* index){
 }
 
 void* writerWrapper(void* index){
-   static_cast<Index*>(index)->writeDriver();
+   static_cast<Index*>(index)->writerDriver();
 }
 
 
-Index::Index(String filename, std::list<Doc_object>* docQueue, threading::Mutex* queueLock)
-   :currentLocation(0), currentDocId(0), urlMap(String("urlTable")), metaMap(FixedLengthString("metaTable")), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
+Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock)
+   :currentLocation(0), totalDocLength(0), currentDocId(0), urlMap(String("urlTable")), metaMap(String("metaTable")), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
 
-
+   fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
+   ftruncate(fd, sizeof(unsigned long long));
    documentQueue = docQueue;
    documentQueueLock = queueLock;
    //read in
-   for(unsigned i = 0; i < readThreads.size(); i++){
+   for(unsigned i = 0; i < 10; i++){
       pthread_create(&readThreads[i], NULL, &readerWrapper, this);
    }
-   for(unsigned i = 0; i < writeThreads.size(); i++){
+   for(unsigned i = 0; i < 10; i++){
       pthread_create(&writeThreads[i], NULL, &writerWrapper, this);
    }
    //reader(docQueue);
 }
 
-void Index::writeDriver(void* notNeeded){
+void Index::writerDriver(){
    //put them in a priority queue that holds wordLocations, sorted by numWords
    //pop value from priority queue to addWord
    wordLocations* locations;
@@ -46,9 +47,9 @@ void Index::writeDriver(void* notNeeded){
       queue.pop();
       pQueueLock.unlock();
       //pass fixed length word and location vector to AddPostings
-      Postings* postings = Postings::GetIndex();
-      postings->AddPostings(FixedLengthString(locations->word.CString()), locations->locations);
-
+      Postings* postings = Postings::GetPostings();
+      postings->AddPostings(FixedLengthString(locations->word.CString()), &locations->locations);
+      delete locations;
    }
    
 }
@@ -94,7 +95,7 @@ void Index::reader(){
          //#-title
          //$-url
          //*-body
-         if(doc.Words[i].type.Compare(String("title")) == true){
+         if(doc.Words[i].type == 't'){
             (*(localMap[String("#") + doc.Words[i].word])).push_back(startLocation);
             startLocation++;
          }
@@ -120,7 +121,7 @@ void Index::reader(){
          urlMap[startLocation] = FixedLengthString(doc.Links[i].CString());
          startLocation++;
       }
-      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthString(doc.doc_url.CString())].inLinks, doc.anchor_words.size());
+      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthString(doc.doc_url.CString())].inLinks, doc.anchor_words.size(),doc.domain_type, doc.domain_rank);
       currentWriteDocIdMutex.lock();
       while(currentWriteDocId != docId){
          queueWriteCV.wait(currentWriteDocIdMutex);
@@ -132,7 +133,10 @@ void Index::reader(){
       for(unsigned i = 0; i < doc.anchor_words.size(); i++){
          metaMap[FixedLengthString(doc.Links[i].CString())].inLinks++;
       }
-
+      totalDocLength += doc.Words.size();
+      unsigned averageDocLength = totalDocLength / (docId + 1);
+      lseek(fd, 0, SEEK_SET);
+      write(fd, &averageDocLength, sizeof(unsigned));
       //iterate through map and insert into pQueue
       for(unsigned i = 0; i < localMap.numBuckets; i++){
          auto it = localMap.array[i].begin();
@@ -152,6 +156,5 @@ void Index::reader(){
       currentWriteDocIdMutex.lock();
       currentWriteDocId++;
       currentWriteDocIdMutex.unlock();
-      std::cout<<queue.top()->word.CString()<<std::endl;
    }
 }

@@ -573,6 +573,11 @@ bool FixedLengthString::operator== ( const FixedLengthString& other ) const
    return true;
    }
 
+FixedLengthString::FixedLengthString()
+   {
+      characters[0] = 0;
+      characters[MaxLength] = 0;
+   }
 
 // SubBlock
 

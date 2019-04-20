@@ -11,7 +11,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <list>
+#include <deque>
 #include "PersistentHashMap.h"
 #include "Parser.hpp"
 #include "threading.h"
@@ -28,38 +28,10 @@ static void sig_handler(int _)
 static const char startFile[] = "/data/crawl/seedlist.url";
 
 int main(int argc, char *argv[]) {
-/*
-	// register our signal handler
-	struct sigaction sa;
-    memset( &sa, 0, sizeof(sa) );
-    sa.sa_handler = sig_handler;
-    sigfillset(&sa.sa_mask);
-    sigaction(SIGINT,&sa,NULL);
 
-
-	std::vector<std::string> urls;
-	std::ifstream start_list(startFile);
-	std::string line;
-
-	while (std::getline(start_list, line)) {
-		if (line != "") {
-			urls.push_back(line);
-		}
-	}
-	urls.push_back("http://dmoztools.net/");
-	// urls.push_back("http://soshesawildflowerxo.tumblr.com/post/173338544891/deep-talks-are-my-favorite-if-you-can-connect#_=_");
-
-	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
-	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
-	search::Crawler crawler(urls);
-*/
-
-
-   std::list<Doc_object> docList;
+   std::deque<Doc_object> docList;
    threading::Mutex queueLock;
-   
-   Index index(String("index.bin"), &docList, &queueLock);
-   std::cout<<"here"<<std::endl;
+   Index index(&docList, &queueLock);
    Doc_object d;
    Vector<Index_object> anchor;
    d.doc_url = String("github.com");
@@ -67,28 +39,28 @@ int main(int argc, char *argv[]) {
    d.Links.push_back(String("abc.com"));
    Index_object i;
    i.word = String("a");
-   i.type = String("title");
+   i.type = String("t");
    i.position = 0;
    d.Words.push_back(i);
    i.word = String("b");
-   i.type = String("body");
+   i.type = String("b");
    i.position = 1;
    d.Words.push_back(i);
    i.word = String("c");
-   i.type = String("body");
+   i.type = String("b");
    i.position = 2;
    d.Words.push_back(i);
    i.word = String("co");
-   i.type = String("body");
+   i.type = String("b");
    i.position = 3;
    d.Words.push_back(i);
    i.word = String("iabc");
-   i.type = String("anchor");
+   i.type = String("a");
    i.position = 4;
    anchor.push_back(i);
    d.Words.push_back(i);
    i.word = String("pows");
-   i.type = String("anchor");
+   i.type = String("a");
    i.position = 5;
    d.Words.push_back(i);
    anchor.push_back(i);

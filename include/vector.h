@@ -53,6 +53,8 @@ public:
     //EFFECTS:  Returns (by reference) the element at the given index.
     T &at(size_t index);
 
+   const T& back();
+
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
     const T &at(size_t index) const;
@@ -148,11 +150,7 @@ void Vector<T>::push_back(T value){
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-<<<<<<< HEAD
-const T &Vector<T>::at(size_t index) const {
-=======
 const T& Vector<T>::at(size_t index) const {
->>>>>>> c1f69db7c336d732e8cd121c9d62914daedb506b
     return elements[index];
 }
 
