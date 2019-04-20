@@ -2,7 +2,7 @@
 
 void Ranker::seekIsrVector(Vector<Isr*>& isrVec, Location locationToSeek)
    {
-   for(int i = 0; i < isrVec.size(); ++i)
+   for(size_t i = 0; i < isrVec.size(); ++i)
       {
       isrVec[i]->SeekToLocation(locationToSeek);
       }
@@ -19,114 +19,206 @@ void Ranker::seekDecoratedWordIsrs(Location locationToSeek,
 
 void Ranker::updateTopRankedDocuments(Document& document)
    {
-   //todo add sortedInsert method to Vector class 
+   ScoredDocument newDoc = {document.GetDocID(), document.GetScore()};
+   ScoredDocumentCompare compare;
+   topRankedDocuments.insertSortedMaxSize(newDoc, compare, numDocsToDisplay);
    }
 
-DocID Ranker::getDocumentID(PostingListIndex* docIndex)
+
+Location getDocStart(unsigned docLength, IsrEndDoc* docIsr)
    {
-   //TODO implement
-   return 0;
+   return docIsr->GetCurrentLocation() - docLength;
    }
 
-void Ranker::getDocumentAttributes(Location matchLocation, IsrEndDoc* docIsr, 
-      DocumentAttributes &docInfo)
+void resetIsr(Isr* isr)
    {
-   Location endDocLocation = docIsr->SeekToLocation(matchLocation);
-   if(endDocLocation == Isr::IsrSentinel)
+   isr->SeekToLocation(IsrGlobals::IndexStart);
+   }
+
+void Ranker::resetIsrVec(Vector<Isr*> &isrVec)
+   {
+   for(size_t i = 0; i < isrVec.size(); ++i)
       {
-      fprintf(stderr, "isrWord has no doc end!")
-      throw(1);
+      resetIsr(isrVec[i]);
       }
-
-   //TODO: change to working dummy implementation
-   docInfo = IndexInterface::GetDocumentAttributes(endDocLocation);
    }
 
-Location getDocStart(DocumentAttributes& docInfo, IsrEndDoc* docIsr)
+void Ranker::resetAllIsr(Isr* rootIsr, DecoratedWordIsrs& wordIsrs, 
+      IsrEndDoc* docIsr)
    {
-   return docIsr.GetCurrentLocation() - docInfo.DocumentLength;
+   resetIsr(rootIsr);
+   resetIsr(docIsr);
+   resetIsrVec(wordIsrs.AnchorTextIsrs);
+   resetIsrVec(wordIsrs.BodyTextIsrs);
+   resetIsrVec(wordIsrs.TitleIsrs);
+   resetIsrVec(wordIsrs.UrlIsrs);
    }
 
-Vector<DocID> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
+Vector<ScoredDocument> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
       IsrEndDoc* docIsr)
    {
    Location matchLocation = rootIsr->NextInstance();
-   while(matchLocation != Isr::IsrSentinel)
+   while(matchLocation != IsrGlobals::IsrSentinel)
       {
       //get document info from current location
       Document document(matchLocation, docIsr);
       //move wordIsrs to beginning of doc
-      Location docStartLocation = getDocStart(docInfo, docIsr);
+      Location docStartLocation = getDocStart(
+            document.GetDocInfo().DocumentLength, docIsr);
       seekDecoratedWordIsrs(docStartLocation, wordIsrs);
       //score and rank
       document.ComputeScore(wordIsrs);
       updateTopRankedDocuments(document);
-      matchingDocIndex = rootIsr->NextInstance();
+      matchLocation = rootIsr->NextInstance();
       }
+   resetAllIsr(rootIsr, wordIsrs, docIsr);
+   return topRankedDocuments;
    }
 
 Ranker::Document::Document(Location matchLocation, IsrEndDoc* docIsr)
-   : docEndLocation(docIsr->GetCurrentLocation());
+   : docEndLocation(docIsr->GetCurrentLocation())
    {
    Location endDocLocation = docIsr->SeekToLocation(matchLocation);
-   if(endDocLocation == Isr::IsrSentinel)
+   if(endDocLocation == IsrGlobals::IsrSentinel)
       {
-      fprintf(stderr, "isrWord has no doc end!")
+      fprintf(stderr, "isrWord has no doc end!");
       throw(1);
       }
+   docInfo = docIsr->GetDocInfo();
+   //TODO: uncomment when Index is complete
+   //docInfo = IndexInterface::GetDocumentAttributes(endDocLocation);
+   decorationFeatures.AnchorTextFeatures.SetFeatureType(anchor);
+   decorationFeatures.BodyTextFeatures.SetFeatureType(body);
+   decorationFeatures.TitleFeatures.SetFeatureType(title);
+   decorationFeatures.UrlFeatures.SetFeatureType(url);
 
-   //TODO: change to working dummy implementation
-   docInfo = IndexInterface::GetDocumentAttributes(endDocLocation);
+   decorationFeatures.AnchorTextFeatures.SetCurrentDocument(this);
+   decorationFeatures.BodyTextFeatures.SetCurrentDocument(this);
+   decorationFeatures.TitleFeatures.SetCurrentDocument(this);
+   decorationFeatures.UrlFeatures.SetCurrentDocument(this);
    }
 
-unsigned short Ranker::Document::ComputeScore(DecoratedWordIsrs& wordIsrs)
+unsigned Ranker::Document::ComputeScore(DecoratedWordIsrs& wordIsrs)
    {
-   decorationFeatures.AnchorTextFeatures.ComputeFeatures(wordIsrs.AnchorTextIsrs);
-   decorationFeatures.BodyTextFeatures.ComputeFeatures(wordIsrs.BodyTextIsrs);
-   decorationFeatures.TitleFeatures.ComputeFeatures(wordIsrs.TitleIsrs);
-   decorationFeatures.UrlFeatures.ComputeFeatures(wordIsrs.UrlIsrs);
+   unsigned anchorScore = decorationFeatures.AnchorTextFeatures.ComputeScore(
+         wordIsrs.AnchorTextIsrs);
+   unsigned decorationScore = decorationFeatures.BodyTextFeatures.ComputeScore(
+         wordIsrs.BodyTextIsrs);
+   unsigned titleScore = decorationFeatures.TitleFeatures.ComputeScore(
+         wordIsrs.TitleIsrs);
+   unsigned urlScore = decorationFeatures.UrlFeatures.ComputeScore(
+         wordIsrs.UrlIsrs);
 
-   //TODO: combine features with tuned weights
-   return 0;
+   //computeScore already applies weights for lienar combination
+   unsigned score = anchorScore + decorationScore + titleScore + urlScore;
+   return score;
    }
 
-Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn)
-   : isr(isrIn) {}
+DocumentAttributes Ranker::Document::GetDocInfo()
+   {
+   return docInfo;
+   }
 
-void Ranker::Document::Features::ComputeFeatures(Vector<Isr*> wordIsrs)
+Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn,
+      Document* curDocumentIn)
+   : isr(isrIn), curDocument(curDocumentIn) {}
+
+unsigned Ranker::Document::Features::ComputeScore(Vector<Isr*>& wordIsrs)
+   {
+   computeFeatures(wordIsrs);
+   unsigned score = textTypeWeight * RankerParams::WordFrequencyWeight * 
+         TotalWordFrequency;
+   return score;
+   }
+
+void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
    {
    //initialize Vector<WordStatistics>
    Vector<WordStatistics> wordsStatistics;
-   for(int i = 0; i < wordIsrs.size(); ++i)
+   for(size_t i = 0; i < wordIsrs.size(); ++i)
       {
-      WordStatistics currentWordStatistic(wordIsrs[i]);
+      WordStatistics currentWordStatistic(wordIsrs[i], curDocument);
       wordsStatistics.push_back(currentWordStatistic);
       }
-   
+
+   //note: keep in mind that wordISRs are currently on one of their words
    bool allIsrsPastEnd = false;
    while(!allIsrsPastEnd)
       {
       //calculate term counts. TODO: expand to compute more features in this pass
-      for(int i = 0; i < wordsStatistics.size(); ++i)
+      for(size_t i = 0; i < wordsStatistics.size(); ++i)
          {
          allIsrsPastEnd = true;
-         if(wordsStatistics[i].IsPastEnd())
+         if(!wordsStatistics[i].IsPastEnd())
             {
             wordsStatistics[i].SeekNextInstance();
             allIsrsPastEnd = false;
             }
          }
       }
+   
+   //sum word statistics
+   TotalWordFrequency = 0;
+   for(size_t i = 0; i < wordsStatistics.size(); ++i)
+      {
+      TotalWordFrequency += wordsStatistics[i].Count;
+      }
    }
 
 void Ranker::Document::Features::WordStatistics::SeekNextInstance()
    {
-   isr->NextInstance();
    if(!IsPastEnd())
+      {
+      isr->NextInstance();
       Count++;
+      }
    }
 
 bool Ranker::Document::Features::WordStatistics::IsPastEnd()
    {
-   return isr->GetCurrentLocation() >= docEndLocation;
+   return isr->GetCurrentLocation() >= curDocument->docEndLocation;
+   }
+
+void Ranker::Document::Features::SetFeatureType(TextType textTypeIn)
+   {
+   textType = textTypeIn;
+   if(textType == anchor)
+      {
+      //anchor specific weights
+      textTypeWeight = RankerParams::AnchorWeight;
+      }
+   else if(textType == body)
+      {
+      //anchor specific weights
+      textTypeWeight = RankerParams::BodyWeight;
+      }
+   else if(textType == title)
+      {
+      //anchor specific weights
+      textTypeWeight = RankerParams::TitleWeight;
+      }
+   else //url
+      {
+      //anchor specific weights
+      textTypeWeight = RankerParams::UrlWeight;
+      }
+   }
+
+unsigned Ranker::Document::GetScore()
+   {
+   return score;
+   }
+
+Ranker::Ranker()
+   : numDocsToDisplay(10) {}
+
+bool Ranker::ScoredDocumentCompare::operator() (ScoredDocument doc1, 
+      ScoredDocument doc2)
+   {
+   return doc1.score > doc2.score;
+   }
+
+void Ranker::Document::Features::SetCurrentDocument(Document* curDocumentIn)
+   {
+   curDocument = curDocumentIn; 
    }

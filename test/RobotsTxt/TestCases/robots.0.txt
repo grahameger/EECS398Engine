@@ -1,4 +1,0 @@
-# Simple Test
-
-User-agent: *
-Disallow: /path

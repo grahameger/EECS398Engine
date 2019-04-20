@@ -1,4 +1,0 @@
-# This should work, actually (not sure how to check at line start)
-
-User-agenUser-ageUser-agUser-aUserUserSUser-agent: *
-Disallow: /path
