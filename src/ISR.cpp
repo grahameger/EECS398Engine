@@ -54,7 +54,6 @@ Location IsrWord::SeekToLocation (Location seekDestination){
         nextPtr = isrInfo.nextPtr;
         postingLists.push_back( isrInfo.postingList );
         subBlocks.push_back( isrInfo.subBlock );
-        
         Location posting = isrInfo.postingList->GetPosting( seekDestination );
         if ( posting != 0 )
             return currentLocation = posting;
@@ -73,6 +72,7 @@ Location IsrWord::CurInstance( ) const{
 //////////
 ISROr::ISROr(Vector<Isr> phrasesToInsert){
     for (int i = 0; i < phrasesToInsert.size(); ++i){
+        
         terms.push_back(phrasesToInsert[i]);
     }
     numOfTerms += phrasesToInsert.size();
@@ -81,21 +81,31 @@ ISROr::ISROr(Vector<Isr> phrasesToInsert){
 Location ISROr::seek(Location target){
     //Move all ISRs to the first occurrence of their respective word at 'target' or later
     //Returns ULLONG_MAX if there is no match
-    Location currentMin = ULLONG_MAX;
+    Location nearestStartLocationTracker = ULLONG_MAX;
+    Location nearestEndLocationTracker = 0;
+    Location nearestTermTracker = 0;
     for (int i = 0; i < numOfTerms; ++i){
         while (terms[i]->nextInstance() < target){
             Location nextLocation = terms[i]->nextInstance();
-            //Terms[i] does not exist after target location
-            if (nextLocation == ULLONG_MAX){
+            //All terms do not exist after target location
+            if (nextLocation == ULLONG_MAX && i == numOfTerms - 1){
                 return ULLONG_MAX;
             }
             //Terms[i] does exist after target location and is the first term to show up
-            else if (nextLocation >= target && nextLocation < currentMin){
-                currentMin = nextLocation;
+            else if (nextLocation >= target && nextLocation < nearestStartLocationTracker){
+                nearestStartLocationTracker = nextLocation;
+                nearestTermTracker = i;
+            }
+            //Terms[i] does exist after target location and is the last term to show up
+            else if (nextLocation >= target && nextLocation > nearestEndLocationTracker){
+                nearestEndLocationTracker = nextLocation;
             }
         }
     }
-    return currentMin;
+    nearestStartLocation = nearestStartLocationTracker;
+    nearestEndLocation = nearestEndLocationTracker;
+    nearestTerm = nearestTermTracker;
+    return nearestStartLocation;
 }
 
 Location ISROr::nextInstance(){
@@ -201,6 +211,10 @@ Location ISRPhrase::seek(Location target){
                 }
             }
         }
+    }
+    
+    if (termLocations.empty()){
+        return ULLONG_MAX;
     }
     return termLocations[0];
 }
