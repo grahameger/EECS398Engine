@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "hash.h"
 #include "mmap.h"
@@ -38,6 +39,7 @@ public:
 
     // Constructor
     PersistentHashMap(String filename, double loadFactorIn = 0.7);
+    ~PersistentHashMap();
 
     // Square Brackets Operator
     MappedType& operator[](const KeyType& key);
@@ -45,6 +47,9 @@ public:
 
     // Inserts value into hash table, thread safe.
     void insert(const ValueType& keyVal);
+
+    // Flush function
+    bool flush();
 
     // Erase the item in the table matching the key. 
     // Returns whether an item was deleted.
@@ -116,7 +121,7 @@ public:
     // it's on the programmer to know if their iterator has been invalidated
     Pair<Key, Mapped>& operator*() {
         assert(!this->persistentHashMap->isGhost.at(this->index));
-        assert(!this->persistentHashMap->isFilled.at(this->index));
+        assert(this->persistentHashMap->isFilled.at(this->index));
         return this->persistentHashMap->buckets[this->index];
     }
 
@@ -177,6 +182,27 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
     // we shouldn't memset we should default construct the objects?
     this->header->rwLock.unlock();
+}
+
+template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::~PersistentHashMap() {
+    // unmap buckets
+    munmapWrapper(buckets, this->header->capacity * sizeof(ValueType));
+    // unmap header
+    munmapWrapper(header, sizeof(HeaderType)); 
+}
+
+template <typename Key, typename Mapped> bool PersistentHashMap<Key, Mapped>::flush() {
+    // sync buckets
+    int rv = msyncWrapper(buckets, this->header->capacity * sizeof(ValueType));
+    if (rv != 0) {
+        return false;
+    }
+    // sync header
+    rv = msyncWrapper(header, sizeof(HeaderType));
+    if (rv != 0) {
+        return false;
+    }
+    return true;
 }
 
 // Inserts the value into the hash table at a given indice.
@@ -275,7 +301,7 @@ Mapped& PersistentHashMap<Key, Mapped>::operator[] (const KeyType& key) {
     }
     // get key and return val at that location
     indexForKey = this->probeForExistingKey(key);
-    auto rv = this->buckets[indexForKey].second;
+    auto& rv = this->buckets[indexForKey].second;
     this->unlock();
     return rv;
 }
@@ -387,7 +413,8 @@ bool PersistentHashMap<Key, Mapped>::erase(const Key& key) {
         return false;
     }
     // delete the element from bucket and decrement numElements
-    this->isGhost.set(indexForElement, true);
+    this->isGhost.set(indexForElement, false);
+    this->isFilled.set(indexForElement, false);
     --this->header->numElements;
     this->unlock();
     return true;

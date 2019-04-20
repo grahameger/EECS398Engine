@@ -21,7 +21,6 @@
 #include <vector>
 #include <array>
 #include <fstream>
-#include <algorithm>
 #include <string_view>
 #include <charconv>
 #include <locale>
