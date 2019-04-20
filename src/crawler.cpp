@@ -314,8 +314,9 @@ namespace search {
     }
 
     void parseFileOnDisk(std::string filename,
-                   Index& masterList,
-                   threading::Mutex& masterListLock) 
+                         std::deque<Doc_object>& d,
+                         threading::Mutex &m,
+                         threading::ConditionVariable& cv) 
     {
         auto mmapedFile = memoryMapFile(filename);
         if (mmapedFile) {
@@ -333,9 +334,27 @@ namespace search {
                 linkFinder.Document.Links[i] = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.Links[i].CString());
             }
             // add them to the master set of links
-            masterListLock.lock();
-            masterList.push_back(std::move(linkFinder.Document));
-            masterListLock.unlock();
+            m.lock();
+            while (d.size() > 1000000) {
+                cv.wait(m);
+            }
+            d.push_back(std::move(linkFinder.Document));
+            m.unlock();
+        }
+    }
+
+    void parseFiles(std::deque<std::string> filenames,
+                    std::deque<Doc_object>& d,
+                    threading::Mutex &m,
+                    threading::ConditionVariable& cv) 
+    {
+        static threading::Mutex filenamesLock;
+        while (!filenames.empty()) {
+            filenamesLock.lock();
+            auto filename = filenames.front();
+            filenames.pop_front();
+            filenamesLock.unlock();
+            parseFileOnDisk(filename, d, m, cv);
         }
     }
 

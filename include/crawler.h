@@ -85,9 +85,15 @@ namespace search {
     };
 
     std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename);
-    void parseFileOnDisk(std::string filename,
-                         std::vector<Doc_object>& masterList,
-                         threading::Mutex& masterListLock);
+    void parseFileOnDisk( std::string filename,
+                                std::deque<Doc_object>& d,
+                                threading::Mutex &m,
+                                threading::ConditionVariable& cv);
+    
+    void parseFiles(std::deque<std::string> filenames,
+                    std::deque<Doc_object>& d,
+                    threading::Mutex& m,
+                    threading::ConditionVariable& cv);
 }
 
 #endif

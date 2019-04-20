@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <stdio.h>
 #include <getopt.h>
+#include <thread>
 
 #include "crawler.h"
 #include "PersistentHashMap.h"
@@ -41,6 +42,7 @@ static void sig_handler(int _)
 static struct option longopts[] = {
 	{"indexFilePrefix", required_argument, nullptr, 'i'},
 	{"seedList", required_argument, nullptr, 's'},
+	{"domainList", required_argument, nullptr, 'd'},
 	{0, 0, 0, 0} //default
 };
 
@@ -51,6 +53,8 @@ static struct option longopts[] = {
 // 	"/data/crawl/reddit/reddit.dedupe.urls",
 // 	"/data/crawl/hn/HNDump/deduped.hn.urls"
 // };
+
+static const size_t NUM_PARSING_THREADS = 10;
 
 int main(int argc, char *argv[]) {
 
@@ -63,6 +67,7 @@ int main(int argc, char *argv[]) {
 
 		std::string indexFilePrefix;
 		std::string seedList;
+		std::string domainList;
 		int optionIndex = 0;
 		int c;
 		char outputChoice = 0;
@@ -76,6 +81,8 @@ int main(int argc, char *argv[]) {
 				case 's':
 					seedList = optarg;
 					break;
+				case 'd':
+					domainList = optarg;
 				default:
 					fprintf(stderr, "Unknown option\n");
 					return 1;
@@ -104,7 +111,10 @@ int main(int argc, char *argv[]) {
 	// 	}
 	// }
 	// open every file in the pages directory
-	std::vector<std::string> files;
+	std::deque<std::string> files;
+	std::deque<Doc_object> documents;
+	threading::Mutex documentsMutex;
+	threading::ConditionVariable documentsCv;
 	DIR * dir;
 	struct dirent * ent; 
 	if ((dir = opendir("pages")) != NULL) {
@@ -112,11 +122,13 @@ int main(int argc, char *argv[]) {
 			files.push_back(ent->d_name);
 		}
 	}
-	threading::Mutex m;
-	std::vector<Doc_object> Documents;	
-	// parse them 
 
-	std::vector<std::string> urls(links.begin(), links.end());
+  Index index(&documents, &documentsMutex, &documentsCv);
+	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+		std::thread new_thread(search::parseFiles, files, documents, documentsMutex, documentsCv);
+		new_thread.detach();
+	}
+
 
 	// std::ifstream queue("queue.urls");
 	// while (std::getline(queue, line)) {
