@@ -5,6 +5,7 @@
 #include "Pair.h"
 #include "StringView.h"
 #include "PostingList.h"
+#include "Postings.h"
 #include "PriorityQueue.h"
 #include "Parser.hpp"
 #include "hash_table.hpp"
@@ -13,43 +14,20 @@
 
 class Index{
 public:
-	Index(String filename);
+	Index(String filename, std::list<Doc_object>* docQueue, threading::Mutex* queueLock);
 	~Index();
-   void addWord(wordLocations* locations,int queueIndex);
-	void newDoc(String url);
+   void reader();
 
 private:
 	//FUNCTIONS
 
 	//returns blocks that contains word's posting list
 	//if posting list does not exist creates it, immediately updates blocks word index to hold this word
-	void threadDriver(void* notNeeded);
-	void reader(std::list<Doc_object>* documentQueue);
-   int incrementNextEmptyBlock();
-   //returns the block and sub block that the next posting list of size postingBlockSizes[index] will be moved into
-   //CALLS TO THIS MUST BEnew LOCKED WITH currentBlocksLock
-   //reading and writing functions
-   void readBlock(char* buf, int blockNum);
-   void readLocation(char* buf, int blockNum, int offset, int length);
-   void writeBlock(char* buf, int blockNum);
-   void writeLocation(char* buf, int blockNum, int offset, int length);
-   void writeLocation(const char* buf, int blockNum, int offset, int length);
-   //input is char* of a block with int at the end which is a pointer, output is the same char* containing block with pointer = 0
-   int followPointer(char* buf, int blockNum);
-   //returns the index of smallest posting list block that string of length byte size will fit in
-   unsigned int smallesFit(unsigned int byteSize);
+	void writerDriver(void* notNeeded);
 	//VARIABLES
    PriorityQueue queue;
-   //need a queue of url docEnd pairs for newDoc()
-
-	struct locationPair{
-      int blockNum;
-      int offset;
-      locationPair():blockNum(0), offset(0){}
-      locationPair(const locationPair& copy):blockNum(copy.blockNum), offset(copy.offset){}
-      locationPair(int blockNumber, int off):blockNum(blockNumber), offset(off){}
-   };
-   locationPair getCurrentBlock(unsigned index);
+   //queue of doc objects from parser
+   std::list<Doc_object>* documentQueue;
    struct urlMetadata{
 	   int length;
       int urlLength;
@@ -58,86 +36,30 @@ private:
       int outLinks;
       urlMetadata()
          :length(0), urlLength(0), urlSlashes(0), inLinks(0), outLinks(0){}
-      urlMetadata(int length, int urlLength, int urlSlashes, int outLinks)
-         :length(length), urlLength(urlLength), urlSlashes(urlSlashes), inLinks(0), outLinks(outLinks){}
+      urlMetadata(int length, int urlLength, int urlSlashes, int inLinks, int outLinks)
+         :length(length), urlLength(urlLength), urlSlashes(urlSlashes), inLinks(inLinks), outLinks(outLinks){}
       urlMetadata(const urlMetadata& u)
          :length(u.length), urlLength(u.urlLength), urlSlashes(u.urlSlashes), inLinks(u.inLinks), outLinks(u.outLinks){}
    };
 	//map will prob be moved to scheduler
-   PersistentHashMap<String, locationPair> map;
-   PersistentHashMap<unsigned long long, String> urlMap;
-   PersistentHashMap<String, urlMetadata> metaMap;
-	const int blockSize;
-	int fd;
-	int numOfPostingSizes;
-	Vector<locationPair> currentBlocks;
-	Vector<unsigned int> postingBlockSizes;
-	const int pageEndBlock;
-	const int urlBlock;
-	unsigned long long currentLocation;//increment at end of addWord and newDoc
-	//increment next empty block, if out of blocks make the file bigger
-	int nextEmptyBlock;
-	int numBlocks;
-	
-   
+	//FIGURE OUT HOW TO STORE URLS
+   PersistentHashMap<unsigned long long, FixedLengthString> urlMap;
+   PersistentHashMap<fixedLengthString, urlMetadata> metaMap;
+   //current absolute location on the web
+	unsigned long long currentLocation;
+	//true if priority queue is empty
+   bool emptyQueue;
    int currentDocId;
    //reader() waits until its docId = currentWriteDocId to push to the pQueue
    int currentWriteDocId;
 
-   bool doneReadingIn;
    //THREADING
-   Vector<pthread_t> threads;
-   Vector<threading::ReadWriteLock*> locks;
+   Vector<pthread_t> readThreads;
+   Vector<pthread_t> writeThreads;
    threading::ConditionVariable queueReadCV;
    threading::ConditionVariable queueWriteCV;
-	threading::Mutex queueLock;
-   threading::Mutex nextBlockLock;
-   threading::Mutex currentBlocksLock;
-   threading::Mutex mapLock;
+   threading::Mutex pQueueLock;
    threading::Mutex currentLocationMutex;
    threading::Mutex currentWriteDocIdMutex;
-   threading::Mutex documentQueueLock;
+   threading::Mutex* documentQueueLock;
 };
-/*
-class PostingListIndex{
-   //this is the index contained in a posting list that contains offsets to posts
-public:
-   //default
-   PostingListIndex();
-   //for reading in a posting list index
-   PostingListIndex(char* buf, int length);
-   //for creating a new posting list index,
-   PostingListIndex(int location);
-   //url page holds strings not locations, needs current docId
-   PostingListIndex(int location, String url);
-   //returns the largest location in this index
-   unsigned long long largestLocation();
-   //returns the first unused charecter in this posting list
-   unsigned int nextOpenChar();
-   int size();
-   //updates the index with new post at offset in block, location in internet, size of post
-   void update(unsigned long long location, int offset, int length);
-   String string();
-   //returns location of index pointer. URL and page end blocks have an int after the index, set intOffset true
-   int pointer(int blockSize);
-private:
-   String index; 
-   int indexSize;
-};
-
-class PostingList{
-public:
-   PostingList(int fd, int startOffset, int listLength);
-   //if the updated posting List fits in its block it returns 1, otherwise 0
-   int update(unsigned long long location);
-   String string();
-   //returns the block size of this plist
-   int length();
-private:
-   String pList;
-   StringView posts;
-   PostingListIndex index;
-   int listLength;
-};
-*/
-

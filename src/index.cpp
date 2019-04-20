@@ -4,233 +4,70 @@
 #include <unistd.h>
 #include "Utf8Uint.h"
 #include <list>
-Index::Index(String filename)
-   :blockSize(10000 + sizeof(int)), pageEndBlock(1), urlBlock(2), currentLocation(0), nextEmptyBlock(3), numBlocks(10000), currentDocId(0), map("table"), urlMap("urlTable"), metaMap("metaTable"), currentBlocks(numOfPostingSizes), threads(10), doneReadingIn(false) {
 
 
-   fd = open(filename.CString(), O_RDWR | O_CREAT);
-   if(fd == -1){
+void* readerWrapper(void* index){
+   static_cast<Index*>(index)->reader();
+}
 
-	}
-	//start with 1026 blocks, 0-1023 are dictionary
-	//0 is disk backed variables
-	//1 is page end block
-	//2 is list of urls
-	//3 is the first block for holding posting lists
-	if(ftruncate(fd, numBlocks*blockSize) == -1){
+void* writerWrapper(void* index){
+   static_cast<Index*>(index)->writeDriver();
+}
 
-	}
-	currentBlocks[0] = locationPair(3,0);
-   for(int i = 0; i<1000; i++){
-      threading::ReadWriteLock* lock = new threading::ReadWriteLock;
-      locks.push_back(lock);
-   }
-   for(unsigned i = 0; i < threads.size(); i++){
-      //pthread_create(&threads[i], NULL, &Index::threadDriver, (void*)nullptr);
-   }
-   std::list<Doc_object> docQueue;
+
+Index::Index(String filename, std::list<Doc_object>* docQueue, threading::Mutex* queueLock)
+   :currentLocation(0), currentDocId(0), urlMap(String("urlTable")), metaMap(FixedLengthString("metaTable")), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
+
+
+   documentQueue = docQueue;
+   documentQueueLock = queueLock;
    //read in
-   reader(&docQueue);
-}
-
-Index::~Index(){
-   for(int i = 0 ; i < locks.size(); i++){
-      delete locks[i];
+   for(unsigned i = 0; i < readThreads.size(); i++){
+      pthread_create(&readThreads[i], NULL, &readerWrapper, this);
    }
+   for(unsigned i = 0; i < writeThreads.size(); i++){
+      pthread_create(&writeThreads[i], NULL, &writerWrapper, this);
+   }
+   //reader(docQueue);
 }
 
-void Index::newDoc(String url){
-		//add page end
-		//add url to url list
-		//put page metadata in url list
-
-		//design of page end block:
-			//offset to index
-			//posts
-			//empty space
-			//index
-			//pointer to next block, 0 if this block is not full
-
-		//design of url list
-			//offset to index
-			//urls with metadata
-			//empty space
-			//index **this index will always include offset and docId of final url**
-			//int that holds location of next block, 0 if this block is not full
-
-		//step 1 find real location of previous doc end
-		//step 2 delta = current location - previous doc end location
-		//step 3 update index if necessary
-		//step 4 current locaiton++
-		//step 5 find location to place url+metadata
-		//step 6 update url block index
-   //ScheduleBlock sb = Scheduler::GetPostingList("&&");//write version?
-   //PostingList postingList(sb.pl);
-   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-   locks[pageEndBlock]->writeLock();
-      char* buf = new char[blockSize];
-      readBlock(buf, pageEndBlock);
-		//get newest url block
-      int blockNum = followPointer(buf, pageEndBlock);
-
-		int indexPointer;
-		memcpy(&indexPointer, buf, sizeof(int));
-
-
-      //need the location in utf8 form for the index
-		//String utf8Location = utf8(currentLocation);
-		
-      //read in the index, if pointer==0 create a new index
-      PostingListIndex index = indexPointer == 0 ? PostingListIndex(currentLocation) : PostingListIndex(buf + indexPointer, blockSize - indexPointer);
-		//find offset and real location of most recently added page
-		//index.findNewestPost();
-		int delta = currentLocation - index.largestLocation();
-		//convert delta to utf8 for saving
-		String utf8Delta("holder"); //= utf8(delta);
-      //add new delta this must be done before index.update
-      memcpy(buf + index.nextOpenChar(), utf8Delta.CString(), utf8Delta.Size());
-		//check if there is space to add page end
-		index.update(currentLocation, index.nextOpenChar(), utf8Delta.Size());
-		if(utf8Delta.Size() + index.nextOpenChar() > index.pointer(blockSize)){
-			//not enough space, need to move to next block
-			char* pointerWriter[sizeof(int)];
-			nextBlockLock.lock();
-         int nextBlock = incrementNextEmptyBlock();
-			nextBlockLock.unlock();
-			//need to convert nextEmptyBlock to a cstring to write it
-         memcpy(pointerWriter, &nextBlock, sizeof(int));
-         //update block pointer, buf was fucked up by memcpying the delta when it didnt fit, so I use pointer writer
-         writeLocation((char*)pointerWriter, blockNum, blockSize - 1 - sizeof(int), sizeof(int));		
-         //locks[blockNum] is write locked by followPointer()
-         locks[blockNum]->unlock();
-
-         //create a new url block
-         locks[nextBlock]->writeLock();
-         readBlock(buf, nextBlock);
-         PostingListIndex newIndex = PostingListIndex(currentLocation);
-         //last byte in block is blockSize-1, first byte of blockPointer is that - sizeof(int), first block of index is that - index.size()
-         indexPointer = newIndex.pointer(blockSize);
-         //update indexPointer
-         memcpy(buf, &indexPointer, sizeof(int));
-         //put in first delta 
-         memcpy(buf + sizeof(int), utf8Delta.CString(), utf8Delta.Size());
-         //put in index
-         memcpy(buf + indexPointer, newIndex.string().CString(), newIndex.size());
-         //save it
-         writeBlock(buf, nextBlock);
-         locks[nextBlock]->unlock();
-		}
-		else{
-         //update index pointer
-         indexPointer = index.pointer(blockSize);
-         memcpy(buf, &indexPointer, sizeof(int));
-         //update index
-         memcpy(buf + indexPointer, index.string().CString(), index.size());
-			
-			//save the block
-         writeBlock(buf, blockNum);
-         locks[blockNum]->unlock();
-		}
-		currentLocation++;
-		//this concludes the page end portion of newDoc()
-		locks[urlBlock]->writeLock();
-      readBlock(buf, urlBlock);
-      //get newest url block
-		blockNum = followPointer(buf, urlBlock);
-
-		memcpy(&indexPointer, buf, sizeof(int)); 
-		//is url passed as utf8?
-		String utf8Url("holder");// = urlAndDataToUtf8(url);
-		PostingListIndex urlIndex = indexPointer == 0 ? PostingListIndex(currentDocId, utf8Url) : PostingListIndex(buf + indexPointer, blockSize-indexPointer);
-      //add new url
-      memcpy(buf + urlIndex.nextOpenChar(), utf8Url.CString(), utf8Url.Size());
-		//url fits in this block
-		urlIndex.update(currentDocId, urlIndex.nextOpenChar(), utf8Url.Size());
-		if(utf8Url.Size() + index.nextOpenChar() > urlIndex.pointer(blockSize)){
-			//not enough space in current block, must make a new one
-			char* pointerWriter[sizeof(int)];
-			nextBlockLock.lock();
-         int nextBlock = incrementNextEmptyBlock();
-			nextBlockLock.unlock();
-			memcpy(pointerWriter, &nextBlock, sizeof(int));
-			//write pointer to new block in current block
-         writeLocation((char*)pointerWriter, blockNum, blockSize - 1 - sizeof(int), sizeof(int));		
-			locks[blockNum]->unlock();
-
-
-         locks[nextBlock]->writeLock();
-         readBlock(buf, nextBlock);
-         PostingListIndex newIndex = PostingListIndex(currentDocId, utf8Url);
-         //update index pointer
-         indexPointer = urlIndex.pointer(blockSize);
-         memcpy(buf, &indexPointer, sizeof(int));
-         //add new url
-         memcpy(buf + sizeof(int), utf8Url.CString(), utf8Url.Size());
-      	//update index
-      	memcpy(buf + indexPointer, newIndex.string().CString(), newIndex.size());
-         writeBlock(buf, nextBlock);
-		   locks[nextBlock]->unlock();charconv: No such file or directory
-		}
-		else{
-         //already added url
-         //update index pointer
-         indexPointer = urlIndex.pointer(blockSize);
-         memcpy(buf, &indexPointer, sizeof(int));
-      	//update index
-      	memcpy(buf + indexPointer , urlIndex.string().CString(), urlIndex.size());
-         writeBlock(buf, blockNum);
-		   locks[blockNum]->unlock();
-      }
-		currentDocId++;
-		delete[] buf;		
-*/
-}
-
-void Index::threadDriver(void* notNeeded){
+void Index::writeDriver(void* notNeeded){
    //put them in a priority queue that holds wordLocations, sorted by numWords
    //pop value from priority queue to addWord
    wordLocations* locations;
    while(true){
-      documentQueueLock.lock();
+      pQueueLock.lock();
       while(queue.size() == 0){
-         queueReadCV.wait(queueLock);
+         emptyQueue = true;
+         queueReadCV.wait(pQueueLock);
       }
       locations = queue.top();
       //now that locaitons is out of queue we remove the entry
       queue.pop();
-      queueLock.unlock();
-      addWord(locations, 0);
-      //unlocked in addWord
+      pQueueLock.unlock();
+      //pass fixed length word and location vector to AddPostings
+      Postings* postings = Postings::GetIndex();
+      postings->AddPostings(FixedLengthString(locations->word.CString()), locations->locations);
+
    }
    
 }
 
-void Index::reader(std::list<Doc_object>* documentQueue){
+
+void Index::reader(){
    //could this be threaded?
    //    would have to make sure thread driver only happens when all document older than the newest currently being read are completely read.
    //    reader must add to queue in correct order, has to wait for readers of old docs to finish if necessary
    while(true){
-      documentQueueLock.lock();
+      documentQueueLock->lock();
       while(documentQueue->empty()){
+         documentQueueLock->unlock();
+         documentQueueLock->lock();
+         
       }
       //think about dynamicness
       Doc_object doc = documentQueue->front();
+      documentQueue->pop_front();
       unsigned long long startLocation = currentLocation;
       int docSize = doc.Words.size();
       //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
@@ -242,7 +79,7 @@ void Index::reader(std::list<Doc_object>* documentQueue){
       int docId = currentDocId;
       currentDocId++;
       //can't read in next doc until current location and currentDocId are updated
-      documentQueueLock.unlock();
+      documentQueueLock->unlock();
       hash_table<Vector<unsigned long long> > localMap;
       //pass urls and doc ends to newDoc somehow, probably a queue of url, docEnd pairs
       //parse into word, vector<ull>location pairs
@@ -268,36 +105,32 @@ void Index::reader(std::list<Doc_object>* documentQueue){
       }
       //docEnd
       (*(localMap[String("")])).push_back(startLocation);
-      urlMap[startLocation] = doc.doc_url;
+      urlMap[startLocation] = FixedLengthString(doc.doc_url.CString());
       startLocation++;
       //parse anchor texts
       for(unsigned i = 0; i < doc.anchor_words.size(); i++){
          for(unsigned j = 0; j < doc.anchor_words[i].size(); j++){
             //probably gonna need to use the same map here
-            (*(localMap[String("&") + doc.Words[i].word])).push_back(startLocation);
+            (*(localMap[String("@") + doc.anchor_words[i][j].word])).push_back(startLocation);
             startLocation++;
             
          }
          //docEnd map here
          (*(localMap[String("")])).push_back(startLocation);
-         urlMap[startLocation] = doc.Links[i];
+         urlMap[startLocation] = FixedLengthString(doc.Links[i].CString());
          startLocation++;
       }
-      int urlSlashes = 0;
-      for(unsigned i = 0; i < doc.doc_url.Size(); i++){
-         if(doc.doc_url[i] == '/') urlSlashes++;
-      }
-      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), urlSlashes, doc.anchor_words.size());
+      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthString(doc.doc_url.CString())].inLinks, doc.anchor_words.size());
       currentWriteDocIdMutex.lock();
       while(currentWriteDocId != docId){
          queueWriteCV.wait(currentWriteDocIdMutex);
       }
       currentWriteDocIdMutex.unlock();
-      documentQueueLock.lock();
+      pQueueLock.lock();
       //url -> metadata
-      metaMap[doc.doc_url] = metadata;
+      metaMap[FixedLengthString(doc.doc_url.CString())] = metadata;
       for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         metaMap[doc.Links[i]].inLinks++;
+         metaMap[FixedLengthString(doc.Links[i].CString())].inLinks++;
       }
 
       //iterate through map and insert into pQueue
@@ -310,356 +143,15 @@ void Index::reader(std::list<Doc_object>* documentQueue){
          }
       }
 
-      documentQueueLock.unlock();
-   }
-}
-
-void Index::addWord(wordLocations* locations, int queueIndex){
-   //adds a word to the index
-   //
-   //design of posting list block
-   //cation,
-   //    int block size
-   //    int index pointer
-   //    utf8 posting lists
-   //    empty space
-   //    utf8 word index
-   //
-   //step 1 find block that contains word's posting list
-   //step 2 read that block and index
-   //step 3 if the word already has a posting list attempt to add the delta to the posting list
-   //    check if there is space in the posting list
-   //    if there is space put the delta in, update the posting list index, update the index pointer, save the block
-   //    if there is not space the posting list needs to be migrated to a block with bigger posting list
-   //       find the block with next largest posting list size
-   //       put current posting list in it, update word index and index pointer in new block
-   //       add delta and update posting list index and index pointer
-   //       attempt to migrate a posting list from current block of that posting list size to block that posting lsit was removed from
-   //       if a posting list that fits is found make sure to update word index and index pointer
-   //if the word does not have a posting list attempt to create one
-   //    check if there is space
-   //    if there is space update the word index and index pointer, create posting list
-   //    if there is not space change current block of that size to next empty block
-   //       initaite block with block size at location 0, create word's posting list in first posting list location
-   //       update index and index pointer
-   //
-   //
-   
-   //set being used in function that passes locations for concurrency
-/*
-   ScheduleBlock sb = Scheduler::GetPostingList(locations->word);//write version?
-   PostingList postingList(sb.pl);
-   unsigned int beforeSizeIndex = smallestFit(postingList.GetByteSize());
-   for(unsigned i = 0; i < locations->numWords; i++){
-      postingList.AddPosting(locations->locations[i]);
-   }
-   //we must delete locations here so that the queue lock can be released earlier
-   //if queue.pop() deleted locations we would need to hold the  queue lock longer than necessary 
-   delete locations;
-   if(smallestFit(postingList.GetByteSize()) - beforeSizeIndex == 0){
-      //it fits
-      postingList.UpdateInPlace();
-   }
-   else{
-      //doesn't fit
-      //if postingList will fit in one block .split() returns a vector containing itself
-      //otherwise it returns a vector containing at least one blok sized posting list followed by a single pl whic may be smaller
-      vector <PostingList> split = postingList.split(blockSize);
-      unsigned blockPointer = 0;
-      for(i = split.size() - 1; i > 0; i--){
-         blockPointer = Scheduler::GetBlock(split[i], blockPointer);
+      pQueueLock.unlock();
+      if(emptyQueue){
+         emptyQueue = false;
+         queueReadCV.broadcast();
       }
-      //if the original posting list was already in a full block it updates in place
-      sb.sb.UpgradeBlock(split[0], blockPointer);
-      
-   }
-
-
-	locationPair pair = map[word];
-   char* buf = new char[blockSize];
-   if(pair.blockNum == 0){
-      //word not in map
-      currentBlocksLock.lock();
-	   //make sure we didnt get data raced
-      if(pair.blockNum == 0){
-         //posting list doesn't exist, must be created
-         pair = locationPair(currentBlocks[0]);
-         //copy constructor changes mapped struct value too
-         nextPostingListBlock(postingBlockSizes[0]);
-      }
-      currentBlocksLock.unlock();
-      //save block size
-      writeLocation((char*)&postingBlockSizes[0], pair.blockNum, 0, sizeof(int));
-   }
-   locks[pair.blockNum]->writeLock();
-   readBlock(buf, pair.blockNum);
-   int listSize;
-   memcpy(&listSize, buf, sizeof(int));
-   int offset = pair.offset + sizeof(int);
-   PostingList pList = PostingList(fd, pair.blockNum*blockSize + offset, listSize);
-   if(pList.update(word) == 1){
-      //fits
-      writeLocation(pList.string().CString(), pair.blockNum, offset, listSize);
-
-   }
-   else{
-      //doesnt fit
-      currentBlocksLock.lock();
-
-      currentBlocksLock.unlock();
-   }
-
-   locks[pair.blockNum]->unlock();
-
-
-   int blockNum, offset;
-   memcpy(&blockNum, pair, sizeof(int));
-   memcpy(&offset, pair + sizeof(int), sizeof(int));
-   char* buf = new char[blockSize];   
-   locks[blockNum].writeLock();
-   readBlock(buf, blockNum);
-   int listSize;
-   memcpy(&listSize, buf, sizeof(int));
-   //memcpy(buf + sizeof(int), &indexPointer, sizeof(int));
-   //WordIndex index = indexPointer == 0 ? WordIndex(word) : WordIndex(buf, blocksize-1, indexPointer);
-   //int offset = index.findWord(word);
-   //posting list found
-   //check if posting list can be expanded, if not move it to a bigger list size
-   if(pList.update(currentLocation) == 0){
-      //updated posting list fits in its block
-      writeLocation(pList.String().CString(), blockNum, offset, listSize);
-      locks[blockNum].unlock();
-      //EZ
-   }
-   else{
-      //find a posting list to move into list block that is being left
-      locks[blockNum].unlock();
-      currentBlocksLock.lock();
-      for(int i = 0; i < numOfPostingSizes; i++){
-         if(postingBlockSizes[i] == listSize){
-            locks[currentBlocks[i]].writeLock();
-         }
-      }
-      currentBlocksLock.unlock();
-      
-      //posting list needs to be moved to new block
-      int* pair2 = nextBiggerPostingListBlock(listSize, word);
-
-
-      memcpy(&blockNum, pair2, sizeof(int));
-      memcpy(&offset, pair2 + sizeof(int), sizeof(int));
-      writeLocation(pList.String().CString(), blockNum, offset, pList.length());
-   }*/
-}
-
-int Index::incrementNextEmptyBlock(){
-   if(nextEmptyBlock == numBlocks - 1){
-		numBlocks *= 2;
-		if(ftruncate(fd, numBlocks*blockSize) == -1){
-
-		}
-		for(int i = 0; i < numBlocks / 2; i++){
-         threading::ReadWriteLock* lock = new threading::ReadWriteLock;
-         locks.push_back(lock);
-      }
-	}
-	//return nextEmptyBlock then increment
-   return nextEmptyBlock++;
-}
-
-void Index::readBlock(char* buf, int blockNum){
-   if(lseek(fd, blockNum*blockSize, SEEK_SET) == -1){
-
-   }
-   if(read(fd, buf, blockSize)){
-
+      queueWriteCV.broadcast();
+      currentWriteDocIdMutex.lock();
+      currentWriteDocId++;
+      currentWriteDocIdMutex.unlock();
+      std::cout<<queue.top()->word.CString()<<std::endl;
    }
 }
-
-void Index::writeBlock(char* buf, int blockNum){
-   if(lseek(fd, blockNum*blockSize, SEEK_SET) == -1){
-
-   }
-   if(write(fd, buf, blockSize)){
-
-   }
-}
-
-void Index::readLocation(char* buf, int blockNum, int offset, int length){
-   if(lseek(fd, blockNum*blockSize + offset, SEEK_SET) == -1){
-
-   }
-   if(read(fd, buf, length)){
-
-   }
-}
-
-void Index::writeLocation(char* buf, int blockNum, int offset, int length){
-   if(lseek(fd, blockNum*blockSize + offset, SEEK_SET) == -1){
-
-   }
-   if(write(fd, buf, length)){
-
-   }
-}
-
-void Index::writeLocation(const char* buf, int blockNum, int offset, int length){
-   if(lseek(fd, blockNum*blockSize + offset, SEEK_SET) == -1){
-
-   }
-   if(write(fd, buf, length)){
-
-   }
-}
-
-int Index::followPointer(char* buf, int blockNum){
-   int pointer = 0;
-   memcpy(&pointer, buf + blockSize - 5, sizeof(int));
-   while( pointer != 0){
-      locks[blockNum]->unlock();
-      blockNum = pointer;
-      locks[blockNum]->writeLock();
-      readBlock(buf, blockNum);
-      memcpy(&pointer, buf + blockSize - 5, sizeof(int));
-   }
-   return blockNum;
-}
-
-unsigned int smallestFit(unsigned int byteSize){
-   //for(unsigned i = 0; i < postingBlockSizes.size(); i++){
-     // if(byteSize >= postingBlockSizes[i]) return i;
-   //}
-}
-
-/*
-WordIndex::WordIndex(char* buf, int startOffset, int endOffset){
-
-}
-
-WordIndex::WordIndex(String Word){
-
-}
-
-int WordInex::findWord(String word){
-   //returns offset to start of this words posting list
-
-}
-
-void WordIndex::update(String word, int offset){
-
-}
-
-PostingList::PostingList(int fd, int startOffset, int listLength)
-   : posts(nullptr,0), listLength(listLength) {
-   char* mapped =(char*)mmapWrapper(fd, listLength, startOffset);
-   int indexPointer = *((int*)mapped);
-   index = indexPointer == 0 ? PostingListIndex() : PostingListIndex(mapped + indexPointer, listLength);
-   int postPointer = index.nextOpenChar();
-   posts = StringView(mapped + sizeof(int), postPointer - sizeof(int));
-}
-
-int PostingList::update(unsigned long long location){
-   unsigned int offset = index.nextOpenChar();
-   unsigned long long largestLocation = index.largestLocation();
-   unsigned long long delta  = location - largestLocation;
-
-   Utf8Uint utf8(location);
-   OutputByteStream obs;
-   obs << utf8;
-   StringView utf8Delta = obs.GetString();
-
-   index.update(location, offset, utf8Delta.Size());
-   int indexPointer = index.pointer(listLength);
-
-   if(offset + utf8Delta.Size() > indexPointer){
-      //need to grow the posting list
-      listLength *= 2;
-      char* buf = new char[listLength];
-      memcpy(buf, pList.CString(), offset);
-      indexPointer = index.pointer(listLength);
-      memcpy(buf, &indexPointer, sizeof(int));
-      memcpy(buf + offset, utf8Delta.GetCString(), utf8Delta.Size());
-      memcpy(buf + indexPointer, index.string().CString(), index.size());
-      pList = String(std::move((char*)buf), listLength);//might need to change string constructor
-      return 0;
-   }
-
-   //add on the index and update the index pointer
-   char* buf = new char[listLength];
-   memcpy(buf, pList.CString(), offset);
-   memcpy(buf + offset, utf8Delta.GetCString(), utf8Delta.Size());
-   memcpy(buf + indexPointer, index.string().CString(), index.size());
-   pList = String(std::move((const char*)buf), listLength);//might need to change string constructor
-   return 1;
-}
-
-
-
-int PostingList::length(){
-   return listLength;
-}
-
-PostingListIndex::PostingListIndex()
-   :indexSize(3*sizeof(int) + sizeof(unsigned long long int)) {
-   char* newString = new char[ indexSize ];
-   *((int*)newString) = sizeof(int);
-   index = String(std::move(newString), indexSize);
-}
-
-PostingListIndex::PostingListIndex(char* buf, int length)
-   :indexSize(length), index(buf, length) {
-
-}
-
-PostingListIndex::PostingListIndex(int location){
-
-}
-
-PostingListIndex::PostingListIndex(int location, String url){
-
-}
-
-unsigned long long PostingListIndex::largestLocation(){
-   return *(unsigned long long*)(index.CString() + sizeof(unsigned int));
-}
-
-unsigned int PostingListIndex::nextOpenChar(){
-   return *(unsigned int*)index.CString();
-}
-
-
-
-int PostingListIndex::size(){
-   return index.Size();
-}
-
-void PostingListIndex::update(unsigned long long location, int offset, int length){
-   unsigned int pairPointer = *(unsigned int*)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long));
-   
-   // TODO: Better
-   InputByteStream ibs( String( index.CString() + pairPointer, 24 ) );
-   Utf8Uint pairOffset, pairLocation;
-   ibs >> pairOffset >> pairLocation;
-   unsigned long long longOffset = (unsigned long long) offset;
-   if(location >> 16 > pairLocation.GetValue() >> 16){
-      //making a new pair
-      OutputByteStream obs;
-      obs << Utf8Uint(longOffset) << Utf8Uint(location);
-      index += String(obs.GetString().GetCString());
-      pairPointer += obs.GetString().Size();
-      *(unsigned int*)(index.CString() + 2*sizeof(unsigned int) + sizeof(unsigned long long)) = pairPointer;
-   }
-   *(unsigned int*)index.CString() = offset + length;
-   *(unsigned long long*)(index.CString() + sizeof(unsigned int)) = location;
-}
-
-String PostingListIndex::string(){
-   return index;
-}
-//intOffset = true if there is an int afte rthe index in the positng list
-int PostingListIndex::pointer(int blockSize){
-   return blockSize - indexSize;
-
-}
-
-*/
