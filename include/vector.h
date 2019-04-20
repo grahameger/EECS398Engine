@@ -4,33 +4,19 @@ template<class T>
 class Vector {
     //OVERVIEW: A container that provides random access to
     //          any element by its index.  Indices start at 0.
-    //          The capacity (maximum size) of an IntVector is
-    //          100 elements.
     
 private:
     
     T *elements; //pointer to dynamic array
-    size_t numElements = 0;  //Current capacity
-    size_t numAllocated = 400; //capacity of array
+    unsigned long long numElements = 0;  //Current capacity
+    unsigned long long numAllocated = 1; //capacity of array
     
 public:
-    
-    //The maximum size of the Vector.  This has to be constant
-    //across all instances since we are using static memory to store
-    //the backing array.  We declare CAPACITY as const to enforce this
-    //and also as static, meaning that all Vectors share the same
-    //CAPACITY variable (i.e. the same memory storing the int).  We also
-    //declare it as public, because users of our ADT may well want to know
-    //the maximum capacity.
-    //
-    //This is the preferred approach.  (Don't even think about using a
-    //global variable. But now you are thinking about it. Stop that.)
-    static const size_t CAPACITY = 200;
     
     Vector();
     
     //EFFECTS: Constructor
-    Vector(size_t num);
+    Vector(unsigned long long num);
     
     //Custom Destructor;
     ~Vector();
@@ -40,8 +26,6 @@ public:
     
     //Assignment operator
     Vector<T> &operator=(const Vector<T> &rhs);
-    
-    void reserve();
     
     void resize();
     
@@ -57,26 +41,25 @@ public:
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    size_t &at(size_t index);
+    unsigned long long &at(unsigned long long index);
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    const size_t &at(size_t index) const;
+    const unsigned long long &at(unsigned long long index) const;
     
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
-    T& operator[](size_t index);
+    T& operator[](unsigned long long index);
     
     //EFFECTS:  Returns the number of elements of this IntVector.
-    size_t size() const;
+    unsigned long long size() const;
     
-    size_t capacity() const;
+    unsigned long long capacity() const;
     
     //EFFECTS:  Returns true if this IntVector is empty, false otherwise.
     bool empty() const;
     
     //EFFECTS:  Returns true if this Vector is at capacity, false otherwise.
-    //          That is, you may add elements if and only if full() is false.
     bool full() const;
 };
 
@@ -87,7 +70,7 @@ Vector<T>::Vector() {
 }
 
 template<class T>
-Vector<T>::Vector(size_t capacity) {
+Vector<T>::Vector(unsigned long long capacity) {
     numAllocated = capacity;
     elements = new T[numAllocated];
 }
@@ -103,7 +86,7 @@ Vector<T>::Vector(const Vector<T> &other) {
     numAllocated = other.numAllocated;
     
     //2. Copy everything over
-    for(size_t i = 0; i < other.numElements; i++) {
+    for(unsigned long long i = 0; i < other.numElements; i++) {
         elements[i] = other.elements[i];
     }
     
@@ -121,7 +104,7 @@ Vector<T>& Vector<T>::operator=(const Vector<T> &rhs) {
     elements = new T[rhs.numAllocated];
     numElements = rhs.numElements;
     numAllocated = rhs.numAllocated;
-    for(size_t i = 0; i < rhs.numElements; i++) {
+    for(unsigned long long i = 0; i < rhs.numElements; i++) {
         elements[i] = rhs.elements[i];
     }
     return *this;
@@ -148,26 +131,26 @@ void Vector<T>::push_back(T value){
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-const size_t &Vector<T>::at(size_t index) const {
+const unsigned long long &Vector<T>::at(unsigned long long index) const {
     return elements[index];
 }
 
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-const T& Vector<T>::operator[] (size_t index) {
+T& Vector<T>::operator[] (unsigned long long index) {
     return elements[index];
 }
 
 //EFFECTS:  Returns the number of elements of this IntVector.
 template<class T>
-size_t Vector<T>::size() const {
+unsigned long long Vector<T>::size() const {
     return numElements;
 }
 
 //EFFECTS:  Returns the number of elements of this IntVector.
 template<class T>
-size_t Vector<T>::capacity() const {
+unsigned long long Vector<T>::capacity() const {
     return numAllocated;
 }
 
@@ -179,7 +162,6 @@ bool Vector<T>::empty() const {
 }
 
 //EFFECTS:  Returns true if this IntVector is at capacity, false otherwise.
-//          That is, you may add elements if and only if full() is false.
 template<class T>
 bool Vector<T>::full() const {
     return (numElements >= numAllocated);
@@ -189,7 +171,7 @@ bool Vector<T>::full() const {
 template<class T>
 void Vector<T>::resize() {
     T * tmp_array = new T[this->numAllocated * 2];
-    for (size_t i = 0; i < numElements; i++) {
+    for (unsigned long long i = 0; i < numElements; i++) {
         tmp_array[i] = elements[i];
     }
     std::swap(tmp_array, elements);
