@@ -579,6 +579,30 @@ FixedLengthString::FixedLengthString()
       characters[MaxLength] = 0;
    }
 
+FixedLengthURL::FixedLengthURL( const char* cstring )
+   {
+   strncpy( characters, cstring, MaxLength );
+   characters[ MaxLength ] = 0;
+   }
+
+
+bool FixedLengthURL::operator== ( const FixedLengthURL& other ) const
+   {
+   for ( unsigned i = 0; i < MaxLength; i++ )
+      {
+      if ( characters[ i ] != other.characters[ i ] )
+         return false;
+      if ( characters[ i ] == 0 )
+         return true;
+      }
+   return true;
+   }
+
+FixedLengthURL::FixedLengthURL()
+   {
+      characters[0] = 0;
+      characters[MaxLength] = 0;
+   }
 // SubBlock
 
 inline void SubBlock::SetNextPtr( unsigned blockIndex )

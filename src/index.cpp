@@ -106,7 +106,7 @@ void Index::reader(){
       }
       //docEnd
       (*(localMap[String("")])).push_back(startLocation);
-      urlMap[startLocation] = FixedLengthString(doc.doc_url.CString());
+      urlMap[startLocation] = FixedLengthURL(doc.doc_url.CString());
       startLocation++;
       //parse anchor texts
       for(unsigned i = 0; i < doc.anchor_words.size(); i++){
@@ -118,10 +118,10 @@ void Index::reader(){
          }
          //docEnd map here
          (*(localMap[String("")])).push_back(startLocation);
-         urlMap[startLocation] = FixedLengthString(doc.Links[i].CString());
+         urlMap[startLocation] = FixedLengthURL(doc.Links[i].CString());
          startLocation++;
       }
-      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthString(doc.doc_url.CString())].inLinks, doc.anchor_words.size(),doc.domain_type, doc.domain_rank);
+      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthURL(doc.doc_url.CString())].inLinks, doc.anchor_words.size(),doc.domain_type, doc.domain_rank);
       currentWriteDocIdMutex.lock();
       while(currentWriteDocId != docId){
          queueWriteCV.wait(currentWriteDocIdMutex);
@@ -129,9 +129,9 @@ void Index::reader(){
       currentWriteDocIdMutex.unlock();
       pQueueLock.lock();
       //url -> metadata
-      metaMap[FixedLengthString(doc.doc_url.CString())] = metadata;
+      metaMap[FixedLengthURL(doc.doc_url.CString())] = metadata;
       for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         metaMap[FixedLengthString(doc.Links[i].CString())].inLinks++;
+         metaMap[FixedLengthURL(doc.Links[i].CString())].inLinks++;
       }
       totalDocLength += doc.Words.size();
       unsigned averageDocLength = totalDocLength / (docId + 1);
