@@ -26,7 +26,18 @@ class FixedLengthString
 
    };
 
+class FixedLengthURL
+   {
+   public:
+      FixedLengthURL( const char* cstring );
 
+      bool operator== ( const FixedLengthURL& other ) const;
+      FixedLengthURL();
+   private:
+      static const unsigned MaxLength = 199;
+      char characters[ MaxLength + 1 ];
+
+   };
 // SubBlockInfo class
 struct SubBlockInfo
    {

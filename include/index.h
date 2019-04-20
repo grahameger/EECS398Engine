@@ -46,8 +46,8 @@ private:
    };
 	//map will prob be moved to scheduler
 	//FIGURE OUT HOW TO STORE URLS
-   PersistentHashMap<unsigned long long, FixedLengthString> urlMap;
-   PersistentHashMap<FixedLengthString, urlMetadata> metaMap;
+   PersistentHashMap<unsigned long long, FixedLengthURL> urlMap;
+   PersistentHashMap<FixedLengthURL, urlMetadata> metaMap;
    //current absolute location on the web
 	unsigned long long currentLocation;
 	//true if priority queue is empty
