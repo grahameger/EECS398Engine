@@ -31,7 +31,8 @@ int main(int argc, char *argv[]) {
 
    std::deque<Doc_object> docList;
    threading::Mutex queueLock;
-   Index index(&docList, &queueLock);
+   threading::ConditionVariable cv;
+   Index index(&docList, &queueLock, &cv);
    Doc_object d;
    Vector<Index_object> anchor;
    d.doc_url = String("github.com");

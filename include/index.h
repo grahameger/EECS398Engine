@@ -14,7 +14,7 @@
 
 class Index{
 public:
-	Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock);
+	Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV);
    void reader();
 	void writerDriver();
 
@@ -59,6 +59,7 @@ private:
    //THREADING
    Vector<pthread_t> readThreads;
    Vector<pthread_t> writeThreads;
+   threading::ConditionVariable* dequeCV;
    threading::ConditionVariable queueReadCV;
    threading::ConditionVariable queueWriteCV;
    threading::Mutex pQueueLock;
