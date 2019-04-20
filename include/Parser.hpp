@@ -13,6 +13,8 @@
 #include "vector.h"
 #include <ctype.h>
 #include "String.h"
+#include <vector>
+#include <string>
 
 static String top_level_domains[] = {"com", "org", "mil", "int", "edu", "gov", "net"};
 const size_t NUM_TOP_DOMAINS = 7;
@@ -41,7 +43,7 @@ struct Doc_object {
     unsigned int domain_rank = MAX_DOMAIN_RANK; //1 = top 1, 2 = top 2, 3 = top 3, etc...
     bool is_https = false;
     
-    Doc_object() : Links(200), Words(5000), anchor_words(200), url(5) { }
+    Doc_object() { }
     
 };
 

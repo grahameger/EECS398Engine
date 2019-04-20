@@ -64,9 +64,18 @@ void LinkFinder::parse_url(std::vector<std::pair<std::string, int>> &v) {
             num_vowels = 0;
             word = ""; //reset word
             while(i < url.Size() && url.CString()[i] != '-' && url.CString()[i] != '/' && url.CString()[i] != '.' && url.CString()[i] != '_') {
+                if(url.CString()[i] == '/') {
+                    Document.num_slash_in_url++;
+                }
                 i++;
             }
         }
+    }
+    if(is_valid_word(word, num_vowels)) {
+        Document.url.push_back(word);
+    }
+    for(int i = 0; i < Document.url.size(); i++) {
+        std::cout << Document.url[i].CString() << std::endl;
     }
 }
 
@@ -85,6 +94,9 @@ void LinkFinder::assign_domain_rank(const String &word, std::vector<std::pair<st
 }
 
 bool LinkFinder::is_stop_domain(String &word) {
+    if(Document.url.size() == 0) {
+        return false;
+    }
     if(word.Size() == 2) {
         Document.domain_type = 'u';
         return true;
@@ -147,7 +159,7 @@ bool is_vowel(char c) {
 }
 
 bool is_valid_word(String word, unsigned int vowels) {
-    if(word.Size() >= 2 && vowels > 0) {
+    if(word.Size() >= 2 && vowels > 0 && strncmp(word.CString(), "www", 3) != 0) {
         return true;
     }
     return false;
