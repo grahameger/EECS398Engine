@@ -24,6 +24,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <atomic>
+#include <optional>
 
 #include "RobotsTxt.h"
 #include "http.h"
@@ -68,7 +69,6 @@ namespace search {
         BloomFilter<std::string> killFilter; 
         BloomFilter<std::string> pageFilter;
         std::set<std::string> robotsDomains;
-        static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
         std::map<std::string, std::set<std::string> > waitingForRobots;
         inline static pthread_mutex_t waitingForRobotsLock;
         std::atomic<size_t> numBytes; 
@@ -78,6 +78,16 @@ namespace search {
         // Without actually handwriting the assembly. You can sort of apply extern "C" to a member function via a very convoluted hack,
         // but it is not portable to all compiler versions.
     };
+
+    struct MemoryMappedFile {
+        char * ptr;
+        size_t size;
+    };
+
+    std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename);
+    void parseFileOnDisk(std::string filename,
+                         std::vector<Doc_object>& masterList,
+                         threading::Mutex& masterListLock);
 }
 
 #endif

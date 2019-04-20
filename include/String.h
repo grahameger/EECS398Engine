@@ -5,6 +5,8 @@
 #ifndef STRING_H_398
 #define STRING_H_398
 
+#include <string> // only for a copy constructor
+
 class String
 {
 public:
@@ -13,6 +15,7 @@ public:
    String( const char* toCopy );
    String( char*&& toMove );
    String( const String& toCopy );
+   String( const std::string& toCopy);
    String( String&& toMove );
    String& operator=( const String& toCopy );
    String& operator=( String&& toMove );

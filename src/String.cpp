@@ -53,6 +53,17 @@ String::String( String&& toMove )
     toMove.cstring = nullptr;
 }
 
+String::String( const std::string& toCopy ) 
+{
+    size = toCopy.size();
+    if (size) {
+        cstring = new char [ size + 1 ];
+        memcpy(cstring, toCopy.c_str(), size + 1);
+    } else {
+        cstring = nullptr;
+    }
+}
+
 
 String& String::operator = ( const String& toCopy )
 {

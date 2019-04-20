@@ -101,6 +101,9 @@ namespace search {
         ~HTTPClient();
         void SubmitURLSync(const std::string &url, size_t redirCount);
         static void * SubmitUrlSyncWrapper(void * context);
+        // Resolves a relative URL into an absolute path relative to the current request.
+        // Returns a nullptr on errors and if the request is to the current document
+        static std::string resolveRelativeUrl(const char * baseURi, const char * newUri);
         static const size_t CHUNKED = -10;
 
     private:
@@ -127,10 +130,6 @@ namespace search {
         void robotsErrorCheck(const HTTPRequest &request);
 
         static char * checkRedirectsHelper(const char * getMessage, size_t len);
-
-        // Resolves a relative URL into an absolute path relative to the current request.
-        // Returns a nullptr on errors and if the request is to the current document
-        static std::string resolveRelativeUrl(const char * baseURi, const char * newUri);
 
         // given a socket return the clientInfo
         std::mutex m;

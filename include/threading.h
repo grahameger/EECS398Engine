@@ -101,6 +101,7 @@ namespace threading {
         void write();
 
         T pop();
+        std::vector<T> popVec();
         T popRandom();
         void popAll(std::vector<T> &d);
 
@@ -255,6 +256,27 @@ namespace threading {
         q.pop_front();
         m.unlock();
         return temp;
+    }
+
+    template <typename T> std::vector<T> ThreadQueue<T>::popVec() {
+        m.lock();
+        while (q.empty()) {
+            loadFromOverflow();
+            while (q.empty()) {
+                cvPop.wait(m);
+            }
+        }
+        std::vector<T> rv;
+        if (q.size() >= 50) {
+            rv = std::vector<T>(q.begin(), q.begin() + 50);
+        } else {
+            rv = std::vector<T>(q.begin(), q.end());
+        }
+        for (size_t i = 0; i < rv.size(); i++) {
+            q.pop_front();
+        }
+        m.unlock();
+        return rv;
     }
 
     template <typename T> void ThreadQueue<T>::popAll(std::vector<T> &d) {

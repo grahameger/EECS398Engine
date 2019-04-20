@@ -4,7 +4,15 @@
 #ifndef DEBUG_398_H
 #define DEBUG_398_H
 
-#define DEBUG
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE
+#endif
+
+// #define DEBUG
 
 #ifdef DEBUG 
 #define D(x) x

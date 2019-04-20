@@ -9,10 +9,15 @@
 // Updated by Graham Eger a lot. 
 
 #include "crawler.h"
+#include "http.h"
 #include "Debug.h"
+#include "index.h"
+
 #include <dirent.h>
 #include <unistd.h>
 #include <ctime>
+#include <deque>
+#include <optional>
 
 extern volatile sig_atomic_t keep_running;
 
@@ -100,7 +105,13 @@ namespace search {
 
     void * Crawler::stub() {
         while (keep_running) {
-            std::string p = readyQueue.pop();
+            std::deque<std::string> temp;
+            if (temp.empty()) {
+                auto rv = readyQueue.popVec();
+                temp = std::deque<std::string>(rv.begin(), rv.end());
+            }
+            std::string p = temp.front();
+            temp.pop_front();
             if (p == "") {
                 continue;
             }
@@ -202,7 +213,7 @@ namespace search {
         double GiB = (double)bytes / 1073741824.0;
         double rate = (GiB - (double)prevGiB) / (difftime(now, prevTime)) * 8 * 1024;
         size_t queueSize = readyQueue.size();
-        D(fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Pages: %zu\nTotal Robots: %zu \nItems on Queue: %zu\n\n", time, GiB, rate, pages, robots, queueSize);)
+        fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Pages: %zu\nTotal Robots: %zu \nItems on Queue: %zu\n\n", time, GiB, rate, pages, robots, queueSize);
         prevTime = now;
         prevGiB = GiB;
     }
@@ -277,4 +288,56 @@ namespace search {
     inline void Crawler::domainUnlock() {
         pthread_mutex_unlock(&domainMutex);
     }
+
+
+    // filename should not have a path on it, it should be just a file
+    // "grahameger.com_downloads" no "pages/grahameger.com_downloads"
+    std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename) {
+        struct stat st; 
+        size_t fileSize = 0;
+        if (stat(filename.c_str(), &st)) {
+            fileSize = st.st_size;
+        }
+        if (fileSize == 0) {
+            return std::nullopt;
+        }
+        // open the file
+        int fd = open(filename.c_str(), O_RDONLY);
+        if (fd != -1) {
+            // memory map the file
+            void * mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+            if (mapped) {
+                return MemoryMappedFile({(char*)mapped, fileSize});
+            }
+        }
+        return std::nullopt;
+    }
+
+    void parseFileOnDisk(std::string filename,
+                   Index& masterList,
+                   threading::Mutex& masterListLock) 
+    {
+        auto mmapedFile = memoryMapFile(filename);
+        if (mmapedFile) {
+            auto& file = mmapedFile.value();
+            // convert the filename to a url
+            for (size_t i = 0; i < filename.size(); i++) {
+                if (filename[i] == '_') {
+                    filename[i] = '/';
+                }
+            }
+            auto url = "http://" + filename;
+            LinkFinder linkFinder;
+            linkFinder.parse(file.ptr, file.size, url.c_str(), false);
+            for (size_t i = 0; i < linkFinder.Document.Links.size(); ++i) {
+                linkFinder.Document.Links[i] = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.Links[i].CString());
+            }
+            // add them to the master set of links
+            masterListLock.lock();
+            masterList.push_back(std::move(linkFinder.Document));
+            masterListLock.unlock();
+        }
+    }
+
+
 }
