@@ -6,13 +6,24 @@
 IsrWord::IsrWord( String word )
       : validISR( true ), currentLocation( 0 )
    {
-   auto returnPair = Postings::GetPostings( )->GetPostingList( word.CString( ) );
-   nextPtr = returnPair.first;
+   IsrInfo isrInfo = Postings::GetPostings( )->GetPostingList( word.CString( ) );
+   nextPtr = isrInfo.nextPtr;
 
-   if ( returnPair.second )
-      postingLists.push_back( returnPair.second );
+   if ( isrInfo.postingList )
+      postingLists.push_back( isrInfo.postingList );
    else
       validISR = false;
+
+   subBlocks.push_back( isrInfo.subBlock );
+   }
+
+
+IsrWord::~IsrWord( )
+   {
+   for( unsigned i = 0; i < postingLists.size( ); i++ )
+      delete postingLists[ i ];
+   for( unsigned i = 0; i < subBlocks.size( ); i++ )
+      Postings::GetPostings( )->MunmapSubBlock( subBlocks[ i ] );
    }
 
 
@@ -36,11 +47,12 @@ Location IsrWord::SeekToLocation( Location seekDestination )
 
    while ( nextPtr != 0 )
       {
-      auto returnPair = Postings::GetPostings( )->GetPostingList( nextPtr );
-      nextPtr = returnPair.first;
-      postingLists.push_back( returnPair.second );
+      IsrInfo isrInfo = Postings::GetPostings( )->GetPostingList( nextPtr );
+      nextPtr = isrInfo.nextPtr;
+      postingLists.push_back( isrInfo.postingList );
+      subBlocks.push_back( isrInfo.subBlock );
 
-      Location posting = returnPair.second->GetPosting( seekDestination );
+      Location posting = isrInfo.postingList->GetPosting( seekDestination );
       if ( posting != 0 )
          return currentLocation = posting;
       }

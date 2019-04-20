@@ -1,6 +1,7 @@
 #ifndef ISR_H
 #define ISR_H
 
+#include "Postings.h"
 #include "vector.h"
 
 class String;
@@ -14,6 +15,7 @@ class IsrWord
    {
    public:
       IsrWord( String word );
+      ~IsrWord( );
 
       Location NextInstance( );
       Location SeekToLocation( Location seekDestination = 0 );
@@ -27,6 +29,7 @@ class IsrWord
 
       unsigned nextPtr;
       Vector< PostingList* > postingLists;
+      Vector< SubBlock > subBlocks;
 
    };
 
