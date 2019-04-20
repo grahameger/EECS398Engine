@@ -7,6 +7,8 @@
 #include <thread>
 #include <algorithm>
 #include <mutex>
+//#include "index.h"
+#include "String.h"
 #include <signal.h>
 #include <stdlib.h>
 #include <unordered_set>
@@ -19,6 +21,13 @@
 #include "http.h"
 #include "Parser.hpp"
 #include "threading.h"
+
+#include <deque>
+#include "PersistentHashMap.h"
+#include "Parser.hpp"
+#include "threading.h"
+#include "index.h"
+
 
 // used to gracefully shut down and run all of our destructors
 volatile sig_atomic_t keep_running = 1;

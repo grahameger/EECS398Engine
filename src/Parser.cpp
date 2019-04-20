@@ -1,3 +1,4 @@
+
 #include "Parser.hpp"
 #include <cstring>
 
@@ -17,73 +18,6 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
     return *this;
 }
 
-void LinkFinder::url_parser(String url) {
-    unsigned int num_consonants_in_row = 0;
-    unsigned int num_vowels = 0;
-    String word;
-    for(int i = 0; i < url.Size(); i++) {
-        //character is alpha
-        if(isalpha(url.CString()[i])) {
-            if(is_vowel(url.CString()[i])) {
-                num_vowels++;
-                num_consonants_in_row = 0;
-            }
-            else {
-                num_consonants_in_row++;
-            }
-            word += tolower(url.CString()[i]);
-            //reset if 4 chars in a row
-            if(num_consonants_in_row == 4) {
-                while(i < url.Size() && url.CString()[i] != '-' && url.CString()[i] != '/' && url.CString()[i] != '.' && url.CString()[i] != '_') {
-                    i++;
-                }
-                word = "";//reset word
-                num_consonants_in_row = 0;
-                num_vowels = 0;
-            }
-        }
-        else {
-            if(is_valid_word(word, num_vowels)) {
-                if(strncmp(word.CString(), "gov", 3) == 0 || strncmp(word.CString(), "com", 3) == 0 || strncmp(word.CString(), "edu", 3) == 0 || strncmp(word.CString(), "net", 3) == 0 || strncmp(word.CString(), "org", 3) == 0 || strncmp(word.CString(), "mil", 3) == 0) {
-                    Document.domain_type = word.CString()[0];
-                    //go back 1 and check graham's list'
-                    //char for top 10/100/1000 in grahams list
-                    if(Document.url.size() >= 1) {
-                        //if(Document.url[0].CString() in graham's top list) {
-                        //    is_top_domain = true;
-                        //domain_rank = get_rank(Document.url[0]);
-                        //}
-                    }
-                }
-                Document.url.push_back(word);
-            }
-            if(url.CString()[i] == '/') {
-                Document.num_slash_in_url++;
-            }
-            num_consonants_in_row = 0;//reset all
-            num_vowels = 0;
-            word = ""; //reset word
-            while(i < url.Size() && url.CString()[i] != '-' && url.CString()[i] != '/' && url.CString()[i] != '.' && url.CString()[i] != '_') {
-                i++;
-            }
-        }
-    }
-    if(is_valid_word(word, num_vowels)) {
-        Document.url.push_back(word);
-    }
-    for(int i = 0; i < Document.url.size(); i++) {
-        std::cout << Document.url[i].CString() << std::endl;
-    }
-}
-//rules
-/*
- 1. 4 cons in a row
- 2. No vowels
- 3. Isalpha
- 4. > 2 chars
- **5. not stopword
- aqs, sourceid, chrome, utf, safari, firefox, com, google, search
- */
 
 bool is_vowel(char c) {
     switch(c) {

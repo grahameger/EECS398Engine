@@ -79,3 +79,10 @@ test/parsed.urls
 startCodeServer.sh
 fileWrites.log
 overflow.urls
+# VIM
+.vimrc
+*.swp
+
+testIndex*
+dummy
+output

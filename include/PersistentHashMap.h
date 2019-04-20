@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "hash.h"
 #include "mmap.h"
@@ -120,7 +121,7 @@ public:
     // it's on the programmer to know if their iterator has been invalidated
     Pair<Key, Mapped>& operator*() {
         assert(!this->persistentHashMap->isGhost.at(this->index));
-        assert(!this->persistentHashMap->isFilled.at(this->index));
+        assert(this->persistentHashMap->isFilled.at(this->index));
         return this->persistentHashMap->buckets[this->index];
     }
 
@@ -300,7 +301,7 @@ Mapped& PersistentHashMap<Key, Mapped>::operator[] (const KeyType& key) {
     }
     // get key and return val at that location
     indexForKey = this->probeForExistingKey(key);
-    auto rv = this->buckets[indexForKey].second;
+    auto& rv = this->buckets[indexForKey].second;
     this->unlock();
     return rv;
 }
@@ -412,7 +413,8 @@ bool PersistentHashMap<Key, Mapped>::erase(const Key& key) {
         return false;
     }
     // delete the element from bucket and decrement numElements
-    this->isGhost.set(indexForElement, true);
+    this->isGhost.set(indexForElement, false);
+    this->isFilled.set(indexForElement, false);
     --this->header->numElements;
     this->unlock();
     return true;

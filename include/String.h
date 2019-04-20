@@ -28,13 +28,10 @@ public:
    bool Compare( const String& other ) const;
    const char operator[ ] ( int index ) const;
    char& operator[ ] ( int index );
-
    String& operator+= ( const String& rhs );
    friend String operator+ ( String lhs, const String& rhs );
    friend String operator+ ( String lhs, const char * toCat );
-
    operator bool( ) const;
-
 private:
     const static char* nullString;
     char* cstring;

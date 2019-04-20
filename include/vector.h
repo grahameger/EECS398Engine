@@ -1,19 +1,18 @@
 // Graham Eger added a resize() function that takes an argument on 04/08/2019
+// Jacob changed original numAllocated from 400 to 1 on 04/20/2019
 
 #pragma once
 #include <algorithm>
 template<class T>
 class Vector {
     //OVERVIEW: A container that provides random access to
-    //          any element by its index.  Indices start at 0.
-    //          The capacity (maximum size) of an IntVector is
-    //          100 elements.
+    //          any element by its index.
     
 private:
     
     T *elements; //pointer to dynamic array
     size_t numElements = 0;  //Current capacity
-    size_t numAllocated = 400; //capacity of array
+    size_t numAllocated = 1; //capacity of array
     
 public:
     
@@ -21,6 +20,9 @@ public:
     
     //EFFECTS: Constructor
     Vector(size_t num);
+
+    //EFFECTS: Constructor
+    Vector( std::initializer_list< T > in_list );
     
     //Custom Destructor;
     ~Vector();
@@ -50,8 +52,8 @@ public:
     //EFFECTS:  Returns (by reference) the element at the given index.
     T &at(size_t index);
 
-    const T& back();
-    
+   const T& back();
+
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
     const T &at(size_t index) const;
@@ -85,7 +87,13 @@ Vector<T>::Vector(size_t capacity) {
     elements = new T[numAllocated];
 }
 
-
+template< class T >
+Vector< T >::Vector( std::initializer_list< T > in_list )
+      : elements( new T[ in_list.size( ) ] ), numAllocated( in_list.size( ) )
+   {
+   for ( auto iterator = in_list.begin( ); iterator != in_list.end( ); iterator++ )
+      push_back( *iterator );
+   }
 
 //copy constructor
 template<class T>
@@ -141,7 +149,7 @@ void Vector<T>::push_back(T value){
 //REQUIRES: 0 <= index < number of elements in this IntVector
 //EFFECTS:  Returns (by reference) the element at the given index.
 template<class T>
-const T &Vector<T>::at(size_t index) const {
+const T& Vector<T>::at(size_t index) const {
     return elements[index];
 }
 
@@ -193,4 +201,10 @@ void Vector<T>::resize() {
     std::swap(tmp_array, elements);
     numAllocated *= 2;
     delete [] tmp_array;
+}
+    
+
+template<class T>
+void Vector<T>::pop_back(){
+   numElements--;
 }
