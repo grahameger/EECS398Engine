@@ -15,13 +15,14 @@ void* writerWrapper(void* index){
 }
 
 
-Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock)
+Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV)
    :currentLocation(0), totalDocLength(0), currentDocId(0), urlMap(String("urlTable")), metaMap(String("metaTable")), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
 
    fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
    ftruncate(fd, sizeof(unsigned long long));
    documentQueue = docQueue;
    documentQueueLock = queueLock;
+   dequeCV = CV;
    //read in
    for(unsigned i = 0; i < 10; i++){
       pthread_create(&readThreads[i], NULL, &readerWrapper, this);
@@ -153,6 +154,7 @@ void Index::reader(){
          queueReadCV.broadcast();
       }
       queueWriteCV.broadcast();
+      dequeCV->signal();
       currentWriteDocIdMutex.lock();
       currentWriteDocId++;
       currentWriteDocIdMutex.unlock();
