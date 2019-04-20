@@ -23,6 +23,11 @@ $(BUILDDIR)/Test%.o: $(TESTDIR)/%.$(SRCEXT)
 	@echo " Making test "
 	@echo " $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<"; $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<
 
+$(BUILDDIR)/Debug%.o: $(SRCDIR)/%.$(SRCEXT)
+	@mkdir -p $(BUILDDIR)
+	@echo " Making debug "
+	@echo " $(CC) $(CPPFLAGS) $(INC) -c -D TEST -o $@ $<"; $(CC) $(CPPFLAGS) $(INC) -c -D TEST -o $@ $<
+
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 	@mkdir -p $(BUILDDIR)
 	@echo " $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<"; $(CC) $(CPPFLAGS) $(INC) -c -o $@ $<
@@ -47,6 +52,18 @@ POSTINGOBJS := TestPostingList.o Utf8Numbers.o ByteStream.o StringView.o String.
 posting: $(patsubst %,$(BUILDDIR)/%,$(POSTINGOBJS))
 	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/posting"
 	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/posting
+
+POSTINGSPLITOBJS := TestPostingListSplit.o Utf8Numbers.o ByteStream.o StringView.o String.o PostingList.o
+split: $(patsubst %,$(BUILDDIR)/%,$(POSTINGSPLITOBJS))
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/split
+
+INDEXOBJS := TestIndex.o DebugPostings.o StringView.o String.o PersistentBitVector.o mmap.o threading.o PostingList.o ByteStream.o Utf8Numbers.o ISR.o
+index: $(patsubst %,$(BUILDDIR)/%,$(INDEXOBJS))
+	@echo "rm -f testIndex*"
+	@rm -f testIndex*
+	@echo " $(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/index"
+	@$(CC) $(CPPFLAGS) $^ $(INC) $(LIB) -o bin/index
 
 # Spikes
 ticket:

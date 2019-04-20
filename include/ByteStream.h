@@ -15,7 +15,7 @@ class InputByteStream
 
       const unsigned char GetNextByte();
 
-      // TODO: Add Iterator like below for setting bit by bit
+      unsigned Size( ) const;
 
    private:
       const StringView reading;

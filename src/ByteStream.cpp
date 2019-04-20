@@ -45,6 +45,12 @@ const StringView OutputByteStream::GetString( ) const
    }
 
 
+unsigned InputByteStream::Size( ) const
+   {
+   return forwardStream ? ( reading.Size( ) - byteNum ) : ( byteNum + 1 );
+   }
+
+
 unsigned OutputByteStream::Size( ) const
    {
    return forwardStream ? byteNum : ( writing.Size( ) - byteNum );
