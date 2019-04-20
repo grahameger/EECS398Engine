@@ -26,6 +26,7 @@
 #include <atomic>
 #include <optional>
 
+#include "Parser.hpp"
 #include "RobotsTxt.h"
 #include "http.h"
 #include "threading.h"

@@ -89,27 +89,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-	// std::set<std::string> urls;
-	// std::ifstream start_list(startFile);
-	// std::string line;
-
-	// for (auto fileName : startFiles) {
-	// 	std::ifstream startFile(fileName);
-	// 	std::cout << "Reading file: " << fileName << std::endl;
-	// 	std::string line;
-	// 	while (std::getline(startFile, line)) {
-	// 		if (line != "") {
-	// 			HTTPRequest request(line);
-	// 			if (request.good()) {
-	// 				auto filename = request.filename();
-	// 				struct stat st;
-	// 				if (stat(filename.c_str(), &st) != 0) {
-	// 					urls.insert(line);
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
+	
 	// open every file in the pages directory
 	std::deque<std::string> files;
 	std::deque<Doc_object> documents;
@@ -129,19 +109,20 @@ int main(int argc, char *argv[]) {
 		new_thread.detach();
 	}
 
-
-	// std::ifstream queue("queue.urls");
-	// while (std::getline(queue, line)) {
-	// 	if (line != "") {
-	// 		urls.insert(line);
-	// 	}
-	// }
-	// std::vector<std::string> urlsShuffled(urls.begin(), urls.end());
-	// // randomly shuffle the vector
-	// auto rng = std::default_random_engine {};
-	// std::shuffle(urlsShuffled.begin(), urlsShuffled.end(), rng);
+	std::vector<std::string> seedUrls;
+	std::ifstream queue(seedList);
+	std::string line;
+	while (std::getline(queue, line)) {
+		if (line != "") {
+			seedUrls.push_back(line);
+		}
+	}
+	std::vector<std::string> urlsShuffled(seedUrls.begin(), seedUrls.end());
+	// randomly shuffle the vector
+	auto rng = std::default_random_engine {};
+	std::shuffle(urlsShuffled.begin(), urlsShuffled.end(), rng);
 
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
-	search::Crawler crawler(urls);
+	search::Crawler crawler(seedUrls);
 }
