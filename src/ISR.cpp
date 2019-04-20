@@ -1,54 +1,67 @@
 #include "ISR.h"
-#include "Index.h"
+#include "Postings.h"
 #include "PostingList.h"
 
 
-ISR::ISR( String& word ) : children( nullptr )
-   { }
-
-
-ISR::ISR( ) : children( nullptr )
-   { }
-
-
-unsigned long long ISR::NextInstance( unsigned long long after )
+IsrWord::IsrWord( String word )
+      : validISR( true ), currentLocation( 0 )
    {
-   return 0;
-   }
-
-
-WordISR::WordISR( String& word )
-   { 
-   auto returnPair = Index::GetIndex( )->GetPostingList( word.CString( ) );
+   auto returnPair = Postings::GetPostings( )->GetPostingList( word.CString( ) );
    nextPtr = returnPair.first;
-   postingLists.push_back( returnPair.second );
+
+   if ( returnPair.second )
+      postingLists.push_back( returnPair.second );
+   else
+      validISR = false;
    }
 
 
-unsigned long long WordISR::NextInstance( unsigned long long after )
+Location IsrWord::NextInstance( )
    {
-   if ( postingLists.empty( ) )
-      return 0;
+   return SeekToLocation( 0 );
+   }
+
+
+Location IsrWord::SeekToLocation( Location seekDestination )
+   {
+   if ( !validISR || postingLists.empty( ) )
+      return currentLocation = 0;
 
    for ( unsigned i = 0; i < postingLists.size( ); i++ )
       {
-      unsigned long long posting = postingLists[ i ]->GetPosting( after );
+      Location posting = postingLists[ i ]->GetPosting( seekDestination );
       if ( posting != 0 )
-         return posting;
+         return currentLocation = posting;
       }
 
    while ( nextPtr != 0 )
       {
-      auto returnPair = Index::GetIndex( )->GetPostingList( nextPtr );
+      auto returnPair = Postings::GetPostings( )->GetPostingList( nextPtr );
       nextPtr = returnPair.first;
       postingLists.push_back( returnPair.second );
 
-      unsigned long long posting = returnPair.second->GetPosting( after );
+      Location posting = returnPair.second->GetPosting( seekDestination );
       if ( posting != 0 )
-         return posting;
+         return currentLocation = posting;
       }
 
-   return 0;
+   return currentLocation = 0;
    }
+
+
+Location IsrWord::CurInstance( ) const
+   {
+   return currentLocation;
+   }
+
+
+IsrWord::operator bool( ) const
+   {
+   return validISR;
+   }
+
+
+IsrEndDoc::IsrEndDoc( ) : IsrWord( "" )
+   { }
 
 

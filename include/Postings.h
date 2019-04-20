@@ -1,12 +1,12 @@
-#ifndef INDEX_H
-#define INDEX_H
+#ifndef POSTINGS_H
+#define POSTINGS_H
 
 #include "StringView.h"
 #include "PersistentHashMap.h"
 
 class SubBlock;
 class PostingList;
-class WordISR;
+class IsrWord;
 
 template < typename T >
 class Vector;
@@ -36,21 +36,27 @@ struct SubBlockInfo
 
    bool operator!= ( const SubBlockInfo& other )
       { 
-      return blockIndex == other.blockIndex && 
-            subBlockIndex == other.subBlockIndex; 
+      return blockIndex != other.blockIndex || 
+            subBlockIndex != other.subBlockIndex; 
+      }
+
+   bool operator== ( const SubBlockInfo& other )
+      {
+      return blockIndex == other.blockIndex &&
+            subBlockIndex == other.subBlockIndex;
       }
    };
 
 
-// Index class
-class Index 
+// Postings class
+class Postings 
    {
    // Static
    public:
-      static Index* GetIndex( );
+      static Postings* GetPostings( );
 
    private:
-      static Index* CurIndex;
+      static Postings* CurPostings;
       static unsigned blockSize;
       static const unsigned BlockDataOffset;
       static const unsigned DefaultBlockSize;
@@ -64,9 +70,9 @@ class Index
 
    private:
       // Methods
-      Index( );
+      Postings( );
 
-      void CreateNewIndexFile( );
+      void CreateNewPostingsFile( );
       void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
             Vector< PostingList* >& split, const FixedLengthString& word );
 
@@ -102,9 +108,10 @@ class Index
       int indexFD;
 
       PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
+      PersistentHashMap< SubBlockInfo, FixedLengthString > wordIndex;
 
    friend SubBlock;
-   friend WordISR;
+   friend IsrWord;
    };
 
 #endif

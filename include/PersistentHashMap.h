@@ -413,7 +413,8 @@ bool PersistentHashMap<Key, Mapped>::erase(const Key& key) {
         return false;
     }
     // delete the element from bucket and decrement numElements
-    this->isGhost.set(indexForElement, true);
+    this->isGhost.set(indexForElement, false);
+    this->isFilled.set(indexForElement, false);
     --this->header->numElements;
     this->unlock();
     return true;

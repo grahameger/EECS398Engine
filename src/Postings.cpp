@@ -1,7 +1,7 @@
 #include "mmap.h"
 #include "vector.h"
 #include "PostingList.h"
-#include "Index.h"
+#include "Postings.h"
 #include "ISR.h"
 
 // For open( )
@@ -45,43 +45,44 @@ struct SubBlock
 
    void SetNextPtr( unsigned blockIndex );
    bool operator!= ( const SubBlock& other ) const;
+   bool operator== ( const SubBlock& other ) const;
    StringView ToStringView( );
    };
 
 
 // ######################
-// Index Static Variables
+// Postings Static Variables
 // ######################
 
 // 16kB per block
-const unsigned Index::DefaultBlockSize = 16'384;
+const unsigned Postings::DefaultBlockSize = 16'384;
 // 8 sizes on default blocks of 16'384 gives us sizes
 // 16'384, 8'192, 4'096, 2'048, 1'024, 512, 256, 128
-const unsigned Index::DefaultNumSizes = 8;
+const unsigned Postings::DefaultNumSizes = 8;
 // data reserved for ptr to next
-const unsigned Index::BlockDataOffset = sizeof( unsigned );
+const unsigned Postings::BlockDataOffset = sizeof( unsigned );
 // Actual blockSize
-unsigned Index::blockSize = Index::DefaultBlockSize;
+unsigned Postings::blockSize = Postings::DefaultBlockSize;
 // Default Filename
-const char* Index::Filename = "testIndex";
+const char* Postings::Filename = "testIndex";
 // The singleton variable
-Index* Index::CurIndex = nullptr;
+Postings* Postings::CurPostings = nullptr;
 
 
 // ######################
-// Public Index Functions
+// Public Postings Functions
 // ######################
 
-Index* Index::GetIndex( )
+Postings* Postings::GetPostings( )
    {
-   if ( CurIndex == nullptr )
-      CurIndex = new Index( );
+   if ( CurPostings == nullptr )
+      CurPostings = new Postings( );
 
-   return CurIndex;
+   return CurPostings;
    }
 
 
-void Index::AddPostings( const FixedLengthString& word, 
+void Postings::AddPostings( const FixedLengthString& word, 
       const Vector< unsigned long long >* postings )
    {
    // Get a stringView for where the postingList of this word goes
@@ -130,11 +131,12 @@ void Index::AddPostings( const FixedLengthString& word,
 
 
 // #######################
-// Private Index Functions
+// Private Postings Functions
 // #######################
 
-Index::Index( ) : indexFD( open( Filename, O_RDWR ) ),
-      subBlockIndex( String( Filename ) + "_hash" )
+Postings::Postings( ) : indexFD( open( Filename, O_RDWR ) ),
+      subBlockIndex( String( Filename ) + "_SBhash" ),
+      wordIndex( String( Filename ) + "_Whash" )
    {
    // Failed to open
    if ( indexFD == -1 )
@@ -143,7 +145,7 @@ Index::Index( ) : indexFD( open( Filename, O_RDWR ) ),
       if ( errno != ENOENT )
          ErrExit( );
 
-      CreateNewIndexFile( );
+      CreateNewPostingsFile( );
       }
 
    // Read in the blockSize being used
@@ -159,7 +161,7 @@ Index::Index( ) : indexFD( open( Filename, O_RDWR ) ),
    }
 
 
-void Index::CreateNewIndexFile( )
+void Postings::CreateNewPostingsFile( )
    {
    // Create the file
    indexFD = open( Filename, O_RDWR | O_CREAT, S_IRWXU );
@@ -197,7 +199,7 @@ void Index::CreateNewIndexFile( )
    }
 
 
-void Index::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
+void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
       Vector< PostingList* >& split, const FixedLengthString& word )
    {
    unsigned blockIndexPtr = 0;
@@ -215,6 +217,7 @@ void Index::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView,
          {
          newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
          subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+         wordIndex.insert( { newSubBlock.subBlockInfo, word } );
          }
 
       // The old block was a full sized block and just needs to be updated
@@ -265,7 +268,7 @@ void Index::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView,
 
 
 // TODO: PostingList that needs to look at next
-Pair< unsigned, PostingList* > Index::GetPostingList
+Pair< unsigned, PostingList* > Postings::GetPostingList
       ( const FixedLengthString& word )
    {
    // Get a stringView for where the postingList of this word goes
@@ -284,7 +287,7 @@ Pair< unsigned, PostingList* > Index::GetPostingList
    }
 
 
-Pair< unsigned, PostingList* > Index::GetPostingList
+Pair< unsigned, PostingList* > Postings::GetPostingList
       ( unsigned blockIndex )
    {
    // Grab that block
@@ -299,7 +302,7 @@ Pair< unsigned, PostingList* > Index::GetPostingList
    }
 
 
-SubBlock Index::GetPostingListSubBlock
+SubBlock Postings::GetPostingListSubBlock
       ( const FixedLengthString& word, bool endWanted )
    {
    auto wordIt = subBlockIndex.find( word );
@@ -312,17 +315,25 @@ SubBlock Index::GetPostingListSubBlock
       {
       SubBlock subBlock = GetNewSubBlock( SmallestSubBlockSize( ) );
       subBlockIndex.insert( { word, subBlock.subBlockInfo } );
+      wordIndex.insert( { subBlock.subBlockInfo, word } );
       return subBlock;
       }
    }
 
 
-SubBlock Index::GetNewSubBlock( unsigned minSize )
+SubBlock Postings::GetNewSubBlock( unsigned minSize )
    {
    unsigned actualSize = blockSize;
    while ( actualSize / 2 >= minSize ) { actualSize /= 2; }
 
    SubBlockInfo subBlockInfo = GetOpenSubBlock( actualSize );
+
+   if ( subBlockInfo.blockIndex == 0 )
+      {
+      subBlockInfo = { actualSize, nextBlockIndex, 0 };
+      SetOpen( subBlockInfo );
+      IncrementNumBlocks( );
+      }
    IncrementOpenSubBlock( actualSize );
 
    SubBlock subBlock = MmapSubBlock( subBlockInfo );
@@ -332,7 +343,7 @@ SubBlock Index::GetNewSubBlock( unsigned minSize )
    }
 
 
-SubBlock Index::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted )
+SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted )
    {
    SubBlock subBlock = MmapSubBlock( subBlockInfo );
 
@@ -357,8 +368,7 @@ SubBlock Index::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted )
    }
 
 
-// TODO: Figure out how to reset lastUsed? Do I need to?
-void Index::DeleteSubBlock( SubBlock subBlock )
+void Postings::DeleteSubBlock( SubBlock subBlock )
    {
    assert( subBlock.subBlockInfo.subBlockSize != blockSize );
 
@@ -367,22 +377,39 @@ void Index::DeleteSubBlock( SubBlock subBlock )
          GetLastUsedSubBlock( subBlock.subBlockInfo.subBlockSize );
    SubBlock lastUsedBlock = GetSubBlock( lastUsedInfo );
 
-   // This was the last subBlock
+   if ( lastUsedBlock.subBlockInfo.blockIndex == 0 )
+      {
+      MunmapSubBlock( subBlock );
+      return;
+      }
+
+   // This was not the last subBlock
    if ( lastUsedInfo != subBlock.subBlockInfo )
       {
       // Copy it into current subBlock
       memcpy( subBlock.mmappedArea, lastUsedBlock.mmappedArea, 
             lastUsedBlock.subBlockInfo.subBlockSize );
+      // Fix hashmaps
+      FixedLengthString word = wordIndex.at( lastUsedInfo );
+      wordIndex.erase( lastUsedInfo );
+      wordIndex.at( subBlock.subBlockInfo ) = word;
+      subBlockIndex.at( word ) = subBlock.subBlockInfo;
       }
 
-   // Decrement openSubBlock
+   // Set open to last used
    SetOpen( lastUsedInfo );
+   // Decrement last used
+   if ( lastUsedInfo.subBlockIndex == 0 )
+      lastUsedInfo.blockIndex = 0;
+   else
+      lastUsedInfo.subBlockIndex--;
+   SetLastUsed( lastUsedInfo );
    // Unmap the deleted block
    MunmapSubBlock( subBlock );
    }
 
 
-SubBlockInfo Index::GetOpenSubBlock( unsigned subBlockSize ) const
+SubBlockInfo Postings::GetOpenSubBlock( unsigned subBlockSize ) const
    {
    if ( subBlockSize == blockSize )
       return { subBlockSize, nextBlockIndex, 0 };
@@ -405,7 +432,7 @@ SubBlockInfo Index::GetOpenSubBlock( unsigned subBlockSize ) const
    }
 
 
-SubBlockInfo Index::GetLastUsedSubBlock( unsigned subBlockSize ) const
+SubBlockInfo Postings::GetLastUsedSubBlock( unsigned subBlockSize ) const
    {
    // Should never be called for blockSize
    assert( subBlockSize != blockSize );
@@ -428,7 +455,7 @@ SubBlockInfo Index::GetLastUsedSubBlock( unsigned subBlockSize ) const
    }
 
 
-void Index::IncrementOpenSubBlock( unsigned subBlockSize )
+void Postings::IncrementOpenSubBlock( unsigned subBlockSize )
    {
    if ( subBlockSize == blockSize )
       return IncrementNumBlocks( );
@@ -446,13 +473,13 @@ void Index::IncrementOpenSubBlock( unsigned subBlockSize )
    }
 
 
-inline void Index::IncrementNumBlocks( )
+inline void Postings::IncrementNumBlocks( )
    {
    metaData.SetInString< unsigned >( ++nextBlockIndex, sizeof( unsigned ) );
    }
 
 
-void Index::SetLastUsed( SubBlockInfo lastUsed )
+void Postings::SetLastUsed( SubBlockInfo lastUsed )
    {
    // Size of each open/lastused entry
    unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
@@ -469,7 +496,7 @@ void Index::SetLastUsed( SubBlockInfo lastUsed )
    }
 
 
-void Index::SetOpen( SubBlockInfo open )
+void Postings::SetOpen( SubBlockInfo open )
    {
    // Size of each open/lastused entry
    unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
@@ -486,7 +513,7 @@ void Index::SetOpen( SubBlockInfo open )
    }
 
 
-SubBlock Index::MmapSubBlock( SubBlockInfo subBlockInfo )
+SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo )
    {
    // BlockIndex * blockSize + subBlockIndex * subBlockSize
    unsigned blockOffset = subBlockInfo.blockIndex * blockSize;
@@ -504,7 +531,7 @@ SubBlock Index::MmapSubBlock( SubBlockInfo subBlockInfo )
    }
 
 
-void Index::MunmapSubBlock( SubBlock subBlock )
+void Postings::MunmapSubBlock( SubBlock subBlock )
    {
    char* mmappedArea = subBlock.mmappedArea -
          subBlock.subBlockInfo.subBlockIndex * subBlock.subBlockInfo.subBlockSize;
@@ -514,7 +541,7 @@ void Index::MunmapSubBlock( SubBlock subBlock )
    }
 
 
-unsigned Index::SmallestSubBlockSize( ) const
+unsigned Postings::SmallestSubBlockSize( ) const
    {
    unsigned numSizes = metaData.GetInString< unsigned >( 2 * sizeof( unsigned ) );
    return blockSize >> ( numSizes - 1 );
@@ -557,8 +584,8 @@ inline void SubBlock::SetNextPtr( unsigned blockIndex )
 
 inline bool SubBlock::operator!= ( const SubBlock& other ) const
    {
-   return subBlockInfo.blockIndex == other.subBlockInfo.blockIndex && 
-         subBlockInfo.subBlockIndex == other.subBlockInfo.subBlockIndex;
+   return subBlockInfo.blockIndex != other.subBlockInfo.blockIndex ||
+         subBlockInfo.subBlockIndex != other.subBlockInfo.subBlockIndex;
    }
 
 

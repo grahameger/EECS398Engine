@@ -6,31 +6,35 @@
 class String;
 class PostingList;
 
-class ISR
+
+using Location = unsigned long long;
+
+
+class IsrWord
    {
    public:
-      ISR( String& query );
+      IsrWord( String word );
 
-      virtual unsigned long long NextInstance( unsigned long long after = 0 );
+      Location NextInstance( );
+      Location SeekToLocation( Location seekDestination = 0 );
+      Location CurInstance( ) const;
 
-   protected:
-      ISR( );
+      operator bool( ) const;
 
-      Vector< ISR* >* children;
+   private:
+      bool validISR;
+      Location currentLocation;
+
+      unsigned nextPtr;
+      Vector< PostingList* > postingLists;
 
    };
 
 
-class WordISR : ISR
+class IsrEndDoc : IsrWord
    {
    public:
-      WordISR( String& word );
-
-      unsigned long long NextInstance( unsigned long long after = 0 ) override;
-
-   private:
-      Vector< PostingList* > postingLists;
-      unsigned nextPtr;
+      IsrEndDoc( );
 
    };
 

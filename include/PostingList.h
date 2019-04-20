@@ -83,6 +83,7 @@ class PostingList
 
       unsigned long long largestPosting;
       unsigned long long origLargestPosting;
+      unsigned long long lastRead;
 
       static const unsigned LowEndBits;
 
