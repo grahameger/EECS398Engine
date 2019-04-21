@@ -85,45 +85,68 @@ ISROr::ISROr(Vector<Isr> phrasesToInsert){
 }
 
 Location ISROr::seek(Location target){
-    //Move all ISRs to the first occurrence of their respective word at 'target' or later
-    //Returns ULLONG_MAX if there is no match
-    Location nearestStartLocationTracker = ULLONG_MAX;
-    Location nearestEndLocationTracker = 0;
-    Location nearestTermTracker = 0;
+    //Algorithm
+    // 1. Seek all ISRs to the first occurrence beginning at the target location.
+    // 2. Loop through all the terms and return the term location which is smallest
+    //Returns 0 if there is no match
+    Location closestTerm = ULLONG_MAX;
+    //Step 1: seek all ISRs to first occurrence after target location
     for (int i = 0; i < numOfTerms; ++i){
-        while (terms[i]->nextInstance() < target){
+        //Traverse each term's posting list until it goes past 'target' or reaches the end
+        while (terms[i]->CurInstance() < target){
+            //We've looped thru all terms, and nextInstance of the last term DNE,
+            //so no term exists after location target
+            if (terms[i]->nextInstance() == 0 && i == numOfTerms - 1 && closestTerm == ULLONG_MAX){
+                return 0;
+            }
             Location nextLocation = terms[i]->nextInstance();
-            //All terms do not exist after target location
-            if (nextLocation == ULLONG_MAX && i == numOfTerms - 1){
-                return ULLONG_MAX;
-            }
-            //Terms[i] does exist after target location and is the first term to show up
-            else if (nextLocation >= target && nextLocation < nearestStartLocationTracker){
-                nearestStartLocationTracker = nextLocation;
-                nearestTermTracker = i;
-            }
-            //Terms[i] does exist after target location and is the last term to show up
-            else if (nextLocation >= target && nextLocation > nearestEndLocationTracker){
-                nearestEndLocationTracker = nextLocation;
+            //Update closestTerm, the term that is closest to and > target
+            if (nextLocation < closestTerm && nextLocation >= target){
+                closestTerm = nextLocation;
+                nearestTerm = i;
             }
         }
     }
-    nearestStartLocation = nearestStartLocationTracker;
-    nearestEndLocation = nearestEndLocationTracker;
-    nearestTerm = nearestTermTracker;
-    return nearestStartLocation;
+    //nearestStartLocation is the first term that appears in the OR ISR
+    nearestStartLocation = closestTerm;
+    //Update nearestEndLocation, the end of the page of nearestStartLocation
+    IsrWord endPage("");
+    nearestEndLocation = endPage.SeekToLocation(closestTerm);
+    return closestTerm;
+    
 }
 
+
+
 Location ISROr::nextInstance(){
-    //Retrieve the next instance of an occurring term
-    Location closestTerm = ULLONG_MAX;
-    for (int i = 0; i < numOfTerms; ++i){
-        if (terms[i]->nextInstance() < closestTerm){
-            nearestTerm = i;
-            closestTerm = terms[i]->nextInstance();
+    
+    //Retrieve the next instance of the first occurring term
+    //Case 1: nearestTerm is initialized (because we initialize nearestTerm to 99999)
+    //and is an index to the closest term
+    if (nearestTerm != 99999){
+        terms[nearestTerm]->nextInstance();
+        Location closestTerm = ULLONG_MAX;
+        for (int i = 0; i < numOfTerms; ++i){
+            if (terms[i]->CurInstance() < closestTerm && terms[i]->CurInstance() != 0){
+                closestTerm = terms[i]->CurInstance();
+                nearestTerm = i;
+            }
+            //There are no next instances of any of the terms
+            if (terms[i]->CurInstance() == 0 && i == numOfTerms - 1 && closestTerm == ULLONG_MAX){
+                return 0;
+            }
         }
+        nearestStartLocation = closestTerm;
+        IsrWord endPage("");
+        nearestEndLocation = endPage.SeekToLocation(closestTerm);
+        return closestTerm;
     }
-    return closestTerm;
+    //Case 2: nearestTerm is not initialized yet, this is the first call of nextInstance()
+    //so we must find the term that is closest to the start of a posting list
+    else {
+        return seek(0);
+    }
+
 }
 
 
@@ -144,47 +167,83 @@ ISRAnd::ISRAnd(Vector<Isr> phrasesToInsert){
 
 
 Location ISRAnd::seek(Location target){
-    //TODO
+    //Algorithm
     // 1. Seek all ISRs to the first occurrence beginning at the target location.
     // 2. Pick the furthest term and attempt to seek all the other terms to the
     //first location beginning where they should appear relative to the furthest term.
     // 3. If any term is past the desired location, return to step 2.
     // 4. If any ISR reaches the end, there is no match.
-    Location currentMin = ULLONG_MAX;
-    Vector<Location>docTracker;
+    Vector<Pair<IsrWord, Location>>docTracker;
+    
+    //Step 1: seek all ISRs to first occurrence after target location
     for (int i = 0; i < numOfTerms; ++i){
-        while (terms[i]->nextInstance() < target){
+        //Traverse each term's posting list until it goes past 'target' or reaches the end
+        while (terms[i]->CurInstance() < target){
+            //None of the posting list terms are on the same page
+            if (terms[i]->nextInstance() == 0){
+                return 0;
+            }
             Location nextLocation = terms[i]->nextInstance();
             IsrWord nextPage("");
             Location pageEnd = nextPage.SeekToLocation(nextLocation);
-            //Terms[i] does not exist after target location
-            if (nextLocation == ULLONG_MAX){
-                return ULLONG_MAX;
+            Pair<IsrWord, Location> toInsert(terms[i], pageEnd);
+            docTracker.push_back(toInsert);
+        }
+        
+    }
+    
+    Location latestPage = 0;
+    bool allSamePage = false;
+    while (!allSamePage){
+        //Step 2: Find the furthest term's page
+        for (int i = 0; i < docTracker.size(); ++i){
+            if (docTracker[i].second > latestPage){
+                latestPage = docTracker[i].second;
             }
-            //Terms[i] does exist after target location and is the first term to show up
-            if (nextLocation > target){
-                if (nextLocation < currentMin){
-                    currentMin = nextLocation;
-                    nearestTerm = i;
-                    nearestStartLocation = currentMin;
-                }
-                
-                //Page matches, or we are pushing back page of first term
-                if (i == 0 || docTracker[i] == docTracker[i-1]){
-                    docTracker.push_back(pageEnd);
-                }
-                //Pages of terms do not match, reset our search
-                else {
-                    i = 0;
-                    while (!docTracker.empty()){
-                        docTracker.pop_back();
+        }
+        
+        //Step 3: Scan other pages, if other pages are before furthest term, move them forward
+        bool pageAltered = false;
+        for (int i = 0; i < docTracker.size(); ++i){
+            if (docTracker[i].second < latestPage){
+                while (docTracker[i].first->CurInstance() < latestPage){
+                    //Step 4: Check if any pages reach the end
+                    if (docTracker[i].first->nextInstance() == 0){
+                        return 0;
                     }
-                    
+                    //Update the IsrWord index and latest page
+                    docTracker[i].first = docTracker[i].first->nextInstance();
+                    IsrWord nextPage("");
+                    Location valToCompare = nextPage.SeekToLocation(docTracker[i].first);
+                    if (valToCompare != docTracker[i].second){
+                        pageAltered = true;
+                    }
+                    docTracker[i].second = nextPage.SeekToLocation(docTracker[i].first);
                 }
             }
         }
+        //Go back to step 2 if we moved any ISRs
+        if (!pageAltered){
+            allSamePage = true;
+        }
     }
-    return currentMin;
+    
+    Location earliestPost = ULLONG_MAX;
+    Location latestPost = 0;
+    for (int i = 0; i < docTracker.size(); ++i){
+        if (docTracker[i].first->CurInstance() < earliestPost){
+            earliestPost = docTracker[i].first->CurInstance();
+            nearestTerm = i;
+        }
+        if (docTracker[i].first->CurInstance() > latestPost){
+            latestPost = docTracker[i].first->CurInstance();
+            farthestTerm = i;
+        }
+    }
+    nearestStartLocation = earliestPost;
+    nearestEndLocation = docTracker[0].second;
+    //Returns the end of the document that all the terms appear on
+    return nearestStartLocation;
 }
 
 //////////////////
@@ -194,6 +253,7 @@ Location ISRAnd::seek(Location target){
 //////////////
 //Phrase ISR//
 //////////////
+
 ISRPhrase::ISRPhrase(String phraseToStore){
     String currWord = "";
     for (int i = 0; i < phraseToStore.Size(); ++i){
@@ -208,16 +268,17 @@ ISRPhrase::ISRPhrase(String phraseToStore){
     }
 }
 
+
+//TODO: UPDATE SEEK. REMEMBER TO UPDATE nearestTerm, farthestTerm, nearestStartLocation, nearestEndLocation too
 Location ISRPhrase::seek(Location target){
     Vector<Location> termLocations;
+    Location nearestStartLocationTracker = ULLONG_MAX;
+    Location nearestEndLocationTracker = ULLONG_MAX;
+    
     for (int i = 0; i < numOfTerms; ++i){
-        while (terms[i]->nextInstance() < target){
+        while (terms[i]->CurInstance() < target && terms[i]->nextInstance() != 0){
             Location nextLocation = terms[i]->nextInstance();
-            //No phrase exists
-            if (nextLocation == ULLONG_MAX){
-                return ULLONG_MAX;
-            }
-            else if (nextLocation > target){
+            if (nextLocation >= target){
                 //Found the first instance of the first term appearing after target
                 if (i == 0){
                     termLocations.push_back(nextLocation);
@@ -237,10 +298,13 @@ Location ISRPhrase::seek(Location target){
                 }
             }
         }
+        if (i == numOfTerms - 1 && nearestStartLocationTracker == ULLONG_MAX){
+            return 0;
+        }
     }
     
     if (termLocations.empty()){
-        return ULLONG_MAX;
+        return 0;
     }
     return termLocations[0];
 }
