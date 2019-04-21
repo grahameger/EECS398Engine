@@ -14,12 +14,12 @@ void LoadVector(Vector<Location>& dst, std::vector<Location>& src)
 int main()
    {
    std::vector<Location> docEndSrc = {10, 20, 30};
-   std::vector<Location> dennisAnchorSrc = {2, 4, 5, 12, 17};
+   std::vector<Location> dennisAnchorSrc = {12, 17};
    std::vector<Location> dennisBodySrc = {3, 13, 24};
-   std::vector<Location> dennisTitleSrc = {21};
+   std::vector<Location> dennisTitleSrc {1, 2};
    std::vector<Location> dennisUrlSrc = {7, 14, 16, 23};
    //todo make it so that it will always take me to diff document
-   std::vector<Location> rootIsrSrc = {2, 12, 21};
+   std::vector<Location> rootIsrSrc = {1, 2, 14, 16, 23, 24};
    //std::vector<Location> liSrc = {14, 15, 18};
 
    Vector<Location> docEndLocations;

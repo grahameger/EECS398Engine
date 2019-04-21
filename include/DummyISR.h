@@ -1,12 +1,16 @@
 //This header is for the sake of testing ranker feaeture extraction without
 //relying on real documents
 #pragma once
+#ifndef DUMMYISR_H
+#define DUMMYISR_H
+
 #include "vector.h"
 #include "IndexInterface.h"
 
 namespace IsrGlobals
    {
    const Location IsrSentinel = 0;
+   //TODO: CHange to 1
    const Location IndexStart = 1;
    }
 
@@ -36,3 +40,5 @@ class IsrEndDoc : public Isr
       IsrEndDoc(Vector<Location> matchesIn);
       DocumentAttributes GetDocInfo();
    };
+
+#endif

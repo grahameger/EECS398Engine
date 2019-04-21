@@ -1,4 +1,7 @@
 #pragma once
+#ifndef RANKER_H
+#define RANKER_H
+
 #include "DummyISR.h"
 #include "vector.h"
 #include "RankerParams.h"
@@ -55,6 +58,8 @@ class Ranker
             unsigned ComputeScore(DecoratedWordIsrs& wordIsrs);
             DocID GetDocID();
             DocumentAttributes GetDocInfo();
+            Location GetDocEndLocation();
+            
          private:
             class Features
                {
@@ -72,7 +77,7 @@ class Ranker
                      {
                      public:
                         WordStatistics(Isr* isrIn, Document* curDocumentIn);
-                        WordStatistics();
+                        WordStatistics() {}
                         void SeekNextInstance();
                         bool IsPastEnd();
                         unsigned Count;
@@ -112,4 +117,9 @@ class Ranker
       void clearTopRankedDocments();
       void resetIsrVec(Vector<Isr*> &isrVec);
       void resetAllIsr(Isr* rootIsr, DecoratedWordIsrs& wordIsrs, IsrEndDoc* docIsr);
+      void resetIsr(Isr *isr);
+      Location getNextDocumentLocation(Isr* rootIsr, Location docEndLocation);
+      Location getDocStart(unsigned docLength, IsrEndDoc* docIsr);
    };
+
+#endif

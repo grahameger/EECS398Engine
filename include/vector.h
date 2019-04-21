@@ -2,6 +2,9 @@
 // Dennis Li added all variations of insert function on 4/18/19
 
 #pragma once
+#ifndef VECTOR_H
+#define VECTOR_H
+
 #include <algorithm>
 template<class T>
 class Vector {
@@ -260,6 +263,11 @@ void Vector<T>::insertSorted(T value, Compare comparator) {
     }
 }
 
+template<class T>
+void Vector<T>::pop_back() {
+   numElements--;
+}
+
 //REQUIRES: Vector must be sorted!
 //EFFECTS: Insert element into vector in sorted order
 //Will maintain max size of maxSize, so if current size
@@ -281,3 +289,5 @@ void Vector<T>::insertSortedMaxSize(T value, Compare comparator, size_t maxSize)
     if(numElements > maxSize)
        pop_back();
 }
+
+#endif

@@ -24,13 +24,12 @@ void Ranker::updateTopRankedDocuments(Document& document)
    topRankedDocuments.insertSortedMaxSize(newDoc, compare, numDocsToDisplay);
    }
 
-
-Location getDocStart(unsigned docLength, IsrEndDoc* docIsr)
+Location Ranker::getDocStart(unsigned docLength, IsrEndDoc* docIsr)
    {
    return docIsr->GetCurrentLocation() - docLength;
    }
 
-void resetIsr(Isr* isr)
+void Ranker::resetIsr(Isr* isr)
    {
    isr->SeekToLocation(IsrGlobals::IndexStart);
    }
@@ -41,6 +40,11 @@ void Ranker::resetIsrVec(Vector<Isr*> &isrVec)
       {
       resetIsr(isrVec[i]);
       }
+   }
+
+DocID Ranker::Document::GetDocID()
+   {
+   return docInfo.DocID; 
    }
 
 void Ranker::resetAllIsr(Isr* rootIsr, DecoratedWordIsrs& wordIsrs, 
@@ -54,10 +58,19 @@ void Ranker::resetAllIsr(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
    resetIsrVec(wordIsrs.UrlIsrs);
    }
 
+Location Ranker::getNextDocumentLocation(Isr* rootIsr, Location docEndLocation)
+   {
+   while(rootIsr->GetCurrentLocation() < docEndLocation && 
+         rootIsr->GetCurrentLocation() != IsrGlobals::IsrSentinel)
+      rootIsr->NextInstance();
+   return rootIsr->GetCurrentLocation();
+   }
+
 Vector<ScoredDocument> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
       IsrEndDoc* docIsr)
    {
-   Location matchLocation = rootIsr->NextInstance();
+   resetAllIsr(rootIsr, wordIsrs, docIsr);
+   Location matchLocation = rootIsr->GetCurrentLocation();
    while(matchLocation != IsrGlobals::IsrSentinel)
       {
       //get document info from current location
@@ -69,17 +82,20 @@ Vector<ScoredDocument> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
       //score and rank
       document.ComputeScore(wordIsrs);
       updateTopRankedDocuments(document);
-      matchLocation = rootIsr->NextInstance();
+      matchLocation = getNextDocumentLocation(rootIsr, document.GetDocEndLocation());
       }
-   resetAllIsr(rootIsr, wordIsrs, docIsr);
    return topRankedDocuments;
    }
 
-Ranker::Document::Document(Location matchLocation, IsrEndDoc* docIsr)
-   : docEndLocation(docIsr->GetCurrentLocation())
+Location Ranker::Document::GetDocEndLocation()
    {
-   Location endDocLocation = docIsr->SeekToLocation(matchLocation);
-   if(endDocLocation == IsrGlobals::IsrSentinel)
+   return docEndLocation;
+   }
+
+Ranker::Document::Document(Location matchLocation, IsrEndDoc* docIsr)
+   {
+   docEndLocation = docIsr->SeekToLocation(matchLocation);
+   if(docEndLocation == IsrGlobals::IsrSentinel)
       {
       fprintf(stderr, "isrWord has no doc end!");
       throw(1);
@@ -102,7 +118,7 @@ unsigned Ranker::Document::ComputeScore(DecoratedWordIsrs& wordIsrs)
    {
    unsigned anchorScore = decorationFeatures.AnchorTextFeatures.ComputeScore(
          wordIsrs.AnchorTextIsrs);
-   unsigned decorationScore = decorationFeatures.BodyTextFeatures.ComputeScore(
+   unsigned bodyScore = decorationFeatures.BodyTextFeatures.ComputeScore(
          wordIsrs.BodyTextIsrs);
    unsigned titleScore = decorationFeatures.TitleFeatures.ComputeScore(
          wordIsrs.TitleIsrs);
@@ -110,7 +126,7 @@ unsigned Ranker::Document::ComputeScore(DecoratedWordIsrs& wordIsrs)
          wordIsrs.UrlIsrs);
 
    //computeScore already applies weights for lienar combination
-   unsigned score = anchorScore + decorationScore + titleScore + urlScore;
+   score = anchorScore + bodyScore + titleScore + urlScore;
    return score;
    }
 
@@ -121,7 +137,7 @@ DocumentAttributes Ranker::Document::GetDocInfo()
 
 Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn,
       Document* curDocumentIn)
-   : isr(isrIn), curDocument(curDocumentIn) {}
+   : isr(isrIn), curDocument(curDocumentIn), Count(0) {}
 
 unsigned Ranker::Document::Features::ComputeScore(Vector<Isr*>& wordIsrs)
    {
@@ -176,7 +192,8 @@ void Ranker::Document::Features::WordStatistics::SeekNextInstance()
 
 bool Ranker::Document::Features::WordStatistics::IsPastEnd()
    {
-   return isr->GetCurrentLocation() >= curDocument->docEndLocation;
+   return isr->GetCurrentLocation() >= curDocument->docEndLocation
+         || isr->GetCurrentLocation() == IsrGlobals::IsrSentinel;
    }
 
 void Ranker::Document::Features::SetFeatureType(TextType textTypeIn)

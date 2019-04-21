@@ -1,4 +1,7 @@
 #pragma once
+#ifndef INDEXINTERFACE_H
+#define INDEXINTERFACE_H
+
 /*
 *feel free to change the datatypes as necessary as long as 
 *functionality is the same, e.g. unsigned int-->unsigned short
@@ -45,3 +48,5 @@ struct CorpusAttributes
   };
 
 DocumentAttributes GetDocumentAttributes(Location endDocLocation);
+
+#endif

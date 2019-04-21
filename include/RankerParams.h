@@ -1,10 +1,15 @@
+#pragma once
+#ifndef RANKERPARAMS_H
+#define RANKERPARAMS_H
 namespace RankerParams
    {
-   unsigned AnchorWeight = 10;
-   unsigned UrlWeight = 6;
-   unsigned BodyWeight = 1;
-   unsigned TitleWeight = 3;
+   extern const unsigned AnchorWeight;
+   extern const unsigned UrlWeight;
+   extern const unsigned BodyWeight;
+   extern const unsigned TitleWeight;
 
    //feature weights
-   unsigned WordFrequencyWeight = 1;
+   extern const unsigned WordFrequencyWeight;
    }
+
+#endif

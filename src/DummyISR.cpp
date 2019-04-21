@@ -15,22 +15,42 @@ Location Isr::NextInstance()
    return curLocation;
    }
 
-Location Isr::SeekDocStart(Location docStart)
+Location Isr::SeekToLocation(Location location)
    {
    Location closestLocation = IsrGlobals::IsrSentinel;
-   while(hasNextInstance() && closestLocation < docStart)
-      closestLocation = NextInstance();      
+   curInd = 0;
+   if(matches.size() > 0)
+      {
+      closestLocation = matches[0]; 
+      }
+
+   while(curInd < matches.size() - 1 && matches[curInd] < location)
+      {
+      curInd++;
+      closestLocation = matches[curInd];
+      }
+
+   if(curInd == matches.size() - 1)
+      {
+      if(matches[curInd] > location)
+         {
+         closestLocation = matches[curInd];
+         }
+      else
+         closestLocation = IsrGlobals::IsrSentinel;
+      }    
+   curLocation = closestLocation;
    return closestLocation;
    }
 
 bool Isr::hasNextInstance()
    {
-   return curInd < matches.size() - 2;
+   return curInd < matches.size() - 1;
    }
 
 Location Isr::GetCurrentLocation()
    {
-   return curInd;
+   return curLocation;
    }
 
 DocumentAttributes IsrEndDoc::GetDocInfo()
@@ -39,7 +59,7 @@ DocumentAttributes IsrEndDoc::GetDocInfo()
    docInfo.DocID = curInd;
    if(curInd == 0)
       {
-      docInfo.DocumentLength = matches[curInd];
+      docInfo.DocumentLength = matches[curInd] - 1;
       }
    else
       {

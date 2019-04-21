@@ -8,10 +8,10 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/engine",
+            "program": "${workspaceFolder}/test/test",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/wd",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -22,7 +22,6 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "build all"
         }
     ]
 }
