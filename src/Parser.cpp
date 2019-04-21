@@ -185,9 +185,11 @@ int LinkFinder::parse_html() {
                                 }
                                 index++;
                             }
-                            link_and_anchor object;
-                            object.link_url = link;
-                            Document.vector_of_link_anchor.push_back(object);
+                            if(is_link) {
+                                link_and_anchor object;
+                                object.link_url = link;
+                                Document.vector_of_link_anchor.push_back(object);
+                            }
                         }
                         
                         //reset index in case link not found
