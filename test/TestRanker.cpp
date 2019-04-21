@@ -36,13 +36,25 @@ int main()
    LoadVector(dennisUrlLocations, dennisUrlSrc);
    LoadVector(docEndLocations, docEndSrc);
    LoadVector(rootIsrLocations, rootIsrSrc);
+   Vector<Location> liTitleLocations2 = {4, 5, 18, 22};
    //LoadVector(liLocations, liSrc);
 
    Isr dennisAnchor(dennisAnchorLocations);
+   dennisAnchor.AddWord("Dennis");
+   dennisAnchor.SetImportance(5);
    Isr dennisBody(dennisBodyLocations);
+   dennisBody.SetImportance(9);
+   dennisBody.AddWord("Dennis");
    Isr dennisTitle(dennisTitleLocations);
+   dennisTitle.SetImportance(11);
+   dennisTitle.AddWord("Dennis");
    Isr dennisUrl(dennisUrlLocations);
+   dennisUrl.AddWord("Dennis");
+   dennisTitle.SetImportance(3);
    Isr rootIsr(rootIsrLocations);
+   Isr liTitle2(liTitleLocations2);
+   dennisTitle2.AddWord("Li");
+   dennisTitle.SetImportance(3);
    //Isr li(liLocations);
    IsrEndDoc docEnd(docEndLocations);
 
@@ -54,6 +66,7 @@ int main()
 
    Vector<Isr*> titleIsrVec;
    titleIsrVec.push_back(&dennisTitle);
+   titleIsrVec.push_back(&liTitle2);
 
    Vector<Isr*> urlIsrVec;
    urlIsrVec.push_back(&dennisUrl);

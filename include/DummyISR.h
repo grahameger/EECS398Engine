@@ -6,6 +6,7 @@
 
 #include "vector.h"
 #include "IndexInterface.h"
+#include "String.h"
 
 namespace IsrGlobals
    {
@@ -20,9 +21,15 @@ class Isr
    //These need to implemented in real ISR
    Isr(Vector<Location> matchesIn);
    Location NextInstance();
-   Location SeekToLocation(Location docStart);
+   Location SeekToLocation(Location location);
    Location GetCurrentLocation();
-   Location SeekDocStart(Location docStart);
+   //not needed for real isr
+   void AddWord(String word);
+   //needed
+   unsigned GetImportance();
+   //not needed for real isr
+   void SetImportance(unsigned importanceIn);
+   String word;
 
    protected:
    //TO JASON AND BRADLEY:
@@ -32,6 +39,7 @@ class Isr
    Vector<Location> matches;
    unsigned curInd;
    bool hasNextInstance();
+   unsigned importance;
    };
 
 class IsrEndDoc : public Isr

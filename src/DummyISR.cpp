@@ -67,3 +67,13 @@ DocumentAttributes IsrEndDoc::GetDocInfo()
       }
    return docInfo;
    }
+
+void Isr::AddWord(String wordIn)
+   {
+   word = wordIn;
+   }
+
+void Isr::SetImportance(unsigned importanceIn)
+   {
+   importance = importanceIn; 
+   }

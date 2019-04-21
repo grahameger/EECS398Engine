@@ -81,17 +81,17 @@ class Ranker
                         void SeekNextInstance();
                         bool IsPastEnd();
                         unsigned Count;
-                     private:
                         Isr* isr;
+                     private:
                         Document* curDocument;
                      };
 
-                  void computeFeatures(Vector<Isr*> wordIsrs);
-               
                private:
                   Document* curDocument;
                   TextType textType;
                   unsigned textTypeWeight;
+                  Isr* getMostImportantWord(Vector<Isr*> wordIsrs)
+                  void computeFeatures(Vector<Isr*> wordIsrs);
                };
 
             struct DecorationFeatures
@@ -120,6 +120,7 @@ class Ranker
       void resetIsr(Isr *isr);
       Location getNextDocumentLocation(Isr* rootIsr, Location docEndLocation);
       Location getDocStart(unsigned docLength, IsrEndDoc* docIsr);
+      Location getLocationDist(Location location1, Location location2);
    };
 
 #endif

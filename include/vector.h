@@ -22,7 +22,10 @@ private:
 public:
     
     Vector();
-    
+
+    //EFFECTS: Constructor
+    Vector( std::initializer_list< T > in_list ); 
+
     //EFFECTS: Constructor
     Vector(size_t num);
     
@@ -104,6 +107,14 @@ template<class T>
 Vector<T>::Vector() {
     elements = new T[numAllocated];
 }
+
+template< class T >
+Vector< T >::Vector( std::initializer_list< T > in_list )
+      : elements( new T[ in_list.size( ) ] ), numAllocated( in_list.size( ) )
+   {
+   for ( auto iterator = in_list.begin( ); iterator != in_list.end( ); iterator++ )
+      push_back( *iterator );
+   }
 
 template<class T>
 Vector<T>::Vector(size_t capacity) {
