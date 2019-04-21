@@ -73,9 +73,9 @@ void Index::reader(){
       unsigned long long startLocation = currentLocation;
       int docSize = doc.Words.size();
       //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
-      docSize += doc.anchor_words.size() + 1;
-      for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         docSize += doc.anchor_words[i].size();
+      docSize += doc.vector_of_link_anchor.size() + 1;
+      for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
+         docSize += doc.vector_of_link_anchor[i].anchor_words.size();
       }
       currentLocation += docSize;
       int docId = currentDocId;
@@ -110,19 +110,19 @@ void Index::reader(){
       urlMap[startLocation] = FixedLengthURL(doc.doc_url.CString());
       startLocation++;
       //parse anchor texts
-      for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         for(unsigned j = 0; j < doc.anchor_words[i].size(); j++){
+      for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
+         for(unsigned j = 0; j < doc.vector_of_link_anchor[i].anchor_words.size(); j++){
             //probably gonna need to use the same map here
-            (*(localMap[String("@") + doc.anchor_words[i][j].word])).push_back(startLocation);
+            (*(localMap[String("@") + doc.vector_of_link_anchor[i].anchor_words[j].word])).push_back(startLocation);
             startLocation++;
             
          }
          //docEnd map here
          (*(localMap[String("")])).push_back(startLocation);
-         urlMap[startLocation] = FixedLengthURL(doc.Links[i].CString());
+         urlMap[startLocation] = FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString());
          startLocation++;
       }
-      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthURL(doc.doc_url.CString())].inLinks, doc.anchor_words.size(),doc.domain_type, doc.domain_rank);
+      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthURL(doc.doc_url.CString())].inLinks, doc.vector_of_link_anchor.size(),doc.domain_type, doc.domain_rank);
       currentWriteDocIdMutex.lock();
       while(currentWriteDocId != docId){
          queueWriteCV.wait(currentWriteDocIdMutex);
@@ -131,8 +131,8 @@ void Index::reader(){
       pQueueLock.lock();
       //url -> metadata
       metaMap[FixedLengthURL(doc.doc_url.CString())] = metadata;
-      for(unsigned i = 0; i < doc.anchor_words.size(); i++){
-         metaMap[FixedLengthURL(doc.Links[i].CString())].inLinks++;
+      for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
+         metaMap[FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString())].inLinks++;
       }
       totalDocLength += doc.Words.size();
       unsigned averageDocLength = totalDocLength / (docId + 1);

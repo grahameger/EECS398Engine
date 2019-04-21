@@ -6,7 +6,7 @@
 template<class T>
 class Vector {
     //OVERVIEW: A container that provides random access to
-    //          any element by its index.
+    //          any element by its index.  Indices start at 0.
     
 private:
     
@@ -71,7 +71,6 @@ public:
     bool empty() const;
     
     //EFFECTS:  Returns true if this Vector is at capacity, false otherwise.
-    //          That is, you may add elements if and only if full() is false.
     bool full() const;
 };
 
@@ -185,7 +184,6 @@ bool Vector<T>::empty() const {
 }
 
 //EFFECTS:  Returns true if this IntVector is at capacity, false otherwise.
-//          That is, you may add elements if and only if full() is false.
 template<class T>
 bool Vector<T>::full() const {
     return (numElements >= numAllocated);
