@@ -1,8 +1,11 @@
 #ifndef POSTINGS_H
 #define POSTINGS_H
 
+#include <unordered_map>
+
 #include "StringView.h"
 #include "PersistentHashMap.h"
+#include "threading.h"
 
 class SubBlock;
 class PostingList;
@@ -59,6 +62,32 @@ struct SubBlockInfo
    };
 
 
+// SubBlock
+
+struct SubBlock
+   {
+   bool uninitialized;
+   char* mmappedArea;
+   unsigned dataOffset;
+   SubBlockInfo subBlockInfo;
+   threading::ReadWriteLock* rwlock;
+   bool writingLock;
+
+   void SetNextPtr( unsigned blockIndex );
+   bool operator!= ( const SubBlock& other ) const;
+   bool operator== ( const SubBlock& other ) const;
+   StringView ToStringView( );
+   };
+
+
+struct IsrInfo
+   {
+   unsigned nextPtr;
+   PostingList* postingList;
+   SubBlock subBlock;
+   };
+
+
 // Postings class
 class Postings 
    {
@@ -87,10 +116,8 @@ class Postings
       void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
             Vector< PostingList* >& split, const FixedLengthString& word );
 
-      Pair< unsigned, PostingList* > GetPostingList
-            ( const FixedLengthString& word );
-      Pair< unsigned, PostingList* > GetPostingList
-            ( unsigned blockIndex );
+      IsrInfo GetPostingList( const FixedLengthString& word );
+      IsrInfo GetPostingList( unsigned blockIndex );
 
       SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
@@ -108,7 +135,7 @@ class Postings
       void SetLastUsed( SubBlockInfo lastUsed );
       void SetOpen( SubBlockInfo open );
 
-      SubBlock MmapSubBlock( SubBlockInfo subBlockInfo );
+      SubBlock MmapSubBlock( SubBlockInfo subBlockInfo, bool writing );
       void MunmapSubBlock( SubBlock subBlock );
 
       unsigned SmallestSubBlockSize( ) const;
@@ -118,8 +145,12 @@ class Postings
       unsigned nextBlockIndex;
       int indexFD;
 
+      // Word to subBlock
       PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
+      // subBlock to word
       PersistentHashMap< SubBlockInfo, FixedLengthString > wordIndex;
+      // subBlock to rwLock
+      std::unordered_map< unsigned, threading::ReadWriteLock* > lockMap;
 
    friend SubBlock;
    friend IsrWord;

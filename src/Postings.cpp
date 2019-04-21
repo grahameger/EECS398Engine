@@ -30,26 +30,6 @@ void ErrExit( )
    }
 
 
-// #####################
-// Other Data Structures
-// #####################
-
-// SubBlock
-
-struct SubBlock
-   {
-   bool uninitialized;
-   char* mmappedArea;
-   unsigned dataOffset;
-   SubBlockInfo subBlockInfo;
-
-   void SetNextPtr( unsigned blockIndex );
-   bool operator!= ( const SubBlock& other ) const;
-   bool operator== ( const SubBlock& other ) const;
-   StringView ToStringView( );
-   };
-
-
 // ######################
 // Postings Static Variables
 // ######################
@@ -114,6 +94,7 @@ void Postings::AddPostings( const FixedLengthString& word,
       #endif
 
       postingList.UpdateInPlace( plStringView );
+      MunmapSubBlock( plSubBlock );
       return;
       }
 
@@ -267,9 +248,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringVie
    }
 
 
-// TODO: PostingList that needs to look at next
-Pair< unsigned, PostingList* > Postings::GetPostingList
-      ( const FixedLengthString& word )
+IsrInfo Postings::GetPostingList( const FixedLengthString& word )
    {
    // Get a stringView for where the postingList of this word goes
    SubBlock plSubBlock = GetPostingListSubBlock( word );
@@ -283,12 +262,11 @@ Pair< unsigned, PostingList* > Postings::GetPostingList
    if ( !plSubBlock.uninitialized )
       postingList = new PostingList( plStringView );
 
-   return { nextPtr, postingList };
+   return { nextPtr, postingList, plSubBlock };
    }
 
 
-Pair< unsigned, PostingList* > Postings::GetPostingList
-      ( unsigned blockIndex )
+IsrInfo Postings::GetPostingList( unsigned blockIndex )
    {
    // Grab that block
    SubBlock plSubBlock = GetSubBlock( { blockSize, blockIndex, 0 } );
@@ -298,18 +276,18 @@ Pair< unsigned, PostingList* > Postings::GetPostingList
 
    PostingList* postingList = new PostingList( plStringView );
 
-   return { nextPtr, postingList };
+   return { nextPtr, postingList, plSubBlock };
    }
 
 
 SubBlock Postings::GetPostingListSubBlock
-      ( const FixedLengthString& word, bool endWanted )
+      ( const FixedLengthString& word, bool writing )
    {
    auto wordIt = subBlockIndex.find( word );
 
    // Return the last block in the chain of blocks stored
    if ( wordIt != subBlockIndex.end( ) )
-      return GetSubBlock( ( *wordIt ).second, endWanted );
+      return GetSubBlock( ( *wordIt ).second, writing );
    // Return a new block
    else
       {
@@ -336,7 +314,7 @@ SubBlock Postings::GetNewSubBlock( unsigned minSize )
       }
    IncrementOpenSubBlock( actualSize );
 
-   SubBlock subBlock = MmapSubBlock( subBlockInfo );
+   SubBlock subBlock = MmapSubBlock( subBlockInfo, true );
    subBlock.uninitialized = true;
 
    return subBlock;
@@ -345,7 +323,7 @@ SubBlock Postings::GetNewSubBlock( unsigned minSize )
 
 SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted )
    {
-   SubBlock subBlock = MmapSubBlock( subBlockInfo );
+   SubBlock subBlock = MmapSubBlock( subBlockInfo, endWanted );
 
    // If we need to follow nextPtrs to get to end
    if ( endWanted && subBlockInfo.subBlockSize == blockSize )
@@ -360,7 +338,7 @@ SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted )
          subBlockInfo.blockIndex = nextBlockPtr;
          subBlockInfo.subBlockIndex = 0;
          // Map new sub block
-         subBlock = MmapSubBlock( subBlockInfo );
+         subBlock = MmapSubBlock( subBlockInfo, endWanted );
          }
       }
 
@@ -375,13 +353,13 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    // Get the last used sub block of this size
    SubBlockInfo lastUsedInfo = 
          GetLastUsedSubBlock( subBlock.subBlockInfo.subBlockSize );
-   SubBlock lastUsedBlock = GetSubBlock( lastUsedInfo );
 
-   if ( lastUsedBlock.subBlockInfo.blockIndex == 0 )
+   if ( lastUsedInfo.blockIndex == 0 )
       {
       MunmapSubBlock( subBlock );
       return;
       }
+   SubBlock lastUsedBlock = GetSubBlock( lastUsedInfo );
 
    // This was not the last subBlock
    if ( lastUsedInfo != subBlock.subBlockInfo )
@@ -513,7 +491,7 @@ void Postings::SetOpen( SubBlockInfo open )
    }
 
 
-SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo )
+SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing )
    {
    // BlockIndex * blockSize + subBlockIndex * subBlockSize
    unsigned blockOffset = subBlockInfo.blockIndex * blockSize;
@@ -522,7 +500,41 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo )
    unsigned dataOffset = 
          subBlockInfo.subBlockSize == blockSize ? BlockDataOffset : 0;
 
-   SubBlock toReturn = { false, nullptr, dataOffset, subBlockInfo };
+   SubBlock toReturn = { false, nullptr, dataOffset, subBlockInfo, nullptr, writing };
+
+   try
+      { 
+      toReturn.rwlock = lockMap.at( subBlockInfo.blockIndex ); 
+
+      #ifdef TEST
+      printf( "Found a lock for block %d. ",
+            subBlockInfo.blockIndex );
+      #endif
+      }
+   catch ( const std::out_of_range& )
+      { 
+      toReturn.rwlock = new threading::ReadWriteLock( );
+      lockMap.insert( { subBlockInfo.blockIndex, toReturn.rwlock } );
+
+      #ifdef TEST
+      printf( "No lock found for block %d. Making a new one. ", 
+            subBlockInfo.blockIndex );
+      #endif
+      }
+
+   #ifdef TEST
+   printf( "Getting a %s lock on it.\n", writing ? "write" : "read" );
+   #endif
+
+   if ( writing )
+      toReturn.rwlock->writeLock( );
+   else
+      toReturn.rwlock->readLock( );
+
+   #ifdef TEST
+   printf( "Lock acquired for %d.\n", subBlockInfo.blockIndex );
+   #endif
+
    toReturn.mmappedArea = 
          ( char* )mmapWrapper( indexFD, blockSize, blockOffset );
    toReturn.mmappedArea += subBlockOffset;
@@ -538,6 +550,20 @@ void Postings::MunmapSubBlock( SubBlock subBlock )
 
    munmapWrapper( mmappedArea, blockSize );
    subBlock.mmappedArea = nullptr;
+
+   if ( subBlock.rwlock == nullptr )
+      { 
+      printf("Unlocking a lock that doesn't exist!\n");
+      exit( 1 );
+      }
+
+   #ifdef TEST
+   printf("Unlocking the %s lock on %d.\n", 
+         subBlock.writingLock ? "write" : "read",
+         subBlock.subBlockInfo.blockIndex );
+   #endif
+
+   subBlock.rwlock->unlock( );
    }
 
 
