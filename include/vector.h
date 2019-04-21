@@ -17,10 +17,12 @@ private:
 public:
     
     Vector();
+    
+    //EFFECTS: Constructor
+    Vector(size_t num);
 
     //EFFECTS: Constructor
     Vector( std::initializer_list< T > in_list );
-    Vector(size_t num);
     
     //Custom Destructor;
     ~Vector();
