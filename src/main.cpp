@@ -54,7 +54,7 @@ static struct option longopts[] = {
 // 	"/data/crawl/hn/HNDump/deduped.hn.urls"
 // };
 
-static const size_t NUM_PARSING_THREADS = 10;
+static const size_t NUM_PARSING_THREADS = 20;
 
 int main(int argc, char *argv[]) {
 
@@ -103,11 +103,11 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-  Index index(&documents, &documentsMutex, &documentsCv);
 	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-		std::thread new_thread(search::parseFiles, files, documents, documentsMutex, documentsCv);
+		std::thread new_thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
 		new_thread.detach();
 	}
+	Index index(&documents, &documentsMutex, &documentsCv);
 
 	std::vector<std::string> seedUrls;
 	std::ifstream queue(seedList);

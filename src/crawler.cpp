@@ -295,10 +295,10 @@ namespace search {
     std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename) {
         struct stat st; 
         size_t fileSize = 0;
-        if (stat(filename.c_str(), &st)) {
+        if (stat(filename.c_str(), &st) == 0) {
             fileSize = st.st_size;
         }
-        if (fileSize == 0) {
+        if (fileSize == 0 || !S_ISREG(st.st_mode)) {
             return std::nullopt;
         }
         // open the file
@@ -318,7 +318,7 @@ namespace search {
                          threading::Mutex &m,
                          threading::ConditionVariable& cv) 
     {
-        auto mmapedFile = memoryMapFile(filename);
+        auto mmapedFile = memoryMapFile("pages/" + filename);
         if (mmapedFile) {
             auto& file = mmapedFile.value();
             // convert the filename to a url
@@ -328,8 +328,7 @@ namespace search {
                 }
             }
             auto url = "http://" + filename;
-            LinkFinder linkFinder;
-            linkFinder.parse(file.ptr, file.size, url.c_str(), false);
+            LinkFinder linkFinder(file.ptr, file.size, url.c_str(), false);
             for (size_t i = 0; i < linkFinder.Document.Links.size(); ++i) {
                 linkFinder.Document.Links[i] = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.Links[i].CString());
             }

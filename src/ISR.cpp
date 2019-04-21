@@ -61,7 +61,7 @@ IsrWord::operator bool( ) const
    }
 
 
-IsrEndDoc::IsrEndDoc( ) : IsrWord( "" )
+IsrEndDoc::IsrEndDoc( ) : IsrWord( ( char* )"" )
    { }
 
 

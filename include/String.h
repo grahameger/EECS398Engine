@@ -12,8 +12,8 @@ class String
 public:
    String( );
    String( const char single_char );
-   String( const char* toCopy );
-   String( char*&& toMove );
+   String( const char* toCopy, int length = -1 );
+   String( char*&& toMove, int length = -1 );
    String( const String& toCopy );
    String( const std::string& toCopy);
    String( String&& toMove );
@@ -22,6 +22,7 @@ public:
    ~String();
    void RemoveWhitespace( );
    void Swap( String& toSwap );
+   void Allocate( const int length, bool after = true );
    bool Empty( ) const;
    int Size( ) const;
    const char* CString( ) const;
