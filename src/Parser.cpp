@@ -2,6 +2,7 @@
 #include "Parser.hpp"
 #include <cstring>
 
+
 //default constructor
 LinkFinder::LinkFinder() {}
 
@@ -22,7 +23,7 @@ Index_object & Index_object::operator=(const Index_object& rhs) {
     return *this;
 }
 
-void LinkFinder::parse_url( std::vector<std::pair<std::string, int>> &v) {
+void LinkFinder::parse_url(Vector<std::pair<std::string, int>> &v) {
     unsigned int num_consonants_in_row = 0;
     unsigned int num_vowels = 0;
     String word;
@@ -76,21 +77,19 @@ void LinkFinder::parse_url( std::vector<std::pair<std::string, int>> &v) {
     if(is_valid_word(word, num_vowels)) {
         Document.url.push_back(word);
     }
+    for(int i = 0; i < Document.url.size(); i++) {
+        std::cout << Document.url[i].CString() << std::endl;
+    }
+    std::cout << Document.domain_rank << std::endl;
 }
 
-void LinkFinder::assign_domain_rank(const String &word, std::vector<std::pair<std::string, int>> &v) {
-    std::vector<std::pair<std::string,int>>::iterator it1, it2;
-    it1 = lower_bound(v.begin(), v.end(), std::pair<std::string,int>(word.CString(),1), comp_pair);
-    it2 = upper_bound(v.begin(), v.end(), std::pair<std::string,int>(word.CString(),1), comp_pair);
-    if(it1 != v.end() && it2 != v.end()) {
-        if(it2 != it1) {
-            Document.is_top_domain = true;
-            if(Document.domain_rank > it1->second) {
-                Document.domain_rank = it1->second;
-            }
-        }
+void LinkFinder::assign_domain_rank(const String &word, Vector<std::pair<std::string, int>> &v) {
+    unsigned int rank = binSearch(v, 0, int(v.size()-1), word, MAX_DOMAIN_RANK);
+    if(Document.domain_rank > rank) {
+        Document.domain_rank = rank;
     }
 }
+
 
 bool LinkFinder::is_stop_domain(String &word) {
     if(Document.url.size() == 0) {
@@ -134,14 +133,14 @@ bool LinkFinder::is_stop_domain(String &word) {
 }
 
 //rules
-/*
- 1. 4 cons in a row
- 2. No vowels
- 3. Isalpha
- 4. >= 2 chars
- **5. not stopword
- aqs, sourceid, chrome, utf, safari, firefox, com, google, search
- */
+    /*
+     1. 4 cons in a row
+     2. No vowels
+     3. Isalpha
+     4. >= 2 chars
+     **5. not stopword
+     aqs, sourceid, chrome, utf, safari, firefox, com, google, search
+     */
 
 bool is_vowel(char c) {
     switch(c) {
@@ -170,6 +169,7 @@ int LinkFinder::parse_html() {
     //url_parser(url, );
     while(index < file_length) {//run until end of file
         if(html_file[index] == '<') {
+            is_link = false;
             (index)++;
             switch(html_file[index]) {
                 case 'A'  :
@@ -182,11 +182,14 @@ int LinkFinder::parse_html() {
                             String link;
                             while(html_file[index] != ' ' && html_file[index] != '>') {
                                 if(html_file[index] != '"' && html_file[index] != '\'') {
+                                    is_link = true;
                                     link += html_file[index];
                                 }
                                 index++;
                             }
-                            Document.Links.push_back(link);
+                            link_and_anchor object;
+                            object.link_url = link;
+                            Document.vector_of_link_anchor.push_back(object);
                         }
                         
                         //reset index in case link not found
@@ -210,7 +213,7 @@ int LinkFinder::parse_html() {
                         goto DEFAULT;
                     }
                     break;
-                    
+                   
                 case 'S'  :
                 case 's'  : //script/style Want to completely skip these
                     if(is_style(html_file)) {
@@ -315,9 +318,9 @@ bool LinkFinder::is_style(char *html_file) {
             return true;
         }
         else if(html_file[index] == 'S' && html_file[index+1] == 'T' && html_file[index+2] == 'Y' && html_file[index+3] == 'L' && html_file[index+4] == 'E') {
-            index += 4;
-            return true;
-        }
+                index += 4;
+                return true;
+            }
     }
     return false;
 }
@@ -348,7 +351,7 @@ void LinkFinder::find_string(char *html_file, char* find_lower, char* find_upper
         }
         index++;
     }
-    return;
+        return;
 }
 
 bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper) {
@@ -370,13 +373,9 @@ bool LinkFinder::find_link(char *html_file, char* find_lower, char* find_upper) 
 }
 
 void LinkFinder::get_words(char *html_file, char type) {
-    Vector<Index_object> full_anchor_object(5);
     while(index < file_length && html_file[index] != '<') {
         String word;
-        add_char_to_word(html_file, word, type, full_anchor_object);
-    }
-    if(type == 'a' && !full_anchor_object.empty()) {
-        Document.anchor_words.push_back(full_anchor_object);
+        add_char_to_word(html_file, word, type);
     }
 }
 
@@ -394,7 +393,7 @@ bool is_relevant_char(char c) {
     return true;
 }
 
-void LinkFinder::add_char_to_word(char* html_file, String &word, char type, Vector<Index_object> &v) {
+void LinkFinder::add_char_to_word(char* html_file, String &word, char type) {
     if(index < file_length && !is_space(html_file[index]) && is_relevant_char(html_file[index]) && html_file[index] != '-') {
         while(index < file_length && !is_space(html_file[index]) && is_relevant_char(html_file[index])) {
             if(isalpha(html_file[index])) {
@@ -417,8 +416,8 @@ void LinkFinder::add_char_to_word(char* html_file, String &word, char type, Vect
         new_obj.type = type;//this is type
         new_obj.position = (int)Document.Words.size();
         Document.Words.push_back(new_obj);
-        if(type == 'a') {
-            v.push_back(new_obj);
+        if(type == 'a' && is_link) {
+            Document.vector_of_link_anchor[Document.vector_of_link_anchor.size()-1].anchor_words.push_back(new_obj);
         }
     }
     else {
@@ -429,8 +428,10 @@ void LinkFinder::add_char_to_word(char* html_file, String &word, char type, Vect
 
 void LinkFinder::get_anchor_text(char *html_file, unsigned long stop_index) {
     char type = 'a';
+    bool is_there_anchor = false;
     //Skip over all inner tags until we hit a's closing tag
     while(index < file_length && index < stop_index) {
+        is_there_anchor = true;
         if(html_file[index] == '<') {
             while(index < file_length && html_file[index] != '>') {
                 index++;
@@ -568,7 +569,7 @@ bool LinkFinder::find_open_tag(char *html_file) {
             if(html_file[index] == '>') {
                 tag_found = true;
             }
-            index--;
+        index--;
         }
         if(!tag_found) { //no parent tag found
             return false;
@@ -590,4 +591,24 @@ bool LinkFinder::find_open_tag(char *html_file) {
         index++;
     }
     return false;//never get here
+}
+
+unsigned int binSearch(Vector<std::pair<std::string, int>> v, int l, int r, String val, unsigned int max)
+{
+    while (l <= r) {
+        int m = l + (r - l) / 2;
+    
+        if (v[m].first == val.CString()) {
+            return v[m].second;
+        }
+        
+        if (v[m].first < val.CString()) {
+            l = m + 1;
+        }
+        else {
+            r = m - 1;
+        }
+    }
+
+    return max;
 }
