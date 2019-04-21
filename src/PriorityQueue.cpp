@@ -1,8 +1,7 @@
 #include "PriorityQueue.h"
 #include "stdexcept"
 
-PriorityQueue::PriorityQueue()
-   :map(String("pQueue.map")){}
+PriorityQueue::PriorityQueue(){}
 
 PriorityQueue::~PriorityQueue(){
    for(unsigned i = 0; i < heap.size(); i++){
@@ -14,13 +13,13 @@ void PriorityQueue::insert(String word, Vector<unsigned long long>* locationsVec
    int index;
    wordLocations* locations;
    try{
-      index = map.at(word);
+      index = *(map.at(word));
       locations = heap[index];
    }
    catch(std::out_of_range& oor){
       //map does not contain word
       index = heap.size();
-      map[word] = index;
+      *(map[word]) = index;
       locations = new wordLocations;
       locations->word = word;
       heap.push_back(locations);
@@ -41,7 +40,7 @@ void PriorityQueue::pop(){
    map.erase(heap[0]->word);
    //move last index to front update map, down()
    heap[0] = heap[heap.size() - 1];
-   map[heap[0]->word] = 0;
+   *(map[heap[0]->word]) = 0;
    heap.pop_back();
    down(0);
 }
@@ -87,8 +86,8 @@ void PriorityQueue::down(int node){
       heap[largestIndex] = heap[node];
       heap[node] = temp;
 
-      map[heap[largestIndex]->word] = largestIndex;
-      map[heap[node]->word] = node;
+      *(map[heap[largestIndex]->word]) = largestIndex;
+      *(map[heap[node]->word]) = node;
       down(largestIndex);
    }
 
@@ -102,8 +101,8 @@ void PriorityQueue::up(int node){
          heap[parentIndex] = heap[node];
          heap[node] = temp;
          //fix the map
-         map[heap[node]->word] = node;         
-         map[heap[parentIndex]->word] = parentIndex;
+         *(map[heap[node]->word]) = node;         
+         *(map[heap[parentIndex]->word]) = parentIndex;
          up(parentIndex);
       }
    }
