@@ -1,4 +1,4 @@
-#include "PersistentHashMap.h"
+#include "hash_table.hpp"
 #include "Pair.h"
 #include "vector.h"
 #include "String.h"
@@ -24,7 +24,7 @@ public:
    int size();
 private:
    //maps to heap node struct
-   PersistentHashMap<String, int> map;
+   hash_table<int> map;
    //holds dynamically allocated wordLocations
    Vector<wordLocations* > heap;
    int parentNode(int n);
