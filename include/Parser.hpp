@@ -18,7 +18,7 @@
 
 static String top_level_domains[] = {"com", "org", "mil", "int", "edu", "gov", "net"};
 const size_t NUM_TOP_DOMAINS = 7;
-const int MAX_DOMAIN_RANK = 745000;
+const unsigned int MAX_DOMAIN_RANK = 745000;
 const size_t DOMAIN_LENGTH = 3;
 
 class Index_object{
@@ -31,17 +31,22 @@ public:
     
 };
 
+struct link_and_anchor {
+    String link_url;
+    Vector<Index_object> anchor_words;
+};
+
 struct Doc_object {
     String doc_url;
     unsigned short num_slash_in_url = 0;
-    Vector<String> Links;
+    //Vector<String> Links;
     Vector<Index_object> Words;
-    Vector<Vector<Index_object>> anchor_words;
     Vector<String> url;
-    bool is_top_domain = false; //if in graham's list of top *100* domains.
     char domain_type = 'x'; // default x. com = c, mil = m, edu = e, none = x, gov = g, etc...
     unsigned int domain_rank = MAX_DOMAIN_RANK; //1 = top 1, 2 = top 2, 3 = top 3, etc...
     bool is_https = false;
+    
+    Vector<link_and_anchor> vector_of_link_anchor;
     
     Doc_object() { }
     
@@ -64,7 +69,7 @@ public:
     int parse_html();
     
     //parses url
-    void parse_url(std::vector<std::pair<std::string, int>> &v);
+    void parse_url(Vector<std::pair<std::string, int>> &v);
     
     bool is_https;
     String url;
@@ -73,10 +78,14 @@ public:
     unsigned long index = 0;
     
     void print_all() {
-        for(int i = 0; i < Document.Links.size(); i ++) {
-            std::cout << Document.Links[i].CString() << std::endl;
+        for(int i = 0; i < Document.vector_of_link_anchor.size(); i ++) {
+            std::cout << Document.vector_of_link_anchor[i].link_url.CString() << ":";
+            for(int j = 0; j < Document.vector_of_link_anchor[i].anchor_words.size(); j++) {
+                std::cout << Document.vector_of_link_anchor[i].anchor_words[j].word.CString() << ", ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl << std::endl;
+        std::cout << std::endl;
         for(int i = 0; i < Document.Words.size(); i++) {
             std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
         }
@@ -128,13 +137,15 @@ private:
     unsigned long parent_tag_distance(char *html_file, char* tag);
     
     //Adds character to word if it's a relevant char. Lowers it as well.
-    void add_char_to_word(char *html_file, String &word, char type, Vector<Index_object> &v);
+    void add_char_to_word(char *html_file, String &word, char type);
     
     //Assigns rank to document if word is found in alexa top list
-    void assign_domain_rank(const String &word, std::vector<std::pair<std::string, int>> &v);
+    void assign_domain_rank(const String &word, Vector<std::pair<std::string, int>> &v);
     
     //Checks if word in url is one of 7 stopwords
     bool is_stop_domain(String &word);
+    
+    bool is_link = false;
     
 };
 
@@ -142,5 +153,7 @@ bool is_space(char c);
 bool is_relevant_char(char c);
 bool is_vowel(char c);
 bool is_valid_word(String word, unsigned int vowels);
+//returns 745000 if not found, else returns actual rank
+unsigned int binSearch(Vector<std::pair<std::string,int>> v, int l, int r, String val, unsigned int max);
 
 #endif /* Parser_hpp_398 */
