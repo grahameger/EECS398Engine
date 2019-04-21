@@ -28,7 +28,7 @@ static void sig_handler(int _)
 static const char startFile[] = "/data/crawl/seedlist.url";
 
 int main(int argc, char *argv[]) {
-
+/*
    std::deque<Doc_object> docList;
    threading::Mutex queueLock;
    threading::ConditionVariable cv;
@@ -72,4 +72,5 @@ int main(int argc, char *argv[]) {
    docList.push_back(d);
    queueLock.unlock();
    while(true){}
+*/
 }
