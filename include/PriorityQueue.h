@@ -1,4 +1,6 @@
 #include "hash_table.hpp"
+#include "hash.h"
+#include <unordered_map>
 #include "Pair.h"
 #include "vector.h"
 #include "String.h"
@@ -24,7 +26,7 @@ public:
    int size();
 private:
    //maps to heap node struct
-   hash_table<int> map;
+   std::unordered_map<String, int, std::hash<String> > map;
    //holds dynamically allocated wordLocations
    Vector<wordLocations* > heap;
    int parentNode(int n);
