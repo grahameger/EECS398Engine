@@ -173,15 +173,12 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
         header->rwLock = threading::ReadWriteLock();
     }
     // TODO: this feels deadlocky, putting this comment here just in case
-    header->rwLock.writeLock();
     if (!fileExists) {
         header->capacity = INITIAL_CAPACITY;
     }
     header->loadFactor = loadFactorIn;
     // mmap the data portion
     this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
-    // we shouldn't memset we should default construct the objects?
-    this->header->rwLock.unlock();
 }
 
 template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::~PersistentHashMap() {

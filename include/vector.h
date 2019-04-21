@@ -6,7 +6,7 @@
 template<class T>
 class Vector {
     //OVERVIEW: A container that provides random access to
-    //          any element by its index.
+    //          any element by its index.  Indices start at 0.
     
 private:
     
@@ -17,12 +17,10 @@ private:
 public:
     
     Vector();
-    
-    //EFFECTS: Constructor
-    Vector(size_t num);
 
     //EFFECTS: Constructor
     Vector( std::initializer_list< T > in_list );
+    Vector(size_t num);
     
     //Custom Destructor;
     ~Vector();
@@ -52,7 +50,7 @@ public:
     //EFFECTS:  Returns (by reference) the element at the given index.
     T &at(size_t index);
 
-   const T& back();
+    const T& back();
 
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.
@@ -71,7 +69,6 @@ public:
     bool empty() const;
     
     //EFFECTS:  Returns true if this Vector is at capacity, false otherwise.
-    //          That is, you may add elements if and only if full() is false.
     bool full() const;
 };
 
@@ -185,7 +182,6 @@ bool Vector<T>::empty() const {
 }
 
 //EFFECTS:  Returns true if this IntVector is at capacity, false otherwise.
-//          That is, you may add elements if and only if full() is false.
 template<class T>
 bool Vector<T>::full() const {
     return (numElements >= numAllocated);

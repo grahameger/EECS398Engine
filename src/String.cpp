@@ -7,8 +7,13 @@
 
 const char* String::nullString = "";
 
-String::String( ) : cstring( nullptr ), size( 0 )
+String::String( const int size ) : cstring( nullptr ), size( size )
    {
+   if ( size > 0 )
+      {
+      cstring = new char[ size + 1 ];
+      cstring[ size ] = 0;
+      }
    }
 
 String::String( const char single_char ) : size( 1 )
@@ -162,17 +167,37 @@ String& String::operator+= ( const String& rhs )
       memcpy( newCString, cstring, size );
    memcpy( newCString + size, rhs.cstring, rhs.size );
 
-   delete[ ] cstring;
+   if (cstring != nullString)
+      delete[ ] cstring;
    cstring = newCString;
    size = newSize;
 
    return *this;
    }
+
+   String& String::operator+= ( const char rhs )
+      {
+      int newSize = size + 1;
+      char* newCString = new char [ newSize + 1 ];
+
+      if ( cstring != nullptr )
+         memcpy( newCString, cstring, size );
+      newCString[ size ] = rhs;
+      newCString[ newSize ] = 0;
+
+      if (cstring != nullString)
+         delete[ ] cstring;
+      cstring = newCString;
+      size = newSize;
+
+      return *this;
+      }
  
- String operator+( String lhs, const String& rhs) 
+ String operator+( const String lhs, const String& rhs) 
    {
-   lhs += rhs;
-   return lhs;
+   auto temp = lhs;
+   temp += rhs;
+   return temp;
    }
 
 String::operator bool( ) const
@@ -192,7 +217,7 @@ void String::Allocate( const int length, bool after )
    if ( cstring != nullptr )
       memcpy( newCString, cstring, size );
 
-   delete cstring;
+   delete[ ] cstring;
    cstring = newCString;
    size = newSize;
    }
@@ -216,11 +241,12 @@ void String::RemoveWhitespace( )
    }
 
 
-String operator+ ( String lhs, const char * toCat ) 
+String operator+ ( const String lhs, const char * toCat ) 
    {
    auto cat = String( toCat );
-   lhs += cat;
-   return lhs;
+   auto lhsString = lhs;
+   lhsString += cat;
+   return lhsString;
    }
 
 

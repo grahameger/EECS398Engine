@@ -10,7 +10,7 @@
 class String
 {
 public:
-   String( );
+   String( const int length = 0 );
    String( const char single_char );
    String( const char* toCopy, int length = -1 );
    String( char*&& toMove, int length = -1 );
@@ -30,8 +30,9 @@ public:
    const char operator[ ] ( int index ) const;
    char& operator[ ] ( int index );
    String& operator+= ( const String& rhs );
-   friend String operator+ ( String lhs, const String& rhs );
-   friend String operator+ ( String lhs, const char * toCat );
+   String& operator+= ( const char );
+   friend String operator+ ( const String lhs, const String& rhs );
+   friend String operator+ ( const String lhs, const char * toCat );
    operator bool( ) const;
 private:
     const static char* nullString;

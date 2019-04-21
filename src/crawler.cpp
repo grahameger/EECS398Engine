@@ -318,6 +318,7 @@ namespace search {
                          threading::Mutex &m,
                          threading::ConditionVariable& cv) 
     {
+        static AlexaRanking alexa;
         auto mmapedFile = memoryMapFile("pages/" + filename);
         if (mmapedFile) {
             auto& file = mmapedFile.value();
@@ -329,6 +330,8 @@ namespace search {
             }
             auto url = "http://" + filename;
             LinkFinder linkFinder(file.ptr, file.size, url.c_str(), false);
+            linkFinder.parse_html();
+            linkFinder.parse_url(alexa.sorted);
             for (size_t i = 0; i < linkFinder.Document.Links.size(); ++i) {
                 linkFinder.Document.Links[i] = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.Links[i].CString());
             }
@@ -337,8 +340,10 @@ namespace search {
             while (d.size() > 1000000) {
                 cv.wait(m);
             }
-            d.push_back(std::move(linkFinder.Document));
+            d.push_back(linkFinder.Document);
             m.unlock();
+            if (file.size)
+                munmap(file.ptr, file.size);
         }
     }
 
@@ -355,6 +360,24 @@ namespace search {
             filenamesLock.unlock();
             parseFileOnDisk(filename, d, m, cv);
         }
+    }
+
+    AlexaRanking::AlexaRanking() {
+        std::fstream fs(filename);
+        Vector<std::pair<std::string,int>> v;
+        std::string line;
+        std::ofstream new_file;
+        std::string domain;
+        int rank;
+        while (getline(fs, line)) {
+            // store each line in the vector
+            std::size_t pos = line.find(",");
+            domain = line.substr(0, pos);
+            rank = stoi(line.substr(pos+1));
+            //global vector of alexa and rank
+            v.push_back(std::pair<std::string, int>(domain,rank));
+        }
+        fs.close();
     }
 
 

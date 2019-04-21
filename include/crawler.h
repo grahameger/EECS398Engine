@@ -85,6 +85,12 @@ namespace search {
         size_t size;
     };
 
+    struct AlexaRanking {
+        inline static const std::string filename = "alexa_index_sort";
+        AlexaRanking();
+        std::vector<std::pair<std::string, int >> sorted;
+    };
+
     std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename);
     void parseFileOnDisk( std::string filename,
                                 std::deque<Doc_object>& d,

@@ -16,7 +16,7 @@ void* writerWrapper(void* index){
 
 
 Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV)
-   :currentLocation(0), totalDocLength(0), currentDocId(0), urlMap(String("urlTable")), metaMap(String("metaTable")), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
+   :currentLocation(0), totalDocLength(0), currentDocId(0), urlMap("urlTable"), metaMap("metaTable"), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
 
    fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
    ftruncate(fd, sizeof(unsigned long long));
@@ -70,6 +70,7 @@ void Index::reader(){
       //think about dynamicness
       Doc_object doc = documentQueue->front();
       documentQueue->pop_front();
+      std::cout << "Popped: " << doc.doc_url << std::endl;
       unsigned long long startLocation = currentLocation;
       int docSize = doc.Words.size();
       //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
