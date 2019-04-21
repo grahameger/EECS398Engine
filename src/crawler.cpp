@@ -332,8 +332,8 @@ namespace search {
             LinkFinder linkFinder(file.ptr, file.size, url.c_str(), false);
             linkFinder.parse_html();
             linkFinder.parse_url(alexa.sorted);
-            for (size_t i = 0; i < linkFinder.Document.Links.size(); ++i) {
-                linkFinder.Document.Links[i] = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.Links[i].CString());
+            for (size_t i = 0; i < linkFinder.Document.vector_of_link_anchor.size(); ++i) {
+                linkFinder.Document.vector_of_link_anchor[i].link_url = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.vector_of_link_anchor[i].link_url.CString());
             }
             // add them to the master set of links
             m.lock();
@@ -364,7 +364,6 @@ namespace search {
 
     AlexaRanking::AlexaRanking() {
         std::fstream fs(filename);
-        Vector<std::pair<std::string,int>> v;
         std::string line;
         std::ofstream new_file;
         std::string domain;
@@ -375,7 +374,7 @@ namespace search {
             domain = line.substr(0, pos);
             rank = stoi(line.substr(pos+1));
             //global vector of alexa and rank
-            v.push_back(std::pair<std::string, int>(domain,rank));
+            sorted.push_back(std::pair<std::string, int>(domain,rank));
         }
         fs.close();
     }

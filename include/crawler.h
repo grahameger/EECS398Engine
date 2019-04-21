@@ -88,7 +88,7 @@ namespace search {
     struct AlexaRanking {
         inline static const std::string filename = "alexa_index_sort";
         AlexaRanking();
-        std::vector<std::pair<std::string, int >> sorted;
+        Vector<std::pair<std::string, int >> sorted;
     };
 
     std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename);

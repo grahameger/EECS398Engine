@@ -77,10 +77,10 @@ void LinkFinder::parse_url(Vector<std::pair<std::string, int>> &v) {
     if(is_valid_word(word, num_vowels)) {
         Document.url.push_back(word);
     }
-    for(int i = 0; i < Document.url.size(); i++) {
-        std::cout << Document.url[i].CString() << std::endl;
-    }
-    std::cout << Document.domain_rank << std::endl;
+    // for(int i = 0; i < Document.url.size(); i++) {
+    //     std::cout << Document.url[i].CString() << std::endl;
+    // }
+    // std::cout << Document.domain_rank << std::endl;
 }
 
 void LinkFinder::assign_domain_rank(const String &word, Vector<std::pair<std::string, int>> &v) {

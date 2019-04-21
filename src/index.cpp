@@ -154,10 +154,10 @@ void Index::reader(){
          emptyQueue = false;
          queueReadCV.broadcast();
       }
+      currentWriteDocId++;
       queueWriteCV.broadcast();
       dequeCV->signal();
       currentWriteDocIdMutex.lock();
-      currentWriteDocId++;
       currentWriteDocIdMutex.unlock();
    }
 }
