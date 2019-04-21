@@ -67,6 +67,12 @@ Location IsrWord::CurInstance( ) const{
     return currentLocation;
 }
 
+//////////////
+//EndDoc ISR//
+//////////////
+IsrEndDoc::IsrEndDoc( ) : IsrWord( "" ){
+}
+
 //////////
 //OR ISR//
 //////////
@@ -145,16 +151,36 @@ Location ISRAnd::seek(Location target){
     // 3. If any term is past the desired location, return to step 2.
     // 4. If any ISR reaches the end, there is no match.
     Location currentMin = ULLONG_MAX;
+    Vector<Location>docTracker;
     for (int i = 0; i < numOfTerms; ++i){
         while (terms[i]->nextInstance() < target){
             Location nextLocation = terms[i]->nextInstance();
+            IsrWord nextPage("");
+            Location pageEnd = nextPage.SeekToLocation(nextLocation);
             //Terms[i] does not exist after target location
             if (nextLocation == ULLONG_MAX){
                 return ULLONG_MAX;
             }
             //Terms[i] does exist after target location and is the first term to show up
-            else if (nextLocation >= target && nextLocation < currentMin){
-                currentMin = nextLocation;
+            if (nextLocation > target){
+                if (nextLocation < currentMin){
+                    currentMin = nextLocation;
+                    nearestTerm = i;
+                    nearestStartLocation = currentMin;
+                }
+                
+                //Page matches, or we are pushing back page of first term
+                if (i == 0 || docTracker[i] == docTracker[i-1]){
+                    docTracker.push_back(pageEnd);
+                }
+                //Pages of terms do not match, reset our search
+                else {
+                    i = 0;
+                    while (!docTracker.empty()){
+                        docTracker.pop_back();
+                    }
+                    
+                }
             }
         }
     }
