@@ -79,6 +79,18 @@ struct SubBlock
    StringView ToStringView( );
    };
 
+namespace hash {
+   template <> struct Hash<SubBlockInfo> {
+   static uint64_t get(const SubBlockInfo& subBlockInfo) {
+      return subBlockInfo.blockIndex + ((uint64_t)(subBlockInfo.subBlockIndex) << 32);
+   }
+   uint64_t operator()(const SubBlockInfo& subBlockInfo)
+   {
+      return get(subBlockInfo);
+   }
+   }; // this should help?
+}
+
 
 struct IsrInfo
    {

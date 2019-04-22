@@ -184,13 +184,14 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringVie
       Vector< PostingList* >& split, const FixedLengthString& word )
    {
    unsigned blockIndexPtr = 0;
+   bool newAllocated = false;
 
    for ( unsigned i = split.size( ); i > 0; i-- )
       {
       SubBlock newSubBlock;
 
       // This is a completely new block for the overflow data
-      if ( i > 1 )
+      if ( i > 1 ) 
          newSubBlock = GetNewSubBlock( blockSize );
 
       // The old block wasn't full sized and needs to be upgraded
@@ -243,7 +244,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringVie
    #endif
 
    // Delete the outgrown subBlock
-   if ( split.size( ) == 1 )
+   if ( split.size( ) == 1 ) 
       DeleteSubBlock( plSubBlock );
    }
 
@@ -404,11 +405,11 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
    if ( ( ++openSubBlock.subBlockIndex %= blockSize / openSubBlock.subBlockSize ) == 0 )
       openSubBlock.blockIndex = 0;
 
+   SubBlock toReturn = MmapSubBlock( openSubBlock, true, false );
+
    SetOpen( openSubBlock, true );
 
    metaDataLock.unlock();
-
-   SubBlock toReturn = MmapSubBlock( openSubBlock, true, false );
 
    return toReturn;
    }
@@ -441,11 +442,11 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHel
       return toReturn;
       }
 
+   toReturn = MmapSubBlock( subBlockInfo, true, true );
+
    SetOpen( subBlockInfo, true );
 
    metaDataLock.unlock();
-
-   toReturn = MmapSubBlock( subBlockInfo, true, true );
 
    return toReturn;
    }

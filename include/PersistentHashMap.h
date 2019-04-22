@@ -22,9 +22,12 @@
 #include "String.h"
 #include "PersistentBitVector.h"
 
+
 #ifndef O_NOATIME
 #define O_NOATIME 0
 #endif
+
+struct SubBlockInfo;
 
 // Linear Probing thread-safe file backed hash map
 template <typename Key, typename Mapped>
@@ -267,10 +270,10 @@ size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
             return i;
         }
     }
-    if (!isGhost.at(i) && isFilled.at(i)) {
+    if (i < this->header->capacity && !isGhost.at(i) && isFilled.at(i)) {
         return this->header->capacity;
     } else {
-        for (i = 0; (isGhost.at(i) || isFilled.at(i)) && i < start; ++i) {
+        for (i = 0; i < start && (isGhost.at(i) || isFilled.at(i)); ++i) {
             if (buckets[i].first == key) {
                 return i;
             }

@@ -16,7 +16,7 @@ void* writerWrapper(void* index){
 
 
 Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV)
-   :currentLocation(0), totalDocLength(0), currentDocId(0), urlMap("urlTable"), metaMap("metaTable"), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
+   : currentLocation(0), totalDocLength(0), currentDocId(0), urlMap("urlTable"), metaMap("metaTable"), currentWriteDocId(0), readThreads(1), writeThreads(1), emptyQueue(false) {
 
    fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
    ftruncate(fd, sizeof(unsigned long long));
@@ -108,7 +108,8 @@ void Index::reader(){
       }
       //docEnd
       (*(localMap[String("")])).push_back(startLocation);
-      urlMap[startLocation] = FixedLengthURL(doc.doc_url.CString());
+      auto fixedLengthUrl = FixedLengthURL(doc.doc_url.CString());
+      urlMap[startLocation] = fixedLengthUrl;
       startLocation++;
       //parse anchor texts
       for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){

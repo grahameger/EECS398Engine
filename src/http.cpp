@@ -62,7 +62,8 @@ namespace search {
                     if (stat(fullPath, &st) == 0) {
                         crawler->numBytes += st.st_size;
                         crawler->numRobots++;
-                        crawler->pageFilter.add(fullPath);
+                        auto s = std::string(fullPath);
+                        crawler->pageFilter.add(s);
                         // add the file to the robots rules
                     }
                 }
@@ -82,7 +83,8 @@ namespace search {
                     if (stat(fullPath, &st) == 0) {
                         crawler->numBytes += st.st_size;
                         crawler->numPages++;
-                        crawler->pageFilter.add(fullPath);
+                        auto s = std::string(fullPath);
+                        crawler->pageFilter.add(std::string(s));
                         // open the file, parse it, add the links to a set
                     }
                 }
