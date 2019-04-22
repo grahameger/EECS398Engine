@@ -87,6 +87,9 @@ Vector<ScoredDocument> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
    return topRankedDocuments;
    }
 
+Ranker::Features::Features()
+   : SpanLengthRatio(-1), QueresOutOfOrderRatio(-1), TotalWordFrequency(0) {}
+
 Location Ranker::Document::GetDocEndLocation()
    {
    return docEndLocation;
@@ -142,8 +145,8 @@ Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn,
 unsigned Ranker::Document::Features::ComputeScore(Vector<Isr*>& wordIsrs)
    {
    computeFeatures(wordIsrs);
-   unsigned score = textTypeWeight * RankerParams::WordFrequencyWeight * 
-         TotalWordFrequency;
+   double score = textTypeWeight * RankerParams::WordFrequencyWeight * 
+         TotalWordFrequency + textTypeWeight;
    return score;
    }
 
@@ -211,6 +214,7 @@ void Ranker::Document::Features::computeSpanFeatures(Vector<Location>&
    closestLocationOrdering, Vector<WordStatistics*>& wordStatisitcs)
       {
       size_t numWordsInSpan = wordStatistics.size();
+      unsigned numQueriesOutOfOrder = 0;
 
       if(numWordsInSpan == 0)
          return;
@@ -228,11 +232,14 @@ void Ranker::Document::Features::computeSpanFeatures(Vector<Location>&
             else if(curLocation > rightMostLocation)
                rightMostLocation = curLocation;
             if(curLocation < prevLocation)
-               NumQueriesOutOfOrder++;
+               numQueriesOutOfOrder++;
             prevLocation = curLocation;
             }         
          }
-      SpanLength = rightMostLocation - leftMostLocation;
+
+      unsigned spanLength = rightMostLocation - leftMostLocation;
+      SpanLengthratio = (double) spanLength / numWordsInSpan;        
+      QueriesOutOfOrderRatio = (double) numQueriesOutOfOrder / numWordsInSpan;
       }
 
 void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
@@ -273,7 +280,6 @@ void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
             }
          }
       }
-   
    //sum word statistics
    TotalWordFrequency = 0;
    for(size_t i = 0; i < wordsStatistics.size(); ++i)

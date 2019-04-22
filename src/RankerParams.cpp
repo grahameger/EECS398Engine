@@ -15,6 +15,12 @@ namespace RankerParams
    const unsigned BodyWeight = 1;
    const unsigned TitleWeight = 1;
 
-   //feature weights
+   //feature weights and cutoffs
    const unsigned WordFrequencyWeight = 1;
+
+   const unsigned SpanLengthWeight = 1;
+   const Vector<CutoffDouble> SpanLengthCutoff = {{1,2}, {2,3}};
+
+   const unsigned QueriesOutOfOrderRatio = 1;
+   
    }

@@ -65,13 +65,15 @@ class Ranker
                {
                //public variables are the features directly used in ranking{
                public: 
+                  Features();
                   unsigned TfIdf;
                   unsigned StaticRank;
                   unsigned NormalizedSumOfStreamLength;
                   unsigned NumAnchorTextReferences;
                   unsigned TotalWordFrequency;
-                  unsigned SpanLength;
-                  unsigned NumQueriesOutOfOrder;
+                  double QueriesOutOfOrderRatio;
+                  double SpanLengthRatio;
+
                   void SetFeatureType(TextType textTypeIn);
                   void SetCurrentDocument(Document* docIn);
                   unsigned ComputeScore(Vector<Isr*>& isr);
@@ -94,6 +96,11 @@ class Ranker
                   unsigned textTypeWeight;
                   Isr* getMostImportantWord(Vector<Isr*> wordIsrs)
                   void computeFeatures(Vector<Isr*> wordIsrs);
+                  void computeSpanFeatures(Vector<Location>& 
+                  closestLocationOrdering, Vector<WordStatistics*>& wordStatisitcs)
+                  void getClosestLocationOrdering(Vector<WordStatistics>& 
+                        WordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering)
+                  Location moveToClosestPosition(WordStatistics* word, 
                };
 
             struct DecorationFeatures
