@@ -106,13 +106,7 @@ namespace search {
 
     void * Crawler::stub() {
         while (keep_running) {
-            std::deque<std::string> temp;
-            if (temp.empty()) {
-                auto rv = readyQueue.popVec();
-                temp = std::deque<std::string>(rv.begin(), rv.end());
-            }
-            std::string p = temp.front();
-            temp.pop_front();
+            auto p = readyQueue.pop();
             if (p == "") {
                 continue;
             }

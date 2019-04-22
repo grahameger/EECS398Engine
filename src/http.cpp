@@ -633,11 +633,12 @@ namespace search {
 
     // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
+        static AlexaRanking alexa;
         crawler->readyQueue.push("");
         const char * baseUri = currentUri.c_str();
         LinkFinder linkFinder(file, len, currentUri, true); // each thread should probably just have they're own one of these
         linkFinder.parse_html();
-        // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
+        linkFinder.parse_url(alexa.sorted);
         std::set<std::string> toPush;
         for (size_t i = 0; i < linkFinder.Document.vector_of_link_anchor.size(); ++i) {
             if (linkFinder.Document.vector_of_link_anchor[i].link_url.Size() < 2083) {
