@@ -70,6 +70,8 @@ class Ranker
                   unsigned NormalizedSumOfStreamLength;
                   unsigned NumAnchorTextReferences;
                   unsigned TotalWordFrequency;
+                  unsigned SpanLength;
+                  unsigned NumQueriesOutOfOrder;
                   void SetFeatureType(TextType textTypeIn);
                   void SetCurrentDocument(Document* docIn);
                   unsigned ComputeScore(Vector<Isr*>& isr);

@@ -207,6 +207,34 @@ void Ranker::Document::Features::getClosestLocationOrdering(Vector<WordStatistic
       closestLocationOrder.push_back(getClosestPosition(wordStatistics[i], anchor));
    }
 
+void Ranker::Document::Features::computeSpanFeatures(Vector<Location>& 
+   closestLocationOrdering, Vector<WordStatistics*>& wordStatisitcs)
+      {
+      size_t numWordsInSpan = wordStatistics.size();
+
+      if(numWordsInSpan == 0)
+         return;
+
+      Location prevLocation = closestLocationOrdering[0];
+      Location leftMostLocation = closestLocationOrdering[0];
+      Location rightMostLocation = closestLocationOrdering[0];
+      for(int i = 1; i < numWordsInSpan; ++i)
+         {
+         Location curLocation = closestLocationOrdering[i];
+         if(curLocation != IsrGlobals)
+            {
+            if(curLocation < leftMostLocation)
+               leftMostLocation = curLocation;
+            else if(curLocation > rightMostLocation)
+               rightMostLocation = curLocation;
+            if(curLocation < prevLocation)
+               NumQueriesOutOfOrder++;
+            prevLocation = curLocation;
+            }         
+         }
+      SpanLength = rightMostLocation - leftMostLocation;
+      }
+
 void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
    {
    if(wordIsrs.empty())
