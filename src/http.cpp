@@ -641,6 +641,7 @@ namespace search {
                 toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Document.vector_of_link_anchor[i].link_url.CString()));
             }
         }
+        fprintf(stdout, "Adding %zu urls to the frontier\n", toPush.size());
         crawler->readyQueue.push(toPush.begin(), toPush.end());
     }
 
