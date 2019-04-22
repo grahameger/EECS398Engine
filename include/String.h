@@ -10,10 +10,10 @@
 class String
 {
 public:
-   String( const int length = 0 );
+   String( const unsigned length = 0 );
    String( const char single_char );
-   String( const char* toCopy, int length = -1 );
-   String( char*&& toMove, int length = -1 );
+   String( const char* toCopy, unsigned length = 0 );
+   String( char*&& toMove, unsigned length = 0 );
    String( const String& toCopy );
    String( const std::string& toCopy);
    String( String&& toMove );
@@ -22,13 +22,13 @@ public:
    ~String();
    void RemoveWhitespace( );
    void Swap( String& toSwap );
-   void Allocate( const int length, bool after = true );
+   void Allocate( const unsigned length, bool after = true );
    bool Empty( ) const;
-   int Size( ) const;
+   unsigned Size( ) const;
    const char* CString( ) const;
    bool Compare( const String& other ) const;
-   const char operator[ ] ( int index ) const;
-   char& operator[ ] ( int index );
+   const char operator[ ] ( unsigned index ) const;
+   char& operator[ ] ( unsigned index );
    String& operator+= ( const String& rhs );
    String& operator+= ( const char );
    friend String operator+ ( const String lhs, const String& rhs );
@@ -37,7 +37,7 @@ public:
 private:
     const static char* nullString;
     char* cstring;
-    int size;
+    unsigned size;
 };
 
 #endif

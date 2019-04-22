@@ -184,7 +184,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringVie
       Vector< PostingList* >& split, const FixedLengthString& word )
    {
    unsigned blockIndexPtr = 0;
-   bool newAllocated = false;
+   // bool newAllocated = false;
 
    for ( unsigned i = split.size( ); i > 0; i-- )
       {

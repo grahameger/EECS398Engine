@@ -14,23 +14,23 @@
 
 class Index{
 public:
-	Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV);
+   Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV);
    void reader();
-	void writerDriver();
+   void writerDriver();
 
 private:
-	//FUNCTIONS
+   //FUNCTIONS
 
-	//returns blocks that contains word's posting list
-	//if posting list does not exist creates it, immediately updates blocks word index to hold this word
-	//VARIABLES
-	int fd;
+   //returns blocks that contains word's posting list
+   //if posting list does not exist creates it, immediately updates blocks word index to hold this word
+   //VARIABLES
+   int fd;
    PriorityQueue queue;
    //queue of doc objects from parser
    std::deque<Doc_object>* documentQueue;
    unsigned long long totalDocLength;
    struct urlMetadata{
-	   int length;
+      int length;
       int urlLength;
       int urlSlashes;
       int inLinks;
@@ -44,13 +44,13 @@ private:
       urlMetadata(const urlMetadata& u)
          :length(u.length), urlLength(u.urlLength), urlSlashes(u.urlSlashes), inLinks(u.inLinks), outLinks(u.outLinks), domain(u.domain), importance(u.importance){}
    };
-	//map will prob be moved to scheduler
-	//FIGURE OUT HOW TO STORE URLS
+   //map will prob be moved to scheduler
+   //FIGURE OUT HOW TO STORE URLS
    PersistentHashMap<unsigned long long, FixedLengthURL> urlMap;
    PersistentHashMap<FixedLengthURL, urlMetadata> metaMap;
    //current absolute location on the web
-	unsigned long long currentLocation;
-	//true if priority queue is empty
+   unsigned long long currentLocation;
+   //true if priority queue is empty
    bool emptyQueue;
    int currentDocId;
    //reader() waits until its docId = currentWriteDocId to push to the pQueue

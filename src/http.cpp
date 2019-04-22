@@ -306,7 +306,7 @@ namespace search {
             return false;
         }
         contentLength = getContentLength(std::string_view(header, headerLen));
-        if (contentLength == CHUNKED) {
+        if (( size_t )contentLength == CHUNKED) {
             D(fprintf(stderr, "[CHUNKED] received a chunked encoding\n");)
             return false;
         }
@@ -433,7 +433,7 @@ namespace search {
                         free(fullResponse);
                         return;
                     }
-                    if (contentLength != (size_t)-1) {
+                    if (contentLength != -1) {
                         totalSize = headerSize + contentLength;
                         ssize_t remaining = totalSize - bytesReceived;
                         if (remaining > 0) {
@@ -445,7 +445,7 @@ namespace search {
                                 bytesReceived += rv;
                                 break;
                             }
-                            if (rv < 0 || bytesReceived < contentLength) {
+                            if (rv < 0 || bytesReceived < (size_t)contentLength) {
                                 // error reading from socket
                                 break;
                             }

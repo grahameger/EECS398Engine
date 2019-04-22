@@ -10,7 +10,7 @@ PriorityQueue::~PriorityQueue(){
 }
 
 void PriorityQueue::insert(String word, Vector<unsigned long long>* locationsVector){
-   int index;
+   size_t index;
    wordLocations* locations;
    try{
       index = map.at(word);
@@ -49,31 +49,31 @@ wordLocations* PriorityQueue::top(){
    return heap[0];
 }
 
-int PriorityQueue::size(){
+size_t PriorityQueue::size(){
    return heap.size();
 }
 
-int PriorityQueue::parentNode(int n){
+size_t PriorityQueue::parentNode(size_t n){
    return(n - 1)/2;
 }
 
-int PriorityQueue::rightNode(int n){
+size_t PriorityQueue::rightNode(size_t n){
    return(2 * n + 2);
 }
 
-int PriorityQueue::leftNode(int n){
+size_t PriorityQueue::leftNode(size_t n){
    return(2 * n + 1);
 }
 
-void PriorityQueue::down(int node){
+void PriorityQueue::down(size_t node){
    if(node > heap.size()){
       return;
    }
 
-   int leftIndex = leftNode(node);
-   int rightIndex = rightNode(node);
+   size_t leftIndex = leftNode(node);
+   size_t rightIndex = rightNode(node);
    
-   int largestIndex = node;
+   size_t largestIndex = node;
 
    if(leftIndex < heap.size() && heap[leftIndex]->numWords > heap[largestIndex]->numWords){
       largestIndex = leftIndex;
@@ -93,9 +93,9 @@ void PriorityQueue::down(int node){
 
 }
 
-void PriorityQueue::up(int node){
+void PriorityQueue::up(size_t node){
    if(node < heap.size() && node != 0){
-      int parentIndex= parentNode(node);
+      size_t parentIndex= parentNode(node);
       if(heap[node]->numWords > heap[parentIndex]->numWords){
          wordLocations* temp = heap[parentIndex];
          heap[parentIndex] = heap[node];

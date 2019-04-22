@@ -8,15 +8,17 @@
 
 void* readerWrapper(void* index){
    static_cast<Index*>(index)->reader();
+   return nullptr;
 }
 
 void* writerWrapper(void* index){
    static_cast<Index*>(index)->writerDriver();
+   return nullptr;
 }
 
 
 Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV)
-   : currentLocation(0), totalDocLength(0), currentDocId(0), urlMap("urlTable"), metaMap("metaTable"), currentWriteDocId(0), readThreads(1), writeThreads(1), emptyQueue(false) {
+   : totalDocLength(0), urlMap("urlTable"), metaMap("metaTable"), currentLocation(0), emptyQueue(false), currentDocId(0), currentWriteDocId(0), readThreads(1), writeThreads(1) {
 
    fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
    ftruncate(fd, sizeof(unsigned long long));

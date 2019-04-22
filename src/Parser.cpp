@@ -430,10 +430,10 @@ void LinkFinder::add_char_to_word(char* html_file, String &word, char type) {
 
 void LinkFinder::get_anchor_text(char *html_file, unsigned long stop_index) {
     char type = 'a';
-    bool is_there_anchor = false;
+    // bool is_there_anchor = false;
     //Skip over all inner tags until we hit a's closing tag
     while(index < file_length && index < stop_index) {
-        is_there_anchor = true;
+        // is_there_anchor = true;
         if(html_file[index] == '<') {
             while(index < file_length && html_file[index] != '>') {
                 index++;
