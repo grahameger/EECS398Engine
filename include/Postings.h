@@ -165,6 +165,8 @@ class Postings
       std::unordered_map< unsigned, threading::ReadWriteLock* > lockMap;
       threading::Mutex lockMapLock;
       threading::Mutex metaDataLock;
+      threading::Mutex subBlockIndexLock;
+      threading::Mutex wordIndexLock;
 
    friend SubBlock;
    friend IsrWord;

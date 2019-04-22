@@ -198,8 +198,12 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringVie
       else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize )
          {
          newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
+	 subBlockIndexLock.lock( );
          subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+	 subBlockIndexLock.unlock( );
+	 wordIndexLock.lock( );
          wordIndex.insert( { newSubBlock.subBlockInfo, word } );
+	 wordIndexLock.unlock( );
          }
 
       // The old block was a full sized block and just needs to be updated
@@ -284,17 +288,24 @@ IsrInfo Postings::GetPostingList( unsigned blockIndex )
 SubBlock Postings::GetPostingListSubBlock
       ( const FixedLengthString& word, bool writing )
    {
+   subBlockIndexLock.lock( );
    auto wordIt = subBlockIndex.find( word );
 
    // Return the last block in the chain of blocks stored
    if ( wordIt != subBlockIndex.end( ) )
+      subBlockIndexLock.unlock( );
       return GetSubBlock( ( *wordIt ).second, writing, false );
    // Return a new block
    else
       {
+      subBlockIndexLock.unlock( );
       SubBlock subBlock = GetNewSubBlock( SmallestSubBlockSize( ) );
+      subBlockIndexLock.lock( );
       subBlockIndex.insert( { word, subBlock.subBlockInfo } );
+      subBlockIndexLock.unlock( );
+      wordIndexLock.lock( );
       wordIndex.insert( { subBlock.subBlockInfo, word } );
+      wordIndexLock.unlock( );
       return subBlock;
       }
    }
@@ -358,10 +369,14 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
       memcpy( subBlock.mmappedArea, lastUsed.mmappedArea, 
             lastUsed.subBlockInfo.subBlockSize );
       // Fix hashmaps
+      wordIndexLock.lock( );
       FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
       wordIndex.erase( lastUsed.subBlockInfo );
       wordIndex.at( subBlock.subBlockInfo ) = word;
+      wordIndexLock.unlock( );
+      subBlockIndex.lock( );
       subBlockIndex.at( word ) = subBlock.subBlockInfo;
+      subBlockIndex.unlock( );
       }
 
    if ( lastUsed.rwlock )
