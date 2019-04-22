@@ -94,13 +94,13 @@ private:
         size_t numElements;
         size_t capacity;
         double loadFactor;
-        threading::ReadWriteLock rwLock;
     };
     int fd; 
     HeaderType * header;
     ValueType * buckets;
     PersistentBitVector isGhost;
     PersistentBitVector isFilled;
+    threading::ReadWriteLock rwLock;
 
 };
 
@@ -167,12 +167,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
 
     // mmap and setup the header portion
     header = (HeaderType*)mmapWrapper(fd, sizeof(HeaderType), 0);
-    // memory mapped files should be initialized to 0
-    // jokes on me they're not in practice
-    if (header->capacity == 0) {
-        header->rwLock = threading::ReadWriteLock();
-    }
-    // TODO: this feels deadlocky, putting this comment here just in case
+    rwLock = threading::ReadWriteLock();
     if (!fileExists) {
         header->capacity = INITIAL_CAPACITY;
     }
@@ -267,7 +262,7 @@ size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
     // size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
     size_t i = hash::Hash<KeyType>{}.get(key) % this->header->capacity;
     size_t start = i;
-    for (; (isGhost.at(i) || isFilled.at(i)) && i < this->header->capacity; ++i ) {
+    for (; i < this->header->capacity && (isGhost.at(i) || isFilled.at(i)); ++i ) {
         if (buckets[i].first == key) {
             return i;
         }
@@ -410,7 +405,7 @@ bool PersistentHashMap<Key, Mapped>::erase(const Key& key) {
         return false;
     }
     // delete the element from bucket and decrement numElements
-    this->isGhost.set(indexForElement, false);
+    this->isGhost.set(indexForElement, true);
     this->isFilled.set(indexForElement, false);
     --this->header->numElements;
     this->unlock();
@@ -445,17 +440,17 @@ bool PersistentHashMap<Key, Mapped>::empty() {
 // Do we really need these?
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::readLock() {
-    header->rwLock.readLock();
+    rwLock.readLock();
 }
 
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::writeLock() {
-    header->rwLock.writeLock();
+    rwLock.writeLock();
 }
 
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::unlock() {
-    header->rwLock.unlock();
+    rwLock.unlock();
 }
 
 template<typename Key, typename Mapped>

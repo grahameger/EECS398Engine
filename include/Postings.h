@@ -123,22 +123,22 @@ class Postings
             ( const FixedLengthString& word, bool endWanted = false );
 
       SubBlock GetNewSubBlock( unsigned minSize );
-      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted = false );
+      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld );
       void DeleteSubBlock( SubBlock subBlock );
 
-      SubBlockInfo GetOpenSubBlock( unsigned subBlockSize ) const;
-      SubBlockInfo GetLastUsedSubBlock( unsigned subBlockSize ) const;
+      SubBlock GetOpenSubBlock( unsigned subBlockSize );
+      SubBlock GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockIndexHeld );
 
-      void IncrementOpenSubBlock( unsigned subBlockSize );
-      void IncrementNumBlocks( );
+      void IncrementOpenSubBlock( unsigned subBlockSize, bool metaDataHeld );
+      void IncrementNumBlocks( bool metaDataHeld );
 
-      void SetLastUsed( SubBlockInfo lastUsed );
-      void SetOpen( SubBlockInfo open );
+      void SetLastUsed( SubBlockInfo lastUsed, bool metaDataHeld );
+      void SetOpen( SubBlockInfo open, bool metaDataHeld );
 
-      SubBlock MmapSubBlock( SubBlockInfo subBlockInfo, bool writing );
+      SubBlock MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool writeLockHeld );
       void MunmapSubBlock( SubBlock subBlock );
 
-      unsigned SmallestSubBlockSize( ) const;
+      unsigned SmallestSubBlockSize( );
 
       // Data
       StringView metaData;
@@ -151,6 +151,8 @@ class Postings
       PersistentHashMap< SubBlockInfo, FixedLengthString > wordIndex;
       // subBlock to rwLock
       std::unordered_map< unsigned, threading::ReadWriteLock* > lockMap;
+      threading::Mutex lockMapLock;
+      threading::Mutex metaDataLock;
 
    friend SubBlock;
    friend IsrWord;

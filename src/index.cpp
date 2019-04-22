@@ -116,11 +116,11 @@ void Index::reader(){
             //probably gonna need to use the same map here
             (*(localMap[String("@") + doc.vector_of_link_anchor[i].anchor_words[j].word])).push_back(startLocation);
             startLocation++;
-            
          }
          //docEnd map here
          (*(localMap[String("")])).push_back(startLocation);
-         urlMap[startLocation] = FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString());
+         auto fixedLengthUrl = FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString());
+         urlMap[startLocation] = fixedLengthUrl;
          startLocation++;
       }
       urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthURL(doc.doc_url.CString())].inLinks, doc.vector_of_link_anchor.size(),doc.domain_type, doc.domain_rank);
