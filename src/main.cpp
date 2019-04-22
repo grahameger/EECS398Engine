@@ -45,7 +45,7 @@ static struct option longopts[] = {
    {"domainList", required_argument, nullptr, 'd'},
    {0, 0, 0, 0} //default
 };
-static const char startFile[] = "/home/eger/wiki/urls.txt";
+static const char startFile[] = "/home/eger/crawl/seedlist.txt";
 // static const char startFile[] = "/data/crawl/dmoz/dmoz.base.urls";
 
 // static const std::vector<std::string> startFiles = {
