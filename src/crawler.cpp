@@ -339,15 +339,15 @@ namespace search {
             //     cv.wait(m);
             // }
             // d.push_back(linkFinder.Document);
-            // m.unlock();
+            //m.unlock();
             if (file.size)
                 munmap(file.ptr, file.size);
-            // write to standard out instead
+            //write to standard out instead
             for (size_t j = 0; j < linkFinder.Document.vector_of_link_anchor.size(); ++j) {
                 if (strcmp(linkFinder.Document.vector_of_link_anchor[j].link_url.CString(), "") != 0) {
-                    //stdoutLock.lock();
-                    //fprintf(stdout, "%s\n", linkFinder.Document.vector_of_link_anchor[j].link_url.CString());
-                    //stdoutLock.unlock();
+                    // stdoutLock.lock();
+                    // fprintf(stdout, "%s\n", linkFinder.Document.vector_of_link_anchor[j].link_url.CString());
+                    // stdoutLock.unlock();
                 }
 		    }
         }

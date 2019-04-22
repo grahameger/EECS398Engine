@@ -68,7 +68,6 @@ void Index::reader(){
       while(documentQueue->empty()){
          documentQueueLock->unlock();
          documentQueueLock->lock();
-         
       }
       //think about dynamicness
       Doc_object doc = documentQueue->front();
@@ -86,6 +85,7 @@ void Index::reader(){
       currentDocId++;
       //can't read in next doc until current location and currentDocId are updated
       documentQueueLock->unlock();
+      dequeCV->signal();
       hash_table<Vector<unsigned long long> > localMap;
       //pass urls and doc ends to newDoc somehow, probably a queue of url, docEnd pairs
       //parse into word, vector<ull>location pairs
