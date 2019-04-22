@@ -45,7 +45,7 @@ static struct option longopts[] = {
 	{"domainList", required_argument, nullptr, 'd'},
 	{0, 0, 0, 0} //default
 };
-
+static const char startFile[] = "/data/crawl/seed-list-run4.txt";
 // static const char startFile[] = "/data/crawl/dmoz/dmoz.base.urls";
 
 // static const std::vector<std::string> startFiles = {
@@ -55,6 +55,8 @@ static struct option longopts[] = {
 // };
 
 static const size_t NUM_PARSING_THREADS = 20;
+
+FILE * fileOut;
 
 int main(int argc, char *argv[]) {
 
@@ -89,6 +91,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+	FILE * fileOut = fopen("fullyparsed.urls", "w+");
+	if (!fileOut) {
+		std::cerr << "couldn't open file" << std::endl;
+		exit(1);
+	}
+
 	
 	// open every file in the pages directory
 	std::deque<std::string> files;
@@ -103,26 +111,44 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-		std::thread new_thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
-		new_thread.detach();
-	}
-	Index index(&documents, &documentsMutex, &documentsCv);
+	fprintf(stdout, "starting to parse\n");
 
-	std::vector<std::string> seedUrls;
-	std::ifstream queue(seedList);
-	std::string line;
-	while (std::getline(queue, line)) {
-		if (line != "") {
-			seedUrls.push_back(line);
-		}
+	std::thread threads[NUM_PARSING_THREADS];
+	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+		threads[i] = std::thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
 	}
-	std::vector<std::string> urlsShuffled(seedUrls.begin(), seedUrls.end());
-	// randomly shuffle the vector
-	auto rng = std::default_random_engine {};
-	std::shuffle(urlsShuffled.begin(), urlsShuffled.end(), rng);
+	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+		threads[i].join();
+	}
+	fprintf(stdout, "done parsing\n");
+	
+	
+
+
+	// Index index(&documents, &documentsMutex, &documentsCv);
+  // wait until all the parsing is actually complete
+	// std::vector<std::string> seedUrls;
+
+
+	// std::ifstream queue(seedList);
+	// std::string line;
+	// while (std::getline(queue, line)) {
+	// 	if (line != "") {
+	// 		seedUrls.push_back(line);
+	// 	}
+	// }
+	// std::vector<std::string> urlsShuffled(seedUrls.begin(), seedUrls.end());
+	// // randomly shuffle the vector
+	// auto rng = std::default_random_engine {};
+	// std::shuffle(urlsShuffled.begin(), urlsShuffled.end(), rng);
 
 	// fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", urls.size(), startFile);
-	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
-	search::Crawler crawler(seedUrls);
+	// fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
+	// std::vector<std::string> seedListUrls;
+	// std::ifstream seedListFile(startFile);
+	// std::string url;
+	// while (std::getline(seedListFile, url)) {
+	// 	seedListUrls.push_back(url);
+	// }
+	// search::Crawler crawler(seedListUrls);
 }
