@@ -269,44 +269,163 @@ ISRPhrase::ISRPhrase(String phraseToStore){
 }
 
 
-//TODO: UPDATE SEEK. REMEMBER TO UPDATE nearestTerm, farthestTerm, nearestStartLocation, nearestEndLocation too
+//TODO
+// 1. Seek all ISRs to the first occurrence beginning at the target location.
+// 2. Pick the furthest term and attempt to seek all the other terms to the
+//first location beginning where they should appear relative to the furthest term.
+// 3. If any term is past the desired location, return to step 2.
+// 4. If any ISR reaches the end, there is no match.
+
 Location ISRPhrase::seek(Location target){
-    Vector<Location> termLocations;
-    Location nearestStartLocationTracker = ULLONG_MAX;
-    Location nearestEndLocationTracker = ULLONG_MAX;
+    Vector<Location>locationTracker;
     
+    //Step 1: seek all ISRs to first occurrence after target location
     for (int i = 0; i < numOfTerms; ++i){
-        while (terms[i]->CurInstance() < target && terms[i]->nextInstance() != 0){
+        //Traverse each term's posting list until it goes past 'target' or reaches the end
+        while (terms[i]->CurInstance() < target){
+            //None of the posting list terms are on the same page
+            if (terms[i]->nextInstance() == 0){
+                return 0;
+            }
             Location nextLocation = terms[i]->nextInstance();
             if (nextLocation >= target){
-                //Found the first instance of the first term appearing after target
-                if (i == 0){
-                    termLocations.push_back(nextLocation);
-                }
-                else {
-                    //Found a potential phrase match
-                    if (termLocations[i-1] == nextLocation - 1){
-                        termLocations.push_back(nextLocation);
-                    }
-                    //Phrase match invalid, restart search
-                    else {
-                        i = 0;
-                        while (!termLocations.empty()){
-                            termLocations.pop_back();
-                        }
-                    }
-                }
+                locationTracker.push_back(nextLocation);
             }
         }
-        if (i == numOfTerms - 1 && nearestStartLocationTracker == ULLONG_MAX){
-            return 0;
-        }
+        
     }
     
-    if (termLocations.empty()){
-        return 0;
-    }
-    return termLocations[0];
+    // 2. Pick the furthest term and attempt to seek all the other terms to the first
+    //    location beginning where they should appear relative to the furthest term.
+
+    bool phraseExists = false;
+    
+    //loop thru all documents until we find a phrase or end of posting lists
+    while (!phraseExists){
+        
+        //Step a: Picking the furthest term
+        unsigned farthestTermIndex = -1;
+        Location farthestTerm = 0;
+        for (int i = 0; i < locationTracker.size(); ++i){
+            if (locationTracker[i] > farthestTerm){
+                farthestTerm = locationTracker[i];
+                farthestTermIndex = i;
+            }
+        }
+        
+        //Step a2:
+        //This is just a check in case we "happen" to find a phrase on the first try
+        //Check if phraase exists in a document
+        for (int i = 1; i < locationTracker.size(); ++i){
+            //Break out of the loop anytime the indices dont match up
+            if (locationTracker[i] != locationTracker[i - 1] + 1){
+                phraseExists = false;
+                break;
+            }
+            //check if the phrase exists
+            else if (i == locationTracker.size() - 1){
+                phraseExists = true;
+            }
+            
+        }
+        //Phrase exists
+        if (phraseExists) {
+            break;
+        }
+        
+        //Move all ISRS to their relative position to the furthest term
+        for (int i = 0; i < locationTracker.size(); ++i){
+            if (i < farthestTermIndex){
+                Location wordOffset = farthestTermIndex - i;
+                Location expectedPosition = locationTracker[farthestTermIndex] - wordOffset;
+                while (terms[i]->CurInstance() < expectedPosition){
+                    //Term does not exist in remaining posting lists
+                    if (terms[i]->nextInstance() == 0){
+                        return 0;
+                    }
+                    locationTracker[i] = terms[i]->nextInstance();
+                }
+            }
+            else if (i > farthestTermIndex){
+                Location wordOffset = farthestTermIndex + i;
+                Location expectedPosition = locationTracker[farthestTermIndex] + wordOffset;
+                while (terms[i]->CurInstance() < expectedPosition){
+                    //Term does not exist in remaining posting lists
+                    if (terms[i]->nextInstance() == 0){
+                        return 0;
+                    }
+                    locationTracker[i] = terms[i]->nextInstance();
+                }
+            }
+        }//for
+        
+        
+    }//while
+    
+    //Update ISRPhrase variables
+    nearestTerm = 0;
+    farthestTerm = numOfTerms - 1;
+    nearestStartLocation = locationTracker[0];
+    IsrWord endPage("");
+    nearestEndLocation = endPage.SeekToLocation(nearestStartLocation);
+    return locationTracker[0];
+    
+    
+    
+    
+//    
+//    Location latestPage = 0;
+//    bool allSamePage = false;
+//    while (!allSamePage){
+//        //Step 2: Find the furthest term's page
+//        for (int i = 0; i < docTracker.size(); ++i){
+//            if (docTracker[i].second > latestPage){
+//                latestPage = docTracker[i].second;
+//            }
+//        }
+//        
+//        //Step 3: Scan other pages, if other pages are before furthest term, move them forward
+//        bool pageAltered = false;
+//        for (int i = 0; i < docTracker.size(); ++i){
+//            if (docTracker[i].second < latestPage){
+//                while (docTracker[i].first->CurInstance() < latestPage){
+//                    //Step 4: Check if any pages reach the end
+//                    if (docTracker[i].first->nextInstance() == 0){
+//                        return 0;
+//                    }
+//                    //Update the IsrWord index and latest page
+//                    docTracker[i].first = docTracker[i].first->nextInstance();
+//                    IsrWord nextPage("");
+//                    Location valToCompare = nextPage.SeekToLocation(docTracker[i].first);
+//                    if (valToCompare != docTracker[i].second){
+//                        pageAltered = true;
+//                    }
+//                    docTracker[i].second = nextPage.SeekToLocation(docTracker[i].first);
+//                }
+//            }
+//        }
+//        //Go back to step 2 if we moved any ISRs
+//        if (!pageAltered){
+//            allSamePage = true;
+//        }
+//    }
+//    
+//    Location earliestPost = ULLONG_MAX;
+//    Location latestPost = 0;
+//    for (int i = 0; i < docTracker.size(); ++i){
+//        if (docTracker[i].first->CurInstance() < earliestPost){
+//            earliestPost = docTracker[i].first->CurInstance();
+//            nearestTerm = i;
+//        }
+//        if (docTracker[i].first->CurInstance() > latestPost){
+//            latestPost = docTracker[i].first->CurInstance();
+//            farthestTerm = i;
+//        }
+//    }
+//    nearestStartLocation = earliestPost;
+//    nearestEndLocation = docTracker[0].second;
+//    //Returns the end of the document that all the terms appear on
+//    return nearestStartLocation;
 }
 
 
