@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 		}
 
 	FILE * fileOut = fopen("fullyparsed.urls", "w+");
-	if (!fileOut) {
+	if (!fileOut) {		
 		std::cerr << "couldn't open file" << std::endl;
 		exit(1);
 	}
