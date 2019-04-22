@@ -39,12 +39,14 @@ static void sig_handler(int _)
     keep_running = 0;
 }
 
+/*
 static struct option longopts[] = {
    {"indexFilePrefix", required_argument, nullptr, 'i'},
    {"seedList", required_argument, nullptr, 's'},
    {"domainList", required_argument, nullptr, 'd'},
    {0, 0, 0, 0} //default
 };
+*/
 static const char startFile[] = "/home/eger/wiki/urls.txt";
 // static const char startFile[] = "/data/crawl/dmoz/dmoz.base.urls";
 
@@ -70,8 +72,8 @@ int main(int argc, char *argv[]) {
 		std::string indexFilePrefix;
 		std::string seedList;
 		std::string domainList;
-		int optionIndex = 0;
-		int c;
+		//int optionIndex = 0;
+		//int c;
 
 	// 	// loop to process the command line options
 	// 	while ((c = getopt_long(argc, argv, "i:s:", longopts, &optionIndex)) != -1) {
