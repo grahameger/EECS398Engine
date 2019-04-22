@@ -51,6 +51,7 @@ namespace search {
         struct dirent * dir;
         char fullPath[1000];
         d = opendir(robotsDir);
+        fprintf(stdout, "Initializing pages bloom filter\n");
         if (d) {
             while ((dir = readdir(d)) != NULL) {
                 if (dir->d_type == DT_REG) {
@@ -69,6 +70,7 @@ namespace search {
                 }
             }
         }
+        fprintf(stdout, "Initializing robots bloom filter\n");
         closedir(d);
         d = opendir(pagesDir);
         if (d) {
@@ -634,6 +636,7 @@ namespace search {
         crawler->readyQueue.push("");
         const char * baseUri = currentUri.c_str();
         LinkFinder linkFinder(file, len, currentUri, true); // each thread should probably just have they're own one of these
+        linkFinder.parse_html();
         // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
         std::set<std::string> toPush;
         for (size_t i = 0; i < linkFinder.Document.vector_of_link_anchor.size(); ++i) {
