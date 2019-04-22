@@ -336,6 +336,7 @@ namespace search {
             linkFinder.parse_html();
             linkFinder.parse_url(alexa.sorted);
             for (size_t i = 0; i < linkFinder.Document.vector_of_link_anchor.size(); ++i) {
+                
                 linkFinder.Document.vector_of_link_anchor[i].link_url = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.vector_of_link_anchor[i].link_url.CString());
             }
             // add them to the master set of links
@@ -350,6 +351,7 @@ namespace search {
             // write to standard out instead
             for (size_t j = 0; j < linkFinder.Document.vector_of_link_anchor.size(); ++j) {
                 if (strcmp(linkFinder.Document.vector_of_link_anchor[j].link_url.CString(), "") != 0) {
+
                     stdoutLock.lock();
                     fprintf(stdout, "%s\n", linkFinder.Document.vector_of_link_anchor[j].link_url.CString());
                     stdoutLock.unlock();
