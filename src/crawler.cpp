@@ -351,9 +351,8 @@ namespace search {
             // write to standard out instead
             for (size_t j = 0; j < linkFinder.Document.vector_of_link_anchor.size(); ++j) {
                 if (strcmp(linkFinder.Document.vector_of_link_anchor[j].link_url.CString(), "") != 0) {
-
                     stdoutLock.lock();
-                    fprintf(stdout, "%s\n", linkFinder.Document.vector_of_link_anchor[j].link_url.CString());
+                    //fprintf(stdout, "%s\n", linkFinder.Document.vector_of_link_anchor[j].link_url.CString());
                     stdoutLock.unlock();
                 }
 		    }
