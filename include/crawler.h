@@ -55,7 +55,7 @@ namespace search {
         static void domainUnlock();
 
         static const size_t NUM_CRAWLER_THREADS = 20000;
-        static const size_t DOMAIN_REHIT_WAIT_TIME = 5;
+        static const size_t DOMAIN_REHIT_WAIT_TIME = 10;
     private:
         friend class HTTPClient;
         threading::ThreadQueue<std::string> readyQueue;
