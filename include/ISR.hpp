@@ -31,18 +31,13 @@ class DocumentAttributes{
     String url;
 };
 
-class ISR{
+class Isr{
 public:
-    Vector<ISRWord*> parseQuery(String &query);
-    ISR (Vector<Expression> &query){
-        parseQuery(query);
-    }
-    ISR (){
+    Isr (){
         
     }
-    Vector<ISR*> queries;
     //ISR pointer to the end of the current doc
-    ISR* docEnd;
+    Isr* docEnd;
     
     //Find next instance of a term
     virtual Location nextInstance();
@@ -60,46 +55,43 @@ public:
     virtual Location getClosestEndLocation();
     
     //Returns whatever document you're looking at
-    virtual ISR* getDocISR();
+    virtual Isr* getDocISR();
+    
+    virtual Location CurInstance();
 };
 
-class ISRWord : public ISR{
+class IsrWord : public Isr {
 public:
-    //Word to be looked up
-    String word;
+    IsrWord( String word );
+    ~IsrWord( );
     
-    //Basic constructor - does nothing
-    ISRWord(){};
+    Location nextInstance( );
+    Location SeekToLocation( Location seekDestination = 0 );
+    Location CurInstance( ) const;
     
-    //Custom constructor
-    ISRWord(String wordToInsert){
-        word = wordToInsert;
-    }
-    k
-    //Points to the current location on a document
-    Location getCurrentPost();
+    operator bool( ) const;
     
-    //Gets number of documents the word appears in
-    unsigned getDocumentCount();
+private:
+    bool validISR;
+    Location currentLocation;
     
-    //Gets number of times the word appears in index
-    unsigned getNumberOfOccurences();
+    unsigned nextPtr;
+    Vector< PostingList* > postingLists;
+    Vector< SubBlock > subBlocks;
     
-    //Note: ISRWord will use its parent class's functions for nextInstance,
-    //nextDocument, seek, getPostsStart, getPostsEnd, getDocISR
 };
 
 
-class ISROr : public ISR{
+class ISROr : public Isr{
 public:
     //List of ISRs that we keep track of
-    Vector<ISR*> terms;
+    Vector<Isr*> terms;
     
     //Variable to keep track of how many terms are in 'terms' (because resize/reserve isn't implemented)
     unsigned numOfTerms = 0;
     
     //Constructor for ISROr, MUST be in a vector<ISR> format, otherwise it wont compile
-    ISROr(Vector<ISR> phrasesToInsert);
+    ISROr(Vector<Isr> phrasesToInsert);
     
     //Points to the closest 'beginning of page'
     Location getClosestStartLocation(){
@@ -128,24 +120,24 @@ public:
     
     //Seek all ISRs to the first occurrence JUST PAST the end of the current document
     Location nextDocument(){
-        return seek(docEnd->getPostsEndLocation() + 1);
+        return seek(docEnd->getClosestEndLocation() + 1);
     }
 private:
     //
-    unsigned nearestTerm;
+    unsigned nearestTerm = 99999;
     Location nearestStartLocation, nearestEndLocation;
 };
 
-class ISRAnd : public ISR{
+class ISRAnd : public Isr{
 public:
     //Container for terms
-    Vector<ISR*> terms;
+    Vector<Isr*> terms;
     
     //Keeps track of how many terms we have
     unsigned numOfTerms = 0;
     
     //Constructor for ISRAnd
-    ISRAnd(Vector<ISR> phrasesToInsert);
+    ISRAnd(Vector<Isr> phrasesToInsert);
     
     Location seek(Location target);
         //TODO:
@@ -162,15 +154,25 @@ public:
         return seek(nearestStartLocation + 1);
     }
     
+    //Points to the closest 'beginning of page'
+    Location getClosestStartLocation(){
+        return nearestStartLocation;
+    }
+    
+    //Points to the closest 'end of page'
+    Location getClosestEndLocation(){
+        return nearestEndLocation;
+    }
+    
 private:
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
 };
 
-class ISRPhrase : public ISR{
+class ISRPhrase : public Isr{
 public:
     //Container for terms
-    Vector<ISR*> terms;
+    Vector<Isr*> terms;
     
     //Keeps track of how many terms we have
     unsigned numOfTerms = 0;
@@ -178,13 +180,8 @@ public:
     //Constructor for ISRPhrase
     ISRPhrase(String phraseToStore);
     
+    //Finds next instance after target location
     Location seek(Location target);
-        //TODO
-        // 1. Seek all ISRs to the first occurrence beginning at the target location.
-        // 2. Pick the furthest term and attempt to seek all the other terms to the
-        //first location beginning where they should appear relative to the furthest term.
-        // 3. If any term is past the desired location, return to step 2.
-        // 4. If any ISR reaches the end, there is no match.
     
     //Finds next instance of phrase match
     Location nextInstance(){
@@ -197,23 +194,18 @@ private:
 };
 
 //ULONG_MAX for failure
+//Should have an enddoc ISR pointing to end of pages
 
-class ISREndDoc : public ISRWord {
+class IsrEndDoc : IsrWord{
 public:
-    Location getCurrentLocation();
-    Location getPreviousLocation();
-    unsigned getDocumentLength();
-    unsigned getTitleLength();
-    unsigned getURLLength();
-    FileOffset docEnd;
-    FileOffset docBegin;
+    IsrEndDoc( );
 };
 
 //Advanced feature, may implement later
-class ISRContainer : public ISR {
+class ISRContainer : public Isr {
 public:
-    ISR** contained, excluded;
-    ISREndDoc* docEnd;
+    Isr** contained, excluded;
+    IsrEndDoc* docEnd;
     unsigned countContained, countExcluded;
     //Location Next();
     Location seek(Location target);
