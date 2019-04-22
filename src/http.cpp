@@ -135,10 +135,10 @@ namespace search {
             }
         }
         if (rv == EAI_AGAIN) {
-            D(fprintf(stderr, "getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));)
+            D(fprintf(stderr, "[DNS TIMEOUT] getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));)
         } else if (rv != 0) {
             return -1;
-            D(fprintf(stderr, "getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));)
+            D(fprintf(stderr, "[DNS FAIL] getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));)
         }
 
 
@@ -155,7 +155,7 @@ namespace search {
             if (!blocking) {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
-                    D(fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));)
+                    D(fprintf(stderr, "[SET SOCKET FAILED] could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));)
                     close(sockfd);
                     freeaddrinfo(servinfo);
                     return -1;
@@ -164,13 +164,13 @@ namespace search {
             // timeout section of the show
             timeval tm = {constants::TIMEOUTSECONDS, constants::TIMEOUTUSECONDS};
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
-                D(fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
+                D(fprintf(stderr, "[SETSOCKOPT] setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
                 close(sockfd);
                 freeaddrinfo(servinfo);
                 return -1;
             }
             if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
-                D(fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
+                D(fprintf(stderr, "[SETSOCKOPT] setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
                 close(sockfd);
                 freeaddrinfo(servinfo);
                 return -1;
@@ -185,7 +185,7 @@ namespace search {
         }
         // end of list with no connection
         if (p == nullptr) {  
-            D(fprintf(stderr, "unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));)
+            D(fprintf(stderr, "[CONNECT FAIL] unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));)
             freeaddrinfo(servinfo);
             return -1;
         }
@@ -580,7 +580,7 @@ namespace search {
             }
         }
         if (fd == -1) {
-            dprintf(logFd, "error opening file %s - %s", filename.c_str(), strerror(errno));
+            dprintf(logFd, "[LOG ERROR] error opening file %s - %s", filename.c_str(), strerror(errno));
             free(fullRespnose);
             return false;
         } else {

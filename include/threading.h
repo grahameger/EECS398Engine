@@ -229,18 +229,18 @@ namespace threading {
     // DO NOT LOCK IN THIS FUNCTION
     template <typename T>
     void ThreadQueue<T>::loadFromOverflow() {  
-        // char * line = NULL;
-        // size_t len = 0;
-        // ssize_t rv = 0;
-        // FILE * queue = fdopen(overflowFd, "r");
-        // if (!queue) {
-        //     fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
-        // }
-        // while ((rv = getline(&line, &len, queue)) != -1) {
-        //     // push the line to the 
-        //     q.push_back(line); // line is statically allocated?
-        //     free(line);
-        // }
+        char * line = NULL;
+        size_t len = 0;
+        ssize_t rv = 0;
+        FILE * queue = fdopen(overflowFd, "r");
+        if (!queue) {
+            fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
+        }
+        while ((rv = getline(&line, &len, queue)) != -1) {
+            // push the line to the 
+            q.push_back(line); // line is statically allocated?
+            free(line);
+        }
     }
 
 

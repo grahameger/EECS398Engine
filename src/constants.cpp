@@ -3,7 +3,7 @@
 namespace constants {
     const std::string getMethod = "GET";
     const std::string endl = "\r\n";
-    const std::string httpVersion = "HTTP/1.0";
+    const std::string httpVersion = "HTTP/1.1";
     const std::string hostString = "Host: ";
     const std::string connClose = "Connection: close" + endl;
     const std::string userAgents = "User-Agent: Ceatles/0.69 (Linux)";

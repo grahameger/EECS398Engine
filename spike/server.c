@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <err.h>
  
-char response[] = "HTTP/1.1 200 OK\r\n"
+char response[] = "HTTP/1.0 200 OK\r\n"
 "Content-Type: text/html; charset=UTF-8\r\n\r\n"
 "<!DOCTYPE html><html><head><title>Bye-bye baby bye-bye</title>"
 "<style>body { background-color: #111 }"
