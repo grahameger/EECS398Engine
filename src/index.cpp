@@ -32,6 +32,7 @@ Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, thre
    for(unsigned i = 0; i < 10; i++){
       pthread_create(&writeThreads[i], NULL, &writerWrapper, this);
    }
+   pthread_join(readThreads[0], nullptr);
    //reader(docQueue);
 }
 
