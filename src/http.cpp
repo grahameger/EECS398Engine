@@ -632,21 +632,16 @@ namespace search {
     // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
         crawler->readyQueue.push("");
-        // turning this off for now
-        // const char * baseUri = currentUri.c_str();
-        // LinkFinder linkFinder; // each thread should probably just have they're own one of these
-        // linkFinder.parse(file, len);
-        // // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
-        // std::set<std::string> toPush;
-        // for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
-        //     if (linkFinder.Link_vector[i].Size() < 2083) { // 2083 is the functional limit to a URL length W3C recommends=
-        //     // perf recorded spending more than 50% of our time resolving relative urls, after investigation there may be a bug finding
-        //     // links that leads to really really long ones, like hundreds of thousands of characters (aka not real links) being processed
-        //     // which would slow down the program significantly as resolving is a fairly intensive task, but necessary for legitimate pages.
-        //         toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
-        //     }
-        // }
-        // crawler->readyQueue.push(toPush.begin(), toPush.end());
+        const char * baseUri = currentUri.c_str();
+        LinkFinder linkFinder(file, len, currentUri, true); // each thread should probably just have they're own one of these
+        // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
+        std::set<std::string> toPush;
+        for (size_t i = 0; i < linkFinder.Document.vector_of_link_anchor.size(); ++i) {
+            if (linkFinder.Document.vector_of_link_anchor[i].link_url.Size() < 2083) {
+                toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Document.vector_of_link_anchor[i].link_url.CString()));
+            }
+        }
+        crawler->readyQueue.push(toPush.begin(), toPush.end());
     }
 
     std::string HTTPClient::resolveRelativeUrl(const char * baseUri, const char * newUri) {
