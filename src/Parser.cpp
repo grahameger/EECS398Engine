@@ -180,7 +180,7 @@ int LinkFinder::parse_html() {
                         unsigned long reset_value = index;
                         if(find_link(html_file, find_low, find_up)) {
                             String link;
-                            while(html_file[index] != ' ' && html_file[index] != '>') {
+                            while(index < file_length && html_file[index] != ' ' && html_file[index] != '>') {
                                 if(html_file[index] != '"' && html_file[index] != '\'') {
                                     is_link = true;
                                     link += html_file[index];
@@ -566,7 +566,7 @@ bool LinkFinder::find_open_tag(char *html_file) {
     bool tag_found = false;
     int num_closing = 0;
     int num_opening = 0;
-    while(index > 0) {
+    while(index < file_length && index > 0) {
         while(index > 0 && index < file_length && html_file[index] != '>') { //find a tag
             if(html_file[index] == '>') {
                 tag_found = true;
@@ -576,7 +576,7 @@ bool LinkFinder::find_open_tag(char *html_file) {
         if(!tag_found) { //no parent tag found
             return false;
         }
-        while(index > 0 && html_file[index] != '<') { //tag was found
+        while(index < file_length && index > 0 && html_file[index] != '<') { //tag was found
             if(html_file[index] == '/') {
                 num_closing++; //uneven tag
                 is_closing_tag = true; //is closing tag

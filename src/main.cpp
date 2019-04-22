@@ -54,7 +54,7 @@ static const char startFile[] = "/home/eger/wiki/urls.txt";
 //    "/data/crawl/hn/HNDump/deduped.hn.urls"
 // };
 
-static const size_t NUM_PARSING_THREADS = 20;
+static const size_t NUM_PARSING_THREADS = 24;
 
 FILE * fileOut;
 
