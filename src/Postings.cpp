@@ -266,6 +266,8 @@ IsrInfo Postings::GetPostingList( const FixedLengthString& word )
    PostingList* postingList;
    if ( !plSubBlock.uninitialized )
       postingList = new PostingList( plStringView );
+   else
+      postingList = new PostingList( );
 
    return { nextPtr, postingList, plSubBlock };
    }
@@ -292,9 +294,11 @@ SubBlock Postings::GetPostingListSubBlock
    auto wordIt = subBlockIndex.find( word );
 
    // Return the last block in the chain of blocks stored
-   if ( wordIt != subBlockIndex.end( ) )
+   if ( wordIt != subBlockIndex.end( ) ) 
+      {
       subBlockIndexLock.unlock( );
       return GetSubBlock( ( *wordIt ).second, writing, false );
+      }
    // Return a new block
    else
       {
@@ -374,9 +378,9 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
       wordIndex.erase( lastUsed.subBlockInfo );
       wordIndex.at( subBlock.subBlockInfo ) = word;
       wordIndexLock.unlock( );
-      subBlockIndex.lock( );
+      subBlockIndexLock.lock( );
       subBlockIndex.at( word ) = subBlock.subBlockInfo;
-      subBlockIndex.unlock( );
+      subBlockIndexLock.unlock( );
       }
 
    if ( lastUsed.rwlock )

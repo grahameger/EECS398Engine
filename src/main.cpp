@@ -72,7 +72,6 @@ int main(int argc, char *argv[]) {
 		std::string domainList;
 		int optionIndex = 0;
 		int c;
-		char outputChoice = 0;
 
 		// loop to process the command line options
 		while ((c = getopt_long(argc, argv, "i:s:", longopts, &optionIndex)) != -1) {
