@@ -740,14 +740,20 @@ namespace search {
         //    is a complete path segment not equal to "..", that
         //    "<segment>/.." is removed.
         size_t segment;
-        while ((segment = path.find("/../")) != std::string::npos) {
+        size_t startIndex = 0;
+        while ((segment = path.find("/../", startIndex)) != std::string::npos) {
             std::string tmp = path.substr(0, segment);
             size_t slash = tmp.rfind('/');
-            if (slash == std::string::npos) {
-                continue;
+            if(segment == 0) {
+                startIndex = segment + 4;
             }
-            if (tmp.substr(0, slash) != "..") {
+            else if (slash == std::string::npos) {
+                path = path.substr(segment + 4);
+            }
+            else if (tmp.substr(0, slash) != "..") {
                 path = path.substr(0, slash + 1) + path.substr(segment + 4);
+            } else {
+                startIndex = segment + 4;
             }
         }
         // g) If the resulting buffer string still begins with one or more

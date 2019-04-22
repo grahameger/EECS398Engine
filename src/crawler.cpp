@@ -20,6 +20,7 @@
 #include <optional>
 
 extern volatile sig_atomic_t keep_running;
+extern FILE * fileOut;
 
 namespace search {
 
@@ -306,6 +307,7 @@ namespace search {
         if (fd != -1) {
             // memory map the file
             void * mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+            close(fd);
             if (mapped) {
                 return MemoryMappedFile({(char*)mapped, fileSize});
             }
@@ -319,6 +321,7 @@ namespace search {
                          threading::ConditionVariable& cv) 
     {
         static AlexaRanking alexa;
+        static threading::Mutex stdoutLock;
         auto mmapedFile = memoryMapFile("pages/" + filename);
         if (mmapedFile) {
             auto& file = mmapedFile.value();
@@ -336,14 +339,22 @@ namespace search {
                 linkFinder.Document.vector_of_link_anchor[i].link_url = HTTPClient::resolveRelativeUrl(url.c_str(), linkFinder.Document.vector_of_link_anchor[i].link_url.CString());
             }
             // add them to the master set of links
-            m.lock();
-            while (d.size() > 1000000) {
-                cv.wait(m);
-            }
-            d.push_back(linkFinder.Document);
-            m.unlock();
+            // m.lock();
+            // while (d.size() > 1000000) {
+            //     cv.wait(m);
+            // }
+            // d.push_back(linkFinder.Document);
+            // m.unlock();
             if (file.size)
                 munmap(file.ptr, file.size);
+            // write to standard out instead
+            for (size_t j = 0; j < linkFinder.Document.vector_of_link_anchor.size(); ++j) {
+                if (strcmp(linkFinder.Document.vector_of_link_anchor[j].link_url.CString(), "") != 0) {
+                    stdoutLock.lock();
+                    fprintf(stdout, "%s\n", linkFinder.Document.vector_of_link_anchor[j].link_url.CString());
+                    stdoutLock.unlock();
+                }
+		    }
         }
     }
 
@@ -353,6 +364,7 @@ namespace search {
                     threading::ConditionVariable& cv) 
     {
         static threading::Mutex filenamesLock;
+        // TODO look at this again
         while (!filenames.empty()) {
             filenamesLock.lock();
             auto filename = filenames.front();
