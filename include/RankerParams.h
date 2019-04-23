@@ -5,9 +5,9 @@
 #include "Vector.h"
 namespace RankerParams
    {
-   struct CutoffDouble
+   struct CutoffFloat
       {
-      double upperBound;
+      float upperBound;
       unsigned score;
       };
 

@@ -1,6 +1,7 @@
 #pragma once
 #ifndef INDEXINTERFACE_H
 #define INDEXINTERFACE_H
+#include <limits.h>
 
 /*
 *feel free to change the datatypes as necessary as long as 

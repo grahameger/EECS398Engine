@@ -237,7 +237,7 @@ void Ranker::Document::Features::computeSpanFeatures(Vector<Location>&
             }         
          }
 
-      unsigned spanLength = rightMostLocation - leftMostLocation;
+      unsigned spanLength = rightMostLocation - leftMostLocation + 1;
       SpanLengthratio = (double) spanLength / numWordsInSpan;        
       QueriesOutOfOrderRatio = (double) numQueriesOutOfOrder / numWordsInSpan;
       }

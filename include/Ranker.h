@@ -101,6 +101,8 @@ class Ranker
                   void getClosestLocationOrdering(Vector<WordStatistics>& 
                         WordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering)
                   Location moveToClosestPosition(WordStatistics* word, 
+                  unsigned GetThresholdedFloatScore(Vector<CutoffFloat>& cutoffs);
+                  unsigned GetThresholdedIntScore(Vector<CutoffInt>& cutoffs);
                };
 
             struct DecorationFeatures
