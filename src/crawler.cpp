@@ -106,7 +106,7 @@ namespace search {
 
     void * Crawler::stub() {
         std::vector<std::string> urls;
-        urls.reserve(100);
+        urls.reserve(10000);
         std::string p;
         while (keep_running) {
             if (urls.empty()) {

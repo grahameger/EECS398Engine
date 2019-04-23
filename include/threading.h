@@ -281,8 +281,8 @@ namespace threading {
             }
         }
         std::vector<T> rv;
-        if (q.size() >= 10000) {
-            rv = std::vector<T>(q.rbegin(), q.rbegin() + 100);
+        if (q.size() >= 100000) {
+            rv = std::vector<T>(q.rbegin(), q.rbegin() + 10000);
         } else {
             rv = std::vector<T>(q.rbegin(), q.rbegin() + 1);
         }
@@ -337,10 +337,6 @@ namespace threading {
         std::rename(fileName.c_str(), fileNameOld.c_str());
         std::rename(fileNameNew.c_str(), fileName.c_str());
         // atomic write done 
-
-
-
-        // std::ofstream
     }
 }
 
