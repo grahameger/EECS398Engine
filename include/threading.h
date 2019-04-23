@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <set>
 #include <cassert>
+#include <array>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -103,7 +104,6 @@ namespace threading {
 
         T pop();
         std::vector<T> popVec();
-        T popRandom();
         void popAll(std::vector<T> &d);
 
         size_t size();
@@ -265,8 +265,17 @@ namespace threading {
                 cvPop.wait(m);
             }
         }
-        T temp = q.front();
-        q.pop_front();
+        // get a random element 
+        static thread_local std::random_device rd;
+        static thread_local std::default_random_engine generator(rd());
+        static thread_local std::uniform_int_distribution<long long unsigned> distribution(0,0xFFFFFFFFFFFFFFFF);
+        size_t random = distribution(generator);
+        auto it = q.begin();
+        if (q.size() > 1) {
+            std::advance( it, random % q.size());
+        }
+        T temp = *it;
+        q.erase(it);
         m.unlock();
         return temp;
     }
