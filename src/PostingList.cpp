@@ -125,7 +125,7 @@ unsigned int PostingList::GetByteSize( )
    }
 
 
-void PostingList::FullUpdate( StringView& toUpdate )
+void PostingList::FullUpdate( StringView toUpdate )
    {
    // Add indexSize and postsSize
    toUpdate.SetInString< unsigned >( index.Size( ) + newIndices.Size( ) );
@@ -153,7 +153,7 @@ void PostingList::FullUpdate( StringView& toUpdate )
    }
 
 
-void PostingList::UpdateInPlace( StringView& toUpdate )
+void PostingList::UpdateInPlace( StringView toUpdate )
    {
    // Add indexSize and postsSize
    toUpdate.SetInString< unsigned >( index.Size( ) + newIndices.Size( ) );

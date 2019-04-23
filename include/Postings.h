@@ -21,6 +21,8 @@ class FixedLengthString
    public:
       FixedLengthString( const char* cstring );
 
+      const char* Characters( ) const { return characters; }
+
       bool operator== ( const FixedLengthString& other ) const;
       FixedLengthString();
    private:
@@ -77,6 +79,8 @@ struct SubBlock
    bool operator!= ( const SubBlock& other ) const;
    bool operator== ( const SubBlock& other ) const;
    StringView ToStringView( );
+   unsigned AvailableSize( ) const
+      { return subBlockInfo.subBlockSize - dataOffset; }
    };
 
 namespace hash {
@@ -125,7 +129,7 @@ class Postings
       Postings( );
 
       void CreateNewPostingsFile( );
-      void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
+      void SaveSplitPostingList( SubBlock plSubBlock,
             Vector< PostingList* >& split, const FixedLengthString& word );
 
       IsrInfo GetPostingList( const FixedLengthString& word );
