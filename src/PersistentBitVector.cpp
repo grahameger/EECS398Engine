@@ -21,7 +21,7 @@ PersistentBitVector::PersistentBitVector(String filename) {
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags, 0755);
+    fd = open(filename.CString(), openFlags, 0766);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
         // TODO: more error handling

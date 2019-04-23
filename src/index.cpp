@@ -68,7 +68,6 @@ void Index::reader(){
       while(documentQueue->empty()){
          documentQueueLock->unlock();
          documentQueueLock->lock();
-         
       }
       //think about dynamicness
       Doc_object doc = documentQueue->front();
