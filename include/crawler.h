@@ -54,7 +54,7 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 30000;
+        static const size_t NUM_CRAWLER_THREADS = 10000;
         static const size_t DOMAIN_REHIT_WAIT_TIME = 10;
     private:
         friend class HTTPClient;
