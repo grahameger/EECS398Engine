@@ -105,8 +105,15 @@ namespace search {
     }
 
     void * Crawler::stub() {
+        std::vector<std::string> urls;
+        urls.reserve(100);
+        std::string p;
         while (keep_running) {
-            auto p = readyQueue.pop();
+            if (urls.empty()) {
+                urls = readyQueue.popVec();
+            }
+            p = std::move(urls.back());
+            urls.pop_back();
             if (p == "") {
                 continue;
             }

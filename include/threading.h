@@ -281,13 +281,13 @@ namespace threading {
             }
         }
         std::vector<T> rv;
-        if (q.size() >= 50) {
-            rv = std::vector<T>(q.begin(), q.begin() + 50);
+        if (q.size() >= 10000) {
+            rv = std::vector<T>(q.end(), q.end() - 100);
         } else {
-            rv = std::vector<T>(q.begin(), q.end());
+            rv = std::vector<T>(q.end(), q.end() - 1);
         }
         for (size_t i = 0; i < rv.size(); i++) {
-            q.pop_front();
+            q.pop_back();
         }
         m.unlock();
         return rv;
