@@ -60,6 +60,8 @@ static const size_t NUM_PARSING_THREADS = 24;
 
 FILE * fileOut;
 
+static const unsigned MAXFILES = 10;
+
 int main(int argc, char *argv[]) {
 
    // register our signal handler
@@ -107,7 +109,9 @@ int main(int argc, char *argv[]) {
 	DIR * dir;
 	struct dirent * ent; 
 	if ((dir = opendir("pages")) != NULL) {
-		while ((ent = readdir(dir)) != NULL) {
+		// TODO: Remove
+		unsigned FilesAdded = 0;
+		while (++FilesAdded != MAXFILES && (ent = readdir(dir)) != NULL) {
 			files.push_back(ent->d_name);
 		}
 	}
@@ -126,22 +130,22 @@ int main(int argc, char *argv[]) {
 	
 
 
-	// Index index(&documents, &documentsMutex, &documentsCv);
+	Index index(&documents, &documentsMutex, &documentsCv);
   // wait until all the parsing is actually complete
-	std::vector<std::string> seedListUrls;
-	for (size_t i = 0; i < documents.size(); ++i) {
-		for (size_t j = 0; i < documents[i].vector_of_link_anchor.size(); ++j) {
-			seedListUrls.push_back(documents[i].vector_of_link_anchor[j].link_url.CString());
-		}
-	}
-	std::ifstream seedListFile(startFile);
-	std::string url;
-	while (std::getline(seedListFile, url)) {
-		seedListUrls.push_back(url);
-	}
-	auto rng = std::default_random_engine {};
-	std::shuffle(seedListUrls.begin(), seedListUrls.end(), rng);
-	fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", seedListUrls.size(), startFile);
-	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
-	search::Crawler crawler(seedListUrls);
+//	std::vector<std::string> seedListUrls;
+//	for (size_t i = 0; i < documents.size(); ++i) {
+//		for (size_t j = 0; i < documents[i].vector_of_link_anchor.size(); ++j) {
+//			seedListUrls.push_back(documents[i].vector_of_link_anchor[j].link_url.CString());
+//		}
+//	}
+//	std::ifstream seedListFile(startFile);
+//	std::string url;
+//	while (std::getline(seedListFile, url)) {
+//		seedListUrls.push_back(url);
+//	}
+//	auto rng = std::default_random_engine {};
+//	std::shuffle(seedListUrls.begin(), seedListUrls.end(), rng);
+//	fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", seedListUrls.size(), startFile);
+//	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
+//	search::Crawler crawler(seedListUrls);
 }
