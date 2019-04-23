@@ -1,5 +1,9 @@
 //  Created by Jake C on 2/10/19.
 //  Graham Eger added a cstdlib include on 4/1 to make compile on crawler machine
+/*
+ This is the html and url parser interface for our search engine. Two functions,
+ Parse_html and Parse_links parse the html document and create it's doc_object.
+ */
 #pragma once
 #ifndef Parser_hpp_398
 #define Parser_hpp_398
@@ -13,147 +17,151 @@
 #include "vector.h"
 #include <ctype.h>
 #include "String.h"
-#include <vector>
-#include <string>
 
-static String top_level_domains[] = {"com", "org", "mil", "int", "edu", "gov", "net"};
+static String top_level_domains[ ] = { "com", "org", "mil", "int", "edu", "gov", "net" };
 const size_t NUM_TOP_DOMAINS = 7;
 const unsigned int MAX_DOMAIN_RANK = 745000;
 const size_t DOMAIN_LENGTH = 3;
 
-class Index_object{
+class Index_object
+{
 public:
-    String word;
-    char type;//body=b/anchor=a/title=t
-    int position;//word 0,1,2,3 in in document
-    //Assignment operator
-    Index_object &operator=(const Index_object& rhs);
-    
+   String word;
+   char type;//body=b/anchor=a/title=t
+   int position;//word 0,1,2,3 in in document
+   //Assignment operator
+   Index_object &operator=( const Index_object& rhs );
+   
 };
 
-struct link_and_anchor {
-    String link_url;
-    Vector<Index_object> anchor_words;
+struct link_and_anchor
+{
+   String link_url;
+   Vector<Index_object> anchor_words;
 };
 
-struct Doc_object {
-    String doc_url;
-    unsigned short num_slash_in_url = 0;
-    //Vector<String> Links;
-    Vector<Index_object> Words;
-    Vector<String> url;
-    char domain_type = 'x'; // default x. com = c, mil = m, edu = e, none = x, gov = g, etc...
-    unsigned int domain_rank = MAX_DOMAIN_RANK; //1 = top 1, 2 = top 2, 3 = top 3, etc...
-    bool is_https = false;
-    
-    Vector<link_and_anchor> vector_of_link_anchor;
-    
-    Doc_object() { }
-    
+struct Doc_object
+{
+   String doc_url;
+   unsigned short num_slash_in_url = 0;
+   Vector<Index_object> Words;
+   Vector<String> url;
+   char domain_type = 'x'; //default x. com = c, mil = m, edu = e, none = x, gov = g, etc...
+   unsigned int domain_rank = MAX_DOMAIN_RANK; //1 = top 1, 2 = top 2, 3 = top 3, etc...
+   bool is_https = false;
+   
+   Vector<link_and_anchor> vector_of_link_anchor;
+   
+   Doc_object( ) { }
+   
 };
 
-class LinkFinder {
+class LinkFinder
+{
 public:
-    //constructor
-    LinkFinder();
-    
-    LinkFinder(char *html_file_in, size_t filesize_in, String url_in, bool is_https_in) : html_file(html_file_in), file_length(filesize_in), url(url_in), is_https(is_https_in) {}
-    
-    
-    //destructor
-    ~LinkFinder();
-    bool is_english;
-    
-    //returns -1 if something failed, else returns 0
-    //parses html file into title, body, links, and anchor text
-    int parse_html();
-    
-    //parses url
-    void parse_url(Vector<std::pair<std::string, int>> &v);
-    
-    bool is_https;
-    String url;
-    char* html_file;
-    unsigned long file_length = 0;
-    unsigned long index = 0;
-    
-    void print_all() {
-        for(int i = 0; i < Document.vector_of_link_anchor.size(); i ++) {
-            std::cout << Document.vector_of_link_anchor[i].link_url.CString() << ":";
-            for(int j = 0; j < Document.vector_of_link_anchor[i].anchor_words.size(); j++) {
-                std::cout << Document.vector_of_link_anchor[i].anchor_words[j].word.CString() << ", ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-        for(int i = 0; i < Document.Words.size(); i++) {
-            std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
-        }
-    }
-    
-    Doc_object Document;
-    
+   //constructor
+   LinkFinder( );
+   
+   LinkFinder( char *html_file_in, size_t filesize_in, String url_in, bool is_https_in ) : html_file( html_file_in ), file_length( filesize_in ), url( url_in ), is_https( is_https_in ) {}
+   
+   
+   //destructor
+   ~LinkFinder( );
+   bool is_english;
+   
+   //returns -1 if something failed, else returns 0
+   //parses html file into title, body, links, and anchor text
+   int parse_html( );
+   
+   //parses url
+   void parse_url( Vector<std::pair<std::string, int>> &v );
+   
+   bool is_https;
+   String url;
+   char* html_file;
+   unsigned long file_length = 0;
+   unsigned long index = 0;
+   
+   void print_all( )
+   {
+      for( int i = 0; i < Document.vector_of_link_anchor.size( ); i++ )
+      {
+         std::cout << Document.vector_of_link_anchor[ i ].link_url.CString( ) << ":";
+         for( int j = 0; j < Document.vector_of_link_anchor[ i ].anchor_words.size( ); j++ )
+         {
+            std::cout << Document.vector_of_link_anchor[ i ].anchor_words[ j ].word.CString() << ", ";
+         }
+         std::cout << std::endl;
+      }
+      std::cout << std::endl;
+      for( int i = 0; i < Document.Words.size(); i++ )
+      {
+         std::cout << Document.Words[ i ].word.CString( ) << ":" << Document.Words[ i ].type << ":" << Document.Words[ i ].position << std::endl;
+      }
+   }
+   
+   Doc_object Document;
+   
 private:
-    //sets index pointer to 1 place after string
-    //must know string can be found.
-    //will skip entire html file if no </a> on the page. else skips to next </a>
-    //be careful to reset index pointer to ensure still in range
-    void find_string(char *html_file, char* find_lower, char* find_upper);
-    
-    
-    //Look for href= If doesn't exist in <a>, returns false. Else, true.
-    bool find_link(char *html_file, char* find_lower, char* find_upper);
-    
-    //If tag found, returns true. Else, false;
-    bool is_script(char *html_file);
-    bool is_style(char *html_file);
-    bool is_title(char *html_file);
-    bool is_html(char *html_file);
-    
-    //Finds word and what type they belong to
-    void get_words(char *html_file, char type);
-    
-    //resets the file pointer to reset_value. Good to use after find_string.
-    void reset_index(unsigned long reset_value);
-    
-    //Prints out all words from *index to stop_index. Ignores everything in <...>
-    void get_anchor_text(char *html_file, unsigned long stop_index);
-    
-    //Finds <a> tag's parent tag if exists. Then finds position of either the
-    //parent's closing tag or </a>, whichever occurs first. Then prints out anchor
-    //text between <a>....position.
-    void find_closing_a_tag(char *html_file);
-    
-    //returns min of index1 and index2
-    long get_min(unsigned long index1, unsigned long index2);
-    
-    //returns max of index1 and index2
-    long get_max(unsigned long index1, unsigned long index2);
-    
-    //sets file pointer to start of opening parent tag
-    bool find_open_tag(char *html_file);
-    
-    //If parent tag exists, returns position of parent tag close.
-    unsigned long parent_tag_distance(char *html_file, char* tag);
-    
-    //Adds character to word if it's a relevant char. Lowers it as well.
-    void add_char_to_word(char *html_file, String &word, char type);
-    
-    //Assigns rank to document if word is found in alexa top list
-    void assign_domain_rank(const String &word, Vector<std::pair<std::string, int>> &v);
-    
-    //Checks if word in url is one of 7 stopwords
-    bool is_stop_domain(String &word);
-    
-    bool is_link = false;
-    
+   //sets index pointer to 1 place after string
+   //must know string can be found.
+   //will skip entire html file if no </a> on the page. else skips to next </a>
+   //be careful to reset index pointer to ensure still in range
+   void find_string( char *html_file, char* find_lower, char* find_upper );
+   
+   
+   //Look for href= If doesn't exist in <a>, returns false. Else, true.
+   bool find_link( char *html_file, char* find_lower, char* find_upper );
+   
+   //If tag found, returns true. Else, false;
+   bool is_script( char *html_file );
+   bool is_style( char *html_file );
+   bool is_title( char *html_file );
+   bool is_html( char *html_file );
+   
+   //Finds word and what type they belong to
+   void get_words( char *html_file, char type );
+   
+   //resets the file pointer to reset_value. Good to use after find_string.
+   void reset_index( unsigned long reset_value );
+   
+   //Prints out all words from *index to stop_index. Ignores everything in <...>
+   void get_anchor_text( char *html_file, unsigned long stop_index );
+   
+   //Finds <a> tag's parent tag if exists. Then finds position of either the
+   //parent's closing tag or </a>, whichever occurs first. Then prints out anchor
+   //text between <a>....position.
+   void find_closing_a_tag( char *html_file );
+   
+   //returns min of index1 and index2
+   long get_min( unsigned long index1, unsigned long index2 );
+   
+   //returns max of index1 and index2
+   long get_max( unsigned long index1, unsigned long index2 );
+   
+   //sets file pointer to start of opening parent tag
+   bool find_open_tag( char *html_file );
+   
+   //If parent tag exists, returns position of parent tag close.
+   unsigned long parent_tag_distance( char *html_file, char* tag );
+   
+   //Adds character to word if it's a relevant char. Lowers it as well.
+   void add_char_to_word( char *html_file, String &word, char type );
+   
+   //Assigns rank to document if word is found in alexa top list
+   void assign_domain_rank( const String &word, Vector<std::pair<std::string, int>> &v );
+   
+   //Checks if word in url is one of 7 stopwords
+   bool is_stop_domain( String &word );
+   
+   bool is_link = false;
+   
 };
 
-bool is_space(char c);
-bool is_relevant_char(char c);
-bool is_vowel(char c);
-bool is_valid_word(String word, unsigned int vowels);
+bool is_space( char c );
+bool is_relevant_char( char c );
+bool is_vowel( char c );
+bool is_valid_word( String word, unsigned int vowels );
 //returns 745000 if not found, else returns actual rank
-unsigned int binSearch(Vector<std::pair<std::string,int>> v, int l, int r, String val, unsigned int max);
-
+unsigned int binSearch( Vector<std::pair<std::string,int>> v, int l, int r, String val, unsigned int max );
 #endif /* Parser_hpp_398 */
