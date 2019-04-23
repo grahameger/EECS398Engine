@@ -70,9 +70,6 @@ class Ranker
                   unsigned StaticRank;
                   unsigned NormalizedSumOfStreamLength;
                   unsigned NumAnchorTextReferences;
-                  unsigned TotalWordFrequency;
-                  double QueriesOutOfOrderRatio;
-                  double SpanLengthRatio;
 
                   void SetFeatureType(TextType textTypeIn);
                   void SetCurrentDocument(Document* docIn);
@@ -92,17 +89,30 @@ class Ranker
 
                private:
                   Document* curDocument;
+                  unsigned numQueryWords;
                   TextType textType;
                   unsigned textTypeWeight;
-                  Isr* getMostImportantWord(Vector<Isr*> wordIsrs)
+                  unsigned spanLength;
+                  unsigned numQueriesOutOfOrder;
+                  unsigned totalWordFrequency;
+                  WordStatistics* getMostImportantWord(Vector<WordStatistics*> wordIsrs);
+                  Location getLocationDist(Location location1, Location location2);
+                  Location moveToClosestPosition(WordStatistics* word, 
+                        WordStatistics* anchorStats);
+
                   void computeFeatures(Vector<Isr*> wordIsrs);
-                  void computeSpanFeatures(Vector<Location>& 
-                  closestLocationOrdering, Vector<WordStatistics*>& wordStatisitcs)
+                  void computeSpanFeatures(Vector<Location>& closestLocationOrdering, 
+                              Vector<WordStatistics*>& wordStatisitcs);
                   void getClosestLocationOrdering(Vector<WordStatistics>& 
                         WordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering)
                   Location moveToClosestPosition(WordStatistics* word, 
-                  unsigned GetThresholdedFloatScore(Vector<CutoffFloat>& cutoffs);
-                  unsigned GetThresholdedIntScore(Vector<CutoffInt>& cutoffs);
+                  bool isPastEnd(Isr* isr);
+                  unsigned getThresholdedFloatScore(Vector<CutoffFloat>& 
+                              cutoffs, float featureValue);
+                  unsigned getThresholdedIntScore(Vector<CutoffInt>& cutoffs);
+                  float getWordFrequencyScore()
+                  float getSpanOrderednessScore()
+                  float getSpanLengthScore()
                };
 
             struct DecorationFeatures

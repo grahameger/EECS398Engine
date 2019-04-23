@@ -88,7 +88,7 @@ Vector<ScoredDocument> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
    }
 
 Ranker::Features::Features()
-   : SpanLengthRatio(-1), QueresOutOfOrderRatio(-1), TotalWordFrequency(0) {}
+   : SpanLengthRatio(-1), QueresOutOfOrderRatio(-1), totalWordFrequency(0) {}
 
 Location Ranker::Document::GetDocEndLocation()
    {
@@ -142,11 +142,33 @@ Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn,
       Document* curDocumentIn)
    : isr(isrIn), curDocument(curDocumentIn), Count(0) {}
 
+float Ranker::Document::Features::getWordFrequencyScore()
+   {
+   return RankerParams::WordFrequencyWeight * getThresholdedIntScore(
+         WordFrequencyCutoff, totalWordFrequency) / (float) numQueryWords;
+   }
+
+float Ranker::Document::Features::getSpanLengthScore()
+   {
+   return RankerParams::SpanLengthWeight * getThresholdedIntScore(SpanLengthCutoff,
+      spanLength) / (float) numQueryWords;
+   }
+
+float Ranker::Document::Features::getSpanOrderednessScore()
+   {
+   return RankerParams::Span * getThresholdedIntScore(SpanOrderednessCutoff, 
+         RankerParams:: numQueriesOutOfOrder) / (float) numQueryWords;
+   }
+
 unsigned Ranker::Document::Features::ComputeScore(Vector<Isr*>& wordIsrs)
    {
+   numQueryWords = wordIsrs.size();
    computeFeatures(wordIsrs);
-   double score = textTypeWeight * RankerParams::WordFrequencyWeight * 
-         TotalWordFrequency + textTypeWeight;
+   float wordFreqeuncyScore = getWordFrequencyScore();
+   float spanLengthScore = getSpanLengthScore();
+   float spanOrderednessScore = getSpanOrderednessScoree();
+   unsigned score = (unsigned) textTypeWeight * (wordFrequencyScore + spanLengthScore
+         + spanOrderednessScore);
    return score;
    }
 
@@ -155,24 +177,69 @@ unsigned Isr::GetImportance()
    return importance; 
    }
 
+unsigned Ranker::Document::Features::getThresholdedIntScore(
+      Vector<CutoffInt>& cutoffs, unsigned featureValue)
+   {
+   if(cutoffs.empty())
+      {
+      printf("cutoffs is empty!");
+      exit(1);
+      }
+
+   unsigned score = cutoffs[0].score;
+   for(size_t i = 0; i < cutoffs.size(); ++i)
+      {
+      CutoffFloat& cutoff = cutoffs[i];
+      if(featureValue <= cutoff.upperBound)
+         score = cutoff.score;
+      else
+         break;
+      }
+   
+   return score;
+   }
+
+unsigned Ranker::Document::Features::getThresholdedFloatScore(
+      Vector<RankerParams::CutoffFloat>& cutoffs, float featureValue)
+   {
+   if(cutoffs.empty())
+      {
+      printf("cutoffs is empty!");
+      exit(1);
+      }
+
+   unsigned score = cutoffs[0].score;
+   for(size_t i = 0; i < cutoffs.size(); ++i)
+      {
+      RankerParams::CutoffFloat& cutoff = cutoffs[i];
+      if(featureValue <= cutoff.upperBound)
+         score = cutoff.score;
+      else
+         break;
+      }
+   
+   return score;
+   }
+
+
 WordStatistcs* Ranker::Document::Features::getMostImportantWord(
-      Vector<WordStatistics>& wordStatistics)
+      Vector<WordStatistics*>& wordStatistics)
    {
    unsigned maxImportance = 0;
    WordStatistics* mostImportantWord = nullptr;
    for(int i = 0; i < wordStatistics.size(); ++i)
       {
-      Isr* curIsr = wordStatistcs[i].isr;
+      Isr* curIsr = wordStatistics[i].isr;
       if(curIsr->GetImportance() > maxImportance)
          {
          maxImportance = curIsr->GetImportance();
-         mostImportanceWord = &WordStatistics[i]; 
+         mostImportantWord = &WordStatistics[i]; 
          } 
       }
    return mostImportantWord;
    }
 
-void Ranker::getLocationDist(Location location1, Location location2)
+Location Ranker::getLocationDist(Location location1, Location location2)
    {
    if(location2 > location1)
       return location2 - location1;
@@ -188,15 +255,15 @@ Location Ranker::Document::Features::moveToClosestPosition(WordStatistics* word,
    if(word->IsPastEnd())
       return IsrGlobals::IsrSentinel;
       
-   Location minDist = getLocationDist(word->isr->curLocation, anchor->curLocation);
-   Location closestLocation = word->isr->curLocation;
-   while(!word->isPastEnd() && word->isr->curLocation < anchor->curLocation)
+   Location minDist = getLocationDist(word->isr->GetCurrentLocation()(), anchor->GetCurrentLocation());
+   Location closestLocation = word->isr->GetCurrentLocation()();
+   while(!word->isPastEnd() && word->isr->GetCurrentLocation()() < anchor->GetCurrentLocation())
       {
-      Location dist = getLocationDist(word->isr->curLocation, anchor->curLocation);
+      Location dist = getLocationDist(word->isr->GetCurrentLocation()(), anchor->GetCurrentLocation());
       if(dist < minDist)
          {
          minDist = dist;
-         closestLocation = word->isr->curLocation; 
+         closestLocation = word->isr->GetCurrentLocation()(); 
          }
       word->SeekNextInstance();
       }
@@ -214,7 +281,7 @@ void Ranker::Document::Features::computeSpanFeatures(Vector<Location>&
    closestLocationOrdering, Vector<WordStatistics*>& wordStatisitcs)
       {
       size_t numWordsInSpan = wordStatistics.size();
-      unsigned numQueriesOutOfOrder = 0;
+      numQueriesOutOfOrder = 0;
 
       if(numWordsInSpan == 0)
          return;
@@ -225,7 +292,7 @@ void Ranker::Document::Features::computeSpanFeatures(Vector<Location>&
       for(int i = 1; i < numWordsInSpan; ++i)
          {
          Location curLocation = closestLocationOrdering[i];
-         if(curLocation != IsrGlobals)
+         if(curLocation != IsrGlobals::IsrSentinel)
             {
             if(curLocation < leftMostLocation)
                leftMostLocation = curLocation;
@@ -237,9 +304,7 @@ void Ranker::Document::Features::computeSpanFeatures(Vector<Location>&
             }         
          }
 
-      unsigned spanLength = rightMostLocation - leftMostLocation + 1;
-      SpanLengthratio = (double) spanLength / numWordsInSpan;        
-      QueriesOutOfOrderRatio = (double) numQueriesOutOfOrder / numWordsInSpan;
+      spanLength = rightMostLocation - leftMostLocation + 1;
       }
 
 void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
@@ -257,7 +322,7 @@ void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
 
    //note: keep in mind that wordISRs are currently on one of their words
    bool allIsrsPastEnd = false;
-   WordStatistics* anchorWord = getMostImportantWord(wordStatistics);
+   WordStatistics* anchorWord = WordStatistics(wordStatistics);
    //corresponds to wordIsrs vec
    Vector<Location> closestLocationOrdering;
    while(!isPastEnd(anchorWord))
@@ -281,10 +346,10 @@ void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
          }
       }
    //sum word statistics
-   TotalWordFrequency = 0;
+   totalWordFrequency = 0;
    for(size_t i = 0; i < wordsStatistics.size(); ++i)
       {
-      TotalWordFrequency += wordsStatistics[i].Count;
+      totalWordFrequency += wordsStatistics[i].Count;
       }
    }
 

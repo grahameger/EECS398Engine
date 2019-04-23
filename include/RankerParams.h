@@ -2,7 +2,7 @@
 #ifndef RANKERPARAMS_H
 #define RANKERPARAMS_H
 
-#include "Vector.h"
+#include "vector.h"
 namespace RankerParams
    {
    struct CutoffFloat
@@ -13,7 +13,7 @@ namespace RankerParams
 
    struct CutoffInt
       {
-      unsignedk upperBound;
+      unsigned upperBound;
       unsigned score;
       };
 
@@ -25,7 +25,7 @@ namespace RankerParams
    //feature weights
    extern const unsigned WordFrequencyWeight;
    const unsigned SpanLengthWeight;
-   const unsigned QueriesOutOfOrderRatio;
+   const unsigned SpanOrderednessWeight;
    }
 
 #endif
