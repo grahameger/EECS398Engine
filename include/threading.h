@@ -200,7 +200,7 @@ namespace threading {
             m.unlock();
             return;
         }
-        q.push_back();
+        q.push_back(d);
         cvPop.signal();
         m.unlock();
     }
