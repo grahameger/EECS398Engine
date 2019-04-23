@@ -20,7 +20,7 @@
 static void makeDir(const char * name) {
     struct stat st = {0};
     if (stat(name, &st) == -1) {
-        int rv = mkdir(name, 0755);
+        int rv = mkdir(name, 0766);
         if (rv == -1) {
             fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));
             exit(1);
@@ -76,7 +76,7 @@ Stream::Stream() {
         makeDir(STREAM_DIRECTORY_NAME);
         // create and open a new file in the directory
         sprintf(pathname, "%s/%c", STREAM_DIRECTORY_NAME, '1');
-        int fd = open(pathname, O_RDWR | O_CREAT | O_NOATIME, 0755);
+        int fd = open(pathname, O_RDWR | O_CREAT | O_NOATIME, 0766);
         if (fd < 0) {
             fprintf(stderr, "error opening file %s - %s\n", pathname, strerror(errno));
         }
@@ -149,7 +149,7 @@ void Stream::allocateNewFile() {
     // open a new file
     std::string filename = std::to_string(backingFiles.size() + 1);
     sprintf(pathname, "%s/%s", STREAM_DIRECTORY_NAME, filename.c_str());
-    int fd = open(pathname, O_RDWR | O_CREAT | O_NOATIME, 0755);
+    int fd = open(pathname, O_RDWR | O_CREAT | O_NOATIME, 0766);
     // map it
     BackingFile * mapping = (BackingFile*)streamMmapWrapper(fd, BACKING_FILE_SIZE);
     // add to vector

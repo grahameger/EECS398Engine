@@ -38,7 +38,7 @@ namespace search {
         if (stat(fileWritesLogName, &st) != 0) {
             oFlags |= O_CREAT;
         }
-        logFd = open(fileWritesLogName, oFlags, 0755);
+        logFd = open(fileWritesLogName, oFlags, 0766);
         if (logFd < 0) {
             fprintf(stderr, "error opening log file");
             exit(1);
@@ -332,7 +332,7 @@ namespace search {
                 pthread_mutex_unlock(&crawler->waitingForRobotsLock);
             }
             // create an empty file with the filename
-            int fd = open(filename.c_str(), O_RDWR | O_CREAT, 0755);
+            int fd = open(filename.c_str(), O_RDWR | O_CREAT, 0766);
             if (fd != -1) {
                 // write the null character to the file
                 dprintf(fd, "%c", '\0');
@@ -554,9 +554,9 @@ namespace search {
             free(fullRespnose);
             return false;
         }
-        int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0755);
+        int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0766);
         for (size_t i = 0; i < 5; ++i) {
-            fd = open(filename.c_str(), O_RDWR | O_CREAT, 0755);
+            fd = open(filename.c_str(), O_RDWR | O_CREAT, 0766);
             if (fd == -1) {
                 // check errno
                 switch (errno) {
