@@ -66,86 +66,40 @@ int main(int argc, char *argv[]) {
 
    // register our signal handler
    struct sigaction sa;
-    memset( &sa, 0, sizeof(sa) );
-    sa.sa_handler = sig_handler;
-    sigfillset(&sa.sa_mask);
-    sigaction(SIGINT,&sa,NULL);
+   memset( &sa, 0, sizeof(sa) );
+   sa.sa_handler = sig_handler;
+   sigfillset(&sa.sa_mask);
+   sigaction(SIGINT,&sa,NULL);
 
-		std::string indexFilePrefix;
-		std::string seedList;
-		std::string domainList;
-		//int optionIndex = 0;
-		//int c;
+   std::string indexFilePrefix;
+   std::string seedList;
+   std::string domainList;
+   
+   // open every file in the pages directory
+   std::deque<std::string> files;
+   std::deque<Doc_object> documents;
+   threading::Mutex documentsMutex;
+   threading::ConditionVariable documentsCv;
+   DIR * dir;
+   struct dirent * ent; 
+   if ((dir = opendir("pages")) != NULL) {
+      // TODO: Remove
+      unsigned FilesAdded = 0;
+      while (++FilesAdded != MAXFILES && (ent = readdir(dir)) != NULL) {
+         files.push_back(ent->d_name);
+      }
+   }
 
-	// 	// loop to process the command line options
-	// 	while ((c = getopt_long(argc, argv, "i:s:", longopts, &optionIndex)) != -1) {
-	// 		switch (c) {
-	// 			case 'i':
-	// 				indexFilePrefix = optarg;
-	// 				break;
-	// 			case 's':
-	// 				seedList = optarg;
-	// 				break;
-	// 			case 'd':
-	// 				domainList = optarg;
-	// 			default:
-	// 				fprintf(stderr, "Unknown option\n");
-	// 				return 1;
-	// 		}
-	// 	}
+   fprintf(stdout, "starting to parse\n");
 
-	// FILE * fileOut = fopen("fullyparsed.urls", "w+");
-	// if (!fileOut) {		
-	// 	std::cerr << "couldn't open file" << std::endl;
-	// 	exit(1);
-	// }
+   std::thread threads[NUM_PARSING_THREADS];
+   for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+      threads[i] = std::thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
+   }
+   for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+      threads[i].join();
+   }
+   fprintf(stdout, "done parsing\n");
 
-	
-	// open every file in the pages directory
-	std::deque<std::string> files;
-	std::deque<Doc_object> documents;
-	threading::Mutex documentsMutex;
-	threading::ConditionVariable documentsCv;
-	DIR * dir;
-	struct dirent * ent; 
-	if ((dir = opendir("pages")) != NULL) {
-		// TODO: Remove
-		unsigned FilesAdded = 0;
-		while (++FilesAdded != MAXFILES && (ent = readdir(dir)) != NULL) {
-			files.push_back(ent->d_name);
-		}
-	}
-
-	fprintf(stdout, "starting to parse\n");
-
-	std::thread threads[NUM_PARSING_THREADS];
-	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-		threads[i] = std::thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
-	}
-	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-		threads[i].join();
-	}
-	fprintf(stdout, "done parsing\n");
-	
-	
-
-
-	Index index(&documents, &documentsMutex, &documentsCv);
-  // wait until all the parsing is actually complete
-//	std::vector<std::string> seedListUrls;
-//	for (size_t i = 0; i < documents.size(); ++i) {
-//		for (size_t j = 0; i < documents[i].vector_of_link_anchor.size(); ++j) {
-//			seedListUrls.push_back(documents[i].vector_of_link_anchor[j].link_url.CString());
-//		}
-//	}
-//	std::ifstream seedListFile(startFile);
-//	std::string url;
-//	while (std::getline(seedListFile, url)) {
-//		seedListUrls.push_back(url);
-//	}
-//	auto rng = std::default_random_engine {};
-//	std::shuffle(seedListUrls.begin(), seedListUrls.end(), rng);
-//	fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", seedListUrls.size(), startFile);
-//	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
-//	search::Crawler crawler(seedListUrls);
+   Index index(&documents, &documentsMutex, &documentsCv);
 }

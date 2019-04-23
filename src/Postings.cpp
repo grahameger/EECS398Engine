@@ -196,7 +196,7 @@ void Postings::CreateNewPostingsFile( )
       {
       SubBlockInfo sizeInfo{ curSize, block, 0 };
       SetOpen( sizeInfo, true );
-      SetLastUsed( { 0, 0, 0 }, true );
+      SetLastUsed( { curSize, 0, 0 }, true );
       }
 
    munmapWrapper( metaData.RawCString( ), metaData.Size( ) );

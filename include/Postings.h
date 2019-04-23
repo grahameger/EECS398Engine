@@ -36,10 +36,12 @@ class FixedLengthURL
    public:
       FixedLengthURL( const char* cstring );
 
+      const char* Characters( ) const { return characters; }
+
       bool operator== ( const FixedLengthURL& other ) const;
       FixedLengthURL();
    private:
-      static const unsigned MaxLength = 199;
+      static const unsigned MaxLength = 255;
       char characters[ MaxLength + 1 ];
 
    };

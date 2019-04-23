@@ -6,37 +6,42 @@
 #include <deque>
 
 
-void* readerWrapper(void* index){
-   static_cast<Index*>(index)->reader();
+void* readerWrapper( void* index )
+   {
+   static_cast< Index* >( index )->reader( );
    return nullptr;
-}
+   }
 
-void* writerWrapper(void* index){
-   static_cast<Index*>(index)->writerDriver();
+void* writerWrapper( void* index )
+   {
+   static_cast< Index* >( index )->writerDriver( );
    return nullptr;
-}
+   }
 
 
-Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV)
-   : totalDocLength(0), urlMap("urlTable"), metaMap("metaTable"), currentLocation(0), emptyQueue(false), currentDocId(0), currentWriteDocId(0), readThreads(1), writeThreads(1) {
+Index::Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock, 
+      threading::ConditionVariable* CV ) : emptyQueue( false ), currentDocId( 0 ), 
+      currentWriteDocId( 0 ), totalDocLength( 0 ), currentLocation( 0 ), 
+      documentQueue( docQueue ), urlMap( "urlTable" ), metaMap( "metaTable" ),
+      dequeCV( CV ), documentQueueLock( queueLock )
+   {
+   fd = open( "averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU );
+   ftruncate( fd, sizeof( unsigned long long ) );
 
-   fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
-   ftruncate(fd, sizeof(unsigned long long));
-   documentQueue = docQueue;
-   documentQueueLock = queueLock;
-   dequeCV = CV;
    //read in
-   for(unsigned i = 0; i < 10; i++){
-      pthread_create(&readThreads[i], NULL, &readerWrapper, this);
-   }
-   for(unsigned i = 0; i < 10; i++){
-      pthread_create(&writeThreads[i], NULL, &writerWrapper, this);
-   }
-   pthread_join(readThreads[0], nullptr);
+   for( unsigned i = 0; i < 10; i++ )
+      pthread_create( &readThreads[ i ], NULL, &readerWrapper, this );
+
+   for( unsigned i = 0; i < 10; i++ )
+      pthread_create( &writeThreads[ i ], NULL, &writerWrapper, this );
+
+   pthread_join( readThreads[ 0 ], nullptr );
+
    //reader(docQueue);
 }
 
-void Index::writerDriver(){
+void Index::writerDriver( )
+   {
    //put them in a priority queue that holds wordLocations, sorted by numWords
    //pop value from priority queue to addWord
    wordLocations* locations;
@@ -56,7 +61,7 @@ void Index::writerDriver(){
       delete locations;
    }
    
-}
+   }
 
 
 void Index::reader(){
