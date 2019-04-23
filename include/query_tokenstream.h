@@ -68,6 +68,7 @@ public:
      * Returns true if the char was matched and consumed, false otherwise
      */
     bool Match( char c );
+    bool Match( string c );
     bool match_and = false;
     bool last_char( );
     
