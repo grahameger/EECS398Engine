@@ -32,7 +32,7 @@ ISR *Parser::FindOr( )
    {
       ISROr *self = new ISROr( );
       self->addTerm( left );
-      while ( stream.Match( '|' ) )
+      while ( stream.Match( '|' ) || stream.Match( "OR" ) || stream.Match( "||" ) )
       {
          left = FindOr( );
          if( !left )
@@ -54,7 +54,7 @@ ISR *Parser::FindAnd( )
    {
       ISRAnd *self = new ISRAnd( );
       self->addTerm( left );
-      while ( ( left = FindSimple( ) ) || stream.Match( '&' ) )
+      while ( ( left = FindSimple( ) ) || stream.Match( '&' ) || stream.Match( "&&" ) || stream.Match( "AND" ) )
       {
          if( stream.match_and )
          {
