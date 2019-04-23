@@ -120,6 +120,7 @@ class Postings
       static const unsigned DefaultBlockSize;
       static const unsigned DefaultNumSizes;
       static const char* Filename;
+      static threading::Mutex constructorMutex;
 
    // Instance
    public:

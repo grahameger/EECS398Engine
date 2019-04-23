@@ -47,6 +47,7 @@ unsigned Postings::blockSize = Postings::DefaultBlockSize;
 const char* Postings::Filename = "testIndex";
 // The singleton variable
 Postings* Postings::CurPostings = nullptr;
+threading::Mutex Postings::constructorMutex;
 
 
 // ######################
@@ -55,8 +56,10 @@ Postings* Postings::CurPostings = nullptr;
 
 Postings* Postings::GetPostings( )
    {
+   constructorMutex.lock( );
    if ( CurPostings == nullptr )
       CurPostings = new Postings( );
+   constructorMutex.unlock( );
 
    return CurPostings;
    }
@@ -158,6 +161,7 @@ Postings::Postings( ) : indexFD( open( Filename, O_RDWR ) ),
    if ( blockSize != DefaultBlockSize )
       printf( "Warning: using existing blockSize of %u instead of suggested %u\n", 
             blockSize, DefaultBlockSize );
+   assert( blockSize != 0 );
    // Set metaData to the mmapped first block
    metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
    // Second num is numBlocks
@@ -177,6 +181,7 @@ void Postings::CreateNewPostingsFile( )
    // Set it to the correct size (1 for metadata, 1 for each size)
    ftruncate( indexFD, blockSize * ( DefaultNumSizes + 1 ) );
 
+   assert( blockSize != 0 );
    // Open the first block
    metaData = StringView( ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize );
    unsigned currentOffset = 0;
@@ -643,6 +648,7 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
    printf( "Lock acquired for %d.\n", subBlockInfo.blockIndex );
    #endif
 
+   assert( blockSize != 0 );
    toReturn.mmappedArea = 
          ( char* )mmapWrapper( indexFD, blockSize, blockOffset );
    toReturn.mmappedArea += subBlockOffset;
