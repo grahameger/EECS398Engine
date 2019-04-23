@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "Utf8Uint.h"
 #include <deque>
+#include "hash_table.hpp"
 
 
 void* readerWrapper( void* index )
@@ -45,128 +46,182 @@ void Index::writerDriver( )
    //put them in a priority queue that holds wordLocations, sorted by numWords
    //pop value from priority queue to addWord
    wordLocations* locations;
-   while(true){
-      pQueueLock.lock();
-      while(queue.size() == 0){
+   while( true )
+      {
+      pQueueLock.lock( );
+
+      while( queue.size( ) == 0 )
+         {
          emptyQueue = true;
-         queueReadCV.wait(pQueueLock);
-      }
-      locations = queue.top();
+         queueReadCV.wait( pQueueLock );
+         }
+
+      locations = queue.top( );
+
       //now that locaitons is out of queue we remove the entry
-      queue.pop();
-      pQueueLock.unlock();
+      queue.pop( );
+      pQueueLock.unlock( );
+
       //pass fixed length word and location vector to AddPostings
-      Postings* postings = Postings::GetPostings();
-      postings->AddPostings(FixedLengthString(locations->word.CString()), &locations->locations);
+      Postings* postings = Postings::GetPostings( );
+      postings->AddPostings( FixedLengthString( locations->word.CString( ) ), 
+            &locations->locations );
+
       delete locations;
-   }
-   
+      }
    }
 
 
-void Index::reader(){
+void Index::reader( )
+   {
    //could this be threaded?
    //    would have to make sure thread driver only happens when all document older than the newest currently being read are completely read.
    //    reader must add to queue in correct order, has to wait for readers of old docs to finish if necessary
-   while(true){
-      documentQueueLock->lock();
-      while(documentQueue->empty()){
-         documentQueueLock->unlock();
-         documentQueueLock->lock();
-      }
-      //think about dynamicness
-      Doc_object doc = documentQueue->front();
-      documentQueue->pop_front();
-      std::cout << "Popped: " << doc.doc_url << std::endl;
+   while( true )
+      {
+      documentQueueLock->lock( );
+      while( documentQueue->empty( ) )
+         {
+         // TODO: Fix Spin Lock
+         documentQueueLock->unlock( );
+         documentQueueLock->lock( );
+         }
+
+      Doc_object doc = documentQueue->front( );
+      documentQueue->pop_front( );
+
       unsigned long long startLocation = currentLocation;
-      int docSize = doc.Words.size();
+      int docSize = doc.Words.size( );
+
+      //docSize += all the anchor text document lengths we're adding
+      for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
+         docSize += doc.vector_of_link_anchor[ i ].anchor_words.size( );
+
       //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
-      docSize += doc.vector_of_link_anchor.size() + 1;
-      for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
-         docSize += doc.vector_of_link_anchor[i].anchor_words.size();
-      }
+      //docSize += # of endDocs
+      docSize += doc.vector_of_link_anchor.size( ) + 1;
+
       currentLocation += docSize;
       int docId = currentDocId;
       currentDocId++;
+
+      std::cout << "Popped: " << doc.doc_url.CString( ) << std::endl;
+
       //can't read in next doc until current location and currentDocId are updated
-      documentQueueLock->unlock();
-      dequeCV->signal();
-      hash_table<Vector<unsigned long long> > localMap;
+      documentQueueLock->unlock( );
+      dequeCV->signal( );
+
+      hash_table< Vector< unsigned long long > > localMap;
+      //@-anchor
+      //#-title
+      //$-url
+      //*-body
+
       //pass urls and doc ends to newDoc somehow, probably a queue of url, docEnd pairs
       //parse into word, vector<ull>location pairs
-      for(unsigned i = 0; i < doc.url.size(); i++){
-         (*(localMap[String("$") + doc.url[i]])).push_back(startLocation);
+      for( unsigned i = 0; i < doc.url.size(); i++ )
+         {
+         String urlDecorated = String( "$" ) + doc.url[ i ];
+         localMap[ urlDecorated ]->push_back( startLocation );
          startLocation++;
-      }
-      for(unsigned i = 0; i < doc.Words.size(); i++){
+         }
+      for( unsigned i = 0; i < doc.Words.size( ); i++ ){
          //proabbly going to need a map here
          //if statement for where in the doc this occured
-         //@-anchor
-         //#-title
-         //$-url
-         //*-body
-         if(doc.Words[i].type == 't'){
-            (*(localMap[String("#") + doc.Words[i].word])).push_back(startLocation);
+         if( doc.Words[ i ].type == 't' )
+            {
+            String titleDecorated = String( "#" ) + doc.Words[ i ].word;
+            localMap[ titleDecorated ]->push_back( startLocation );
             startLocation++;
-         }
-         else{
-            (*(localMap[String("*") + doc.Words[i].word])).push_back(startLocation);
+            }
+         else
+            {
+            String bodyDecorated = String( "*" ) + doc.Words[ i ].word;
+            localMap[ bodyDecorated ]->push_back( startLocation );
             startLocation++;
-         }
+            }
       }
       //docEnd
-      (*(localMap[String("")])).push_back(startLocation);
-      auto fixedLengthUrl = FixedLengthURL(doc.doc_url.CString());
-      urlMap[startLocation] = fixedLengthUrl;
-      startLocation++;
+      localMap[ String("") ]->push_back( startLocation++ );
+
+      FixedLengthURL fixedLengthUrl( doc.doc_url.CString( ) );
+      urlMap[ startLocation ] = fixedLengthUrl;
+
       //parse anchor texts
-      for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
-         for(unsigned j = 0; j < doc.vector_of_link_anchor[i].anchor_words.size(); j++){
+      for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
+         {
+         for( unsigned j = 0; j < doc.vector_of_link_anchor[ i ].anchor_words.size( ); j++)
+            {
             //probably gonna need to use the same map here
-            (*(localMap[String("@") + doc.vector_of_link_anchor[i].anchor_words[j].word])).push_back(startLocation);
+            String anchorDecorated = String( "@" ) + 
+                  doc.vector_of_link_anchor[ i ].anchor_words[ j ].word;
+            localMap[ anchorDecorated ]->push_back( startLocation );
             startLocation++;
-         }
+            }
          //docEnd map here
-         (*(localMap[String("")])).push_back(startLocation);
-         auto fixedLengthUrl = FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString());
-         urlMap[startLocation] = fixedLengthUrl;
-         startLocation++;
-      }
-      urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthURL(doc.doc_url.CString())].inLinks, doc.vector_of_link_anchor.size(),doc.domain_type, doc.domain_rank);
-      currentWriteDocIdMutex.lock();
-      while(currentWriteDocId != docId){
-         queueWriteCV.wait(currentWriteDocIdMutex);
-      }
-      currentWriteDocIdMutex.unlock();
-      pQueueLock.lock();
-      //url -> metadata
-      metaMap[FixedLengthURL(doc.doc_url.CString())] = metadata;
-      for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
-         metaMap[FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString())].inLinks++;
-      }
-      totalDocLength += doc.Words.size();
-      unsigned averageDocLength = totalDocLength / (docId + 1);
-      lseek(fd, 0, SEEK_SET);
-      write(fd, &averageDocLength, sizeof(unsigned));
-      //iterate through map and insert into pQueue
-      for(unsigned i = 0; i < localMap.numBuckets; i++){
-         auto it = localMap.array[i].begin();
-         while(it != localMap.array[i].end()){
-            //add word vector<ull>location pair to priority queue
-            queue.insert((*it).key, (*it).offset);
-            it++;
+         localMap[ String("") ]->push_back( startLocation );
+
+         FixedLengthURL fixedLengthUrl( doc.vector_of_link_anchor[ i ].link_url.CString( ) );
+         urlMap[ startLocation++ ] = fixedLengthUrl;
          }
+
+      FixedLengthURL fixedDocUrl( doc.doc_url.CString( ) );
+
+      int inLinks = metaMap[ fixedDocUrl ].inLinks;
+      urlMetadata metadata( doc.Words.size( ), doc.doc_url.Size( ), doc.num_slash_in_url,
+            inLinks, doc.vector_of_link_anchor.size( ), doc.domain_type, doc.domain_rank );
+
+      // Doc_object parsed, time to add it's words to the index priority queue
+      // Can't add this doc until all before it have been added
+      currentWriteDocIdMutex.lock( );
+      while( currentWriteDocId != docId )
+         {
+         queueWriteCV.wait( currentWriteDocIdMutex );
+         }
+      currentWriteDocIdMutex.unlock( );
+
+      // It's time to add this doc
+      pQueueLock.lock( );
+
+      //url -> metadata
+      metaMap[ fixedDocUrl ] = metadata;
+      for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
+         {
+         FixedLengthURL anchorPointsTo( doc.vector_of_link_anchor[ i ].link_url.CString( ) );
+         metaMap[ anchorPointsTo ].inLinks++;
+         }
+
+      // Update AverageDocLength.bin
+      totalDocLength += doc.Words.size( );
+      unsigned averageDocLength = totalDocLength / ( docId + 1 );
+      lseek( fd, 0, SEEK_SET );
+      write( fd, &averageDocLength, sizeof( unsigned ) );
+
+      //iterate through map and insert into pQueue
+      for( unsigned i = 0; i < localMap.numBuckets; i++ ){
+         auto it = localMap.array[ i ].begin( );
+         while( it != localMap.array[ i ].end( ))
+            {
+            //add word vector<ull>location pair to priority queue
+            queue.insert( ( *it ).key, ( *it ).offset );
+            it++;
+            }
       }
 
       pQueueLock.unlock();
-      if(emptyQueue){
+
+      // Notify write threads there is something in the pQueue
+      if( emptyQueue )
+         {
          emptyQueue = false;
-         queueReadCV.broadcast();
-      }
-      currentWriteDocId++;
-      queueWriteCV.broadcast();
-      dequeCV->signal();
+         queueReadCV.broadcast( );
+         }
+
+      // Increment currentWriteDocId, then broadcast to anyone waiting
       currentWriteDocIdMutex.lock();
+      currentWriteDocId++;
       currentWriteDocIdMutex.unlock();
+      queueWriteCV.broadcast();
+
    }
 }

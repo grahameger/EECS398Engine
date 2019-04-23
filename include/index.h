@@ -4,13 +4,12 @@
 #include "PersistentHashMap.h"
 #include "Postings.h"
 #include "vector.h"
-#include "crawler.h"
+#include "Parser.hpp"
 
 // #include "String.h"
 // #include "Pair.h"
 // #include "StringView.h"
 // #include "PostingList.h"
-// #include "Parser.hpp"
 // #include "hash_table.hpp"
 
 
