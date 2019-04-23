@@ -23,7 +23,7 @@ ISR *Parser::FindPhrase( )
  
  return nullptr;
  
- }*/
+ }
 
 ISR *Parser::FindOr( )
 {
