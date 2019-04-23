@@ -79,7 +79,8 @@ int main(int argc, char *argv[]) {
    std::deque<std::string> files;
    std::deque<Doc_object> documents;
    threading::Mutex documentsMutex;
-   threading::ConditionVariable documentsCv;
+   threading::ConditionVariable documentsFullCv;
+   threading::ConditionVariable documentsEmptyCv;
    DIR * dir;
    struct dirent * ent; 
    if ((dir = opendir("pages")) != NULL) {
@@ -88,18 +89,19 @@ int main(int argc, char *argv[]) {
       while (++FilesAdded != MAXFILES && (ent = readdir(dir)) != NULL) {
          files.push_back(ent->d_name);
       }
+      fprintf(stdout, "%u files added\n", FilesAdded);
    }
 
    fprintf(stdout, "starting to parse\n");
 
    std::thread threads[NUM_PARSING_THREADS];
    for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-      threads[i] = std::thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
+      threads[i] = std::thread(search::parseFiles, std::ref(files), std::ref(documents), std::ref(documentsMutex), std::ref(documentsFullCv), std::ref(documentsEmptyCv));
    }
    for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
       threads[i].join();
    }
    fprintf(stdout, "done parsing\n");
 
-   Index index(&documents, &documentsMutex, &documentsCv);
+   Index index(&documents, &documentsMutex, &documentsFullCv, &documentsEmptyCv);
 }

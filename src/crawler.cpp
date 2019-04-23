@@ -312,7 +312,8 @@ namespace search {
     void parseFileOnDisk(std::string filename,
                          std::deque<Doc_object>& d,
                          threading::Mutex &m,
-                         threading::ConditionVariable& cv) 
+                         threading::ConditionVariable& fullCv,
+                         threading::ConditionVariable& emptyCv)
     {
         static AlexaRanking alexa;
         static threading::Mutex stdoutLock;
@@ -336,10 +337,11 @@ namespace search {
              //add them to the master set of links
              m.lock();
              while (d.size() > 1000000) {
-                 cv.wait(m);
+                 fullCv.wait(m);
              }
              d.push_back(linkFinder.Document);
              m.unlock();
+	     emptyCv.signal( );
             if (file.size)
                 munmap(file.ptr, file.size);
             // write to standard out instead
@@ -353,19 +355,25 @@ namespace search {
         }
     }
 
-    void parseFiles(std::deque<std::string> filenames,
+    void parseFiles(std::deque<std::string>& filenames,
                     std::deque<Doc_object>& d,
                     threading::Mutex &m,
-                    threading::ConditionVariable& cv) 
+                    threading::ConditionVariable& fullCv,
+                    threading::ConditionVariable& emptyCv)
     {
         static threading::Mutex filenamesLock;
         // TODO look at this again
-        while (!filenames.empty()) {
+	bool notEmpty = true;
+        while ( notEmpty ) {
             filenamesLock.lock();
-            auto filename = filenames.front();
-            filenames.pop_front();
-            filenamesLock.unlock();
-            parseFileOnDisk(filename, d, m, cv);
+	    if ( (notEmpty = !filenames.empty()) ) {
+	        auto filename = filenames.front();
+	        filenames.pop_front();
+	        filenamesLock.unlock();
+	        parseFileOnDisk(filename, d, m, fullCv, emptyCv);
+	    } else {
+		filenamesLock.unlock( );
+	    }
         }
     }
 

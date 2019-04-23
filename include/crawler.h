@@ -95,12 +95,14 @@ namespace search {
     void parseFileOnDisk( std::string filename,
                                 std::deque<Doc_object>& d,
                                 threading::Mutex &m,
-                                threading::ConditionVariable& cv);
+                                threading::ConditionVariable& fullCv,
+                                threading::ConditionVariable& emptyCv);
     
-    void parseFiles(std::deque<std::string> filenames,
+    void parseFiles(std::deque<std::string>& filenames,
                     std::deque<Doc_object>& d,
                     threading::Mutex& m,
-                    threading::ConditionVariable& cv);
+                    threading::ConditionVariable& fullCv,
+                    threading::ConditionVariable& emptyCv);
 }
 
 #endif

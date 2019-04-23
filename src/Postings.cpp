@@ -473,9 +473,8 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
       IncrementNumBlocks( true );
       }
 
-   // Get the open sub block and set it to the last used for this size
-   SubBlock toReturn = MmapSubBlock( openSubBlock, true, false );
-   SetLastUsed( toReturn.subBlockInfo, true );
+   SubBlockInfo toReturnInfo = openSubBlock;
+   SetLastUsed( toReturnInfo, true );
 
    // If the incremented next subBlock is invalid, make blockIndex invalid too
    if ( ( ++openSubBlock.subBlockIndex %= blockSize / openSubBlock.subBlockSize ) == 0 )
@@ -486,7 +485,8 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
 
    metaDataLock.unlock();
 
-   return toReturn;
+   // Get the open sub block and set it to the last used for this size
+   return MmapSubBlock( toReturnInfo, true, false );
    }
 
 
@@ -517,8 +517,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHel
       return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
       }
 
-   SubBlock toReturn = MmapSubBlock( lastUsedSubBlock, true, 
-         lastUsedSubBlock.blockIndex == blockHeld );
+   SubBlockInfo toReturnInfo = lastUsedSubBlock;
    SetOpen( lastUsedSubBlock, true );
 
    // If decremented lastUsedSubBlock is invalid
@@ -533,7 +532,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHel
 
    metaDataLock.unlock();
 
-   return toReturn;
+   return MmapSubBlock( toReturnInfo, true, toReturnInfo.blockIndex == blockHeld );
    }
 
 

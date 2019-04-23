@@ -21,10 +21,11 @@ void* writerWrapper( void* index )
 
 
 Index::Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock, 
-      threading::ConditionVariable* CV ) : emptyQueue( false ), currentDocId( 0 ), 
-      currentWriteDocId( 0 ), totalDocLength( 0 ), currentLocation( 0 ), 
-      documentQueue( docQueue ), urlMap( "urlTable" ), metaMap( "metaTable" ),
-      dequeCV( CV ), documentQueueLock( queueLock )
+      threading::ConditionVariable* fullCV, threading::ConditionVariable* emptyCV) 
+      : emptyQueue( false ), currentDocId( 0 ), currentWriteDocId( 0 ), 
+      totalDocLength( 0 ), currentLocation( 0 ), documentQueue( docQueue ), 
+      urlMap( "urlTable" ), metaMap( "metaTable" ), dequeCV( fullCV ), 
+      queueWriteCV( emptyCV ), documentQueueLock( queueLock )
    {
    fd = open( "averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU );
    ftruncate( fd, sizeof( unsigned long long ) );
@@ -82,9 +83,7 @@ void Index::reader( )
       documentQueueLock->lock( );
       while( documentQueue->empty( ) )
          {
-         // TODO: Fix Spin Lock
-         documentQueueLock->unlock( );
-         documentQueueLock->lock( );
+	 queueWriteCV->wait( *documentQueueLock );
          }
 
       Doc_object doc = documentQueue->front( );
@@ -176,7 +175,7 @@ void Index::reader( )
       currentWriteDocIdMutex.lock( );
       while( currentWriteDocId != docId )
          {
-         queueWriteCV.wait( currentWriteDocIdMutex );
+         queueWriteDocIdCV.wait( currentWriteDocIdMutex );
          }
       currentWriteDocIdMutex.unlock( );
 
@@ -221,7 +220,7 @@ void Index::reader( )
       currentWriteDocIdMutex.lock();
       currentWriteDocId++;
       currentWriteDocIdMutex.unlock();
-      queueWriteCV.broadcast();
+      queueWriteDocIdCV.broadcast();
 
    }
 }

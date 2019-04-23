@@ -266,7 +266,7 @@ size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
     size_t i = hash::Hash<KeyType>{}.get(key) % this->header->capacity;
     size_t start = i;
     for (; i < this->header->capacity && (isGhost.at(i) || isFilled.at(i)); ++i ) {
-        if (buckets[i].first == key) {
+        if (!isGhost.at(i) && buckets[i].first == key) {
             return i;
         }
     }
@@ -274,7 +274,7 @@ size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
         return this->header->capacity;
     } else {
         for (i = 0; i < start && (isGhost.at(i) || isFilled.at(i)); ++i) {
-            if (buckets[i].first == key) {
+	    if (!isGhost.at(i) && buckets[i].first == key) {
                 return i;
             }
         }
