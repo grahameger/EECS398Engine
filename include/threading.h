@@ -282,9 +282,11 @@ namespace threading {
         }
         std::vector<T> rv;
         if (q.size() >= 100000) {
-            rv = std::vector<T>(q.rbegin(), q.rbegin() + 10000);
+            rv = std::vector<T>(std::move_iterator(q.rbegin()),
+                                std::move_iterator(q.rbegin() + 10000));
         } else {
-            rv = std::vector<T>(q.rbegin(), q.rbegin() + 1);
+            rv = std::vector<T>(std::move_iterator(q.rbegin()),
+                                std::move_iterator(q.rbegin() + 1));
         }
         for (size_t i = 0; i < rv.size(); i++) {
             q.pop_back();
