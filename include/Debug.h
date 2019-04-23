@@ -12,7 +12,7 @@
 #define _XOPEN_SOURCE
 #endif
 
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG 
 #define D(x) x
