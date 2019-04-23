@@ -266,16 +266,8 @@ namespace threading {
             }
         }
         // get a random element 
-        static thread_local std::random_device rd;
-        static thread_local std::default_random_engine generator(rd());
-        static thread_local std::uniform_int_distribution<long long unsigned> distribution(0,0xFFFFFFFFFFFFFFFF);
-        size_t random = distribution(generator);
-        auto it = q.begin();
-        if (q.size() > 1) {
-            std::advance( it, random % q.size());
-        }
-        T temp = *it;
-        q.erase(it);
+        T temp = q.front();
+        q.pop_front();
         m.unlock();
         return temp;
     }

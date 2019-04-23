@@ -1,7 +1,7 @@
 #!/bin/bash
 nsamples=1
 sleeptime=0
-pid=5390 
+pid=$(pidof crawler)
 
 for x in $(seq 1 $nsamples)
   do
