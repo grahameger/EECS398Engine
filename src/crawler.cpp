@@ -112,7 +112,7 @@ namespace search {
             if (urls.empty()) {
                 urls = readyQueue.popVec();
             }
-            p = std::move(urls.back());
+            p = urls.back();
             urls.pop_back();
             if (p == "") {
                 continue;
