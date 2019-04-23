@@ -134,7 +134,7 @@ namespace search {
             if (!req.robots() && !haveRobots(req.host)) {
                 // change the path to get the robots.txt file
                 // add the old url to the back of the queue until we get the robots file
-                readyQueue.push(p);
+                readyQueue.pushForce(p);
                 pthread_mutex_lock(&waitingForRobotsLock);
                 // see if there's a set already for it
                 auto it = waitingForRobots.find(req.host);
@@ -179,7 +179,7 @@ namespace search {
                     pthread_mutex_unlock(&domainMutex);
                     // add the page to the back of the Queue
                     D(fprintf(stderr, "[RATE LIMIT] %s\n", req.filename().c_str());)
-                    readyQueue.push(p); 
+                    readyQueue.pushForce(p); 
                     // continue
                     continue;
                 }

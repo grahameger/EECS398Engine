@@ -91,6 +91,7 @@ namespace threading {
         ~ThreadQueue();
 
         void push(const T &d);
+        void pushForce(const T& d);
         void push(const std::vector<T> &d);
 
         template <typename Iterator>
@@ -188,6 +189,18 @@ namespace threading {
             return;
         }
         q.push_back(d);
+        cvPop.signal();
+        m.unlock();
+    }
+
+    template <typename T> void ThreadQueue<T>::pushForce(const T &d) {
+        m.lock();
+        if (d == T()) {
+            cvPop.signal();
+            m.unlock();
+            return;
+        }
+        q.push_back();
         cvPop.signal();
         m.unlock();
     }
