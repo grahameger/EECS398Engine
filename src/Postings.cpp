@@ -91,6 +91,14 @@ void Postings::AddPostings( const FixedLengthString& word,
       plSubBlock = GetNewSubBlock( postingList.GetByteSize( ) );
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
+      subBlockIndexLock.lock( );
+      subBlockIndex.insert( { word, plSubBlock.subBlockInfo } );
+      subBlockIndexLock.unlock( );
+
+      wordIndexLock.lock( );
+      wordIndex.insert( { plSubBlock.subBlockInfo, word } );
+      wordIndexLock.unlock( );
+
       #ifdef TEST
       printf( "Posting list added to NEW block at (%u, %u) of size %u\n",
             plSubBlock.subBlockInfo.blockIndex,
@@ -188,7 +196,7 @@ void Postings::CreateNewPostingsFile( )
       {
       SubBlockInfo sizeInfo{ curSize, block, 0 };
       SetOpen( sizeInfo, true );
-      SetLastUsed( sizeInfo, true );
+      SetLastUsed( { 0, 0, 0 }, true );
       }
 
    munmapWrapper( metaData.RawCString( ), metaData.Size( ) );
@@ -208,10 +216,10 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
          split.size( ) );
    #endif
 
+   SubBlock newSubBlock;
+
    for ( unsigned i = split.size( ); i > 0; i-- )
       {
-      SubBlock newSubBlock;
-
       // This is a completely new block for the overflow data or
       // The old block is not a full block and needs to be re-allocated
       if ( i > 1 || plSubBlock.subBlockInfo.subBlockSize != blockSize ) 
@@ -256,8 +264,21 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
    printf( "%s\n", Buffer );
    #endif
 
-   // Delete the outgrown subBlock
+   // Update subBlockIndex, and wordIndex, then Delete the outgrown subBlock
    assert( plSubBlock.subBlockInfo.subBlockSize != blockSize );
+
+   subBlockIndexLock.lock( );
+   if ( plSubBlock.subBlockInfo.blockIndex != 0 )
+      subBlockIndex.erase( word );
+   subBlockIndex.insert( { word, newSubBlock.subBlockInfo } );
+   subBlockIndexLock.unlock( );
+
+   wordIndexLock.lock( );
+   if ( plSubBlock.subBlockInfo.blockIndex != 0 )
+      wordIndex.erase( newSubBlock.subBlockInfo );
+   wordIndex.insert( { newSubBlock.subBlockInfo, word } );
+   wordIndexLock.unlock( );
+
    DeleteSubBlock( plSubBlock );
    }
 
@@ -360,35 +381,60 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    assert( subBlock.subBlockInfo.subBlockSize != blockSize );
 
    // Get the last used sub block of this size
-   SubBlock lastUsed = 
-         GetLastUsedSubBlock( subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo.blockIndex );
+   SubBlock lastUsed = GetLastUsedSubBlock(
+         subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo.blockIndex );
+   
+   #ifdef TEST
+   char Buffer[2048];
+   int bufferIndex = 0;
+   bufferIndex += sprintf( Buffer, "Deleting (%u, %u), lastUsed of size %u is (%u, %u)\n",
+         subBlock.subBlockInfo.blockIndex,
+         subBlock.subBlockInfo.subBlockIndex,
+         subBlock.subBlockInfo.subBlockSize,
+         lastUsed.subBlockInfo.blockIndex,
+         lastUsed.subBlockInfo.subBlockIndex );
+   #endif
 
    if ( lastUsed.subBlockInfo.blockIndex == 0 )
       {
+      #ifdef TEST
+      sprintf( Buffer + bufferIndex, "\tNo lastUsed, nothing to move.\n" );
+      printf( "%s\n", Buffer );
+      #endif
+
       MunmapSubBlock( subBlock );
       return;
       }
 
-   // This was not the last subBlock
-   if ( lastUsed.subBlockInfo != subBlock.subBlockInfo )
+   // This was the last subBlock
+   if ( lastUsed.subBlockInfo == subBlock.subBlockInfo )
       {
-      // Copy it into current subBlock
-      memcpy( subBlock.mmappedArea, lastUsed.mmappedArea, 
-            lastUsed.subBlockInfo.subBlockSize );
-      // Fix hashmaps
-      wordIndexLock.lock( );
-      FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
-      wordIndex.erase( lastUsed.subBlockInfo );
-      wordIndex.at( subBlock.subBlockInfo ) = word;
-      wordIndexLock.unlock( );
-      subBlockIndexLock.lock( );
-      subBlockIndex.at( word ) = subBlock.subBlockInfo;
-      subBlockIndexLock.unlock( );
+      #ifdef TEST
+      sprintf( Buffer + bufferIndex, "\tDeleting the lastUsed, nothing to move.\n" );
+      printf( "%s\n", Buffer );
+      #endif
+
+      MunmapSubBlock( subBlock );
+      return;
       }
+
+   // Copy it into current subBlock
+   memcpy( subBlock.mmappedArea, lastUsed.mmappedArea, 
+         lastUsed.subBlockInfo.subBlockSize );
+
+   // Update hashmaps
+   wordIndexLock.lock( );
+   FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
+   wordIndex.erase( lastUsed.subBlockInfo );
+   wordIndex.at( subBlock.subBlockInfo ) = word;
+   wordIndexLock.unlock( );
+
+   subBlockIndexLock.lock( );
+   subBlockIndex.at( word ) = subBlock.subBlockInfo;
+   subBlockIndexLock.unlock( );
 
    if ( lastUsed.rwlock )
       MunmapSubBlock( lastUsed );
-   // Unmap the deleted block
    MunmapSubBlock( subBlock );
    }
 
@@ -457,23 +503,33 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHel
    // Plus the original offset from the other data
    offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
 
-   SubBlockInfo subBlockInfo;
+   SubBlockInfo lastUsedSubBlock;
 
-   subBlockInfo.subBlockSize = subBlockSize;
-   subBlockInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+   lastUsedSubBlock.subBlockSize = subBlockSize;
+   lastUsedSubBlock.blockIndex = metaData.GetInString< unsigned >( offset );
    offset += sizeof( unsigned );
-   subBlockInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+   lastUsedSubBlock.subBlockIndex = metaData.GetInString< unsigned char >( offset );
 
-   SubBlock toReturn{ false, nullptr, 0, subBlockInfo, nullptr, true};
-   if ( subBlockInfo.blockIndex == 0 )
+   // If lastUsedSubBlock is invalid
+   if ( lastUsedSubBlock.blockIndex == 0 )
       {
-      metaDataLock.unlock();
-      return toReturn;
+      metaDataLock.unlock( );
+      return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
       }
 
-   toReturn = MmapSubBlock( subBlockInfo, true, true );
+   SubBlock toReturn = MmapSubBlock( lastUsedSubBlock, true, 
+         lastUsedSubBlock.blockIndex == blockHeld );
+   SetOpen( lastUsedSubBlock, true );
 
-   SetOpen( subBlockInfo, true );
+   // If decremented lastUsedSubBlock is invalid
+   if ( lastUsedSubBlock.subBlockIndex-- == 0 )
+      {
+      lastUsedSubBlock.subBlockIndex = 0;
+      lastUsedSubBlock.blockIndex = 0;
+      }
+
+   // Decrement lastUsedSubBlock
+   SetLastUsed( lastUsedSubBlock, true );
 
    metaDataLock.unlock();
 
