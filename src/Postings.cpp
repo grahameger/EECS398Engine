@@ -387,7 +387,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
 
    // Get the last used sub block of this size
    SubBlock lastUsed = GetLastUsedSubBlock(
-         subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo.blockIndex );
+         subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo );
    
    #ifdef TEST
    char Buffer[2048];
@@ -495,7 +495,7 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
    }
 
 
-SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHeld )
+SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subBlockHeld )
    {
    // Should never be called for blockSize
    assert( subBlockSize != blockSize );
@@ -537,7 +537,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHel
 
    metaDataLock.unlock();
 
-   return MmapSubBlock( toReturnInfo, true, toReturnInfo.blockIndex == blockHeld );
+   return MmapSubBlock( toReturnInfo, true, toReturnInfo == subBlockHeld );
    }
 
 
@@ -616,7 +616,7 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
       try
          { 
          lockMapLock.lock();
-         toReturn.rwlock = lockMap.at( subBlockInfo.blockIndex ); 
+         toReturn.rwlock = lockMap.at( subBlockInfo ); 
          lockMapLock.unlock();
          #ifdef TEST
          printf( "Found a lock for block %d. ",
@@ -626,7 +626,7 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
       catch ( const std::out_of_range& )
          { 
          toReturn.rwlock = new threading::ReadWriteLock( );
-         lockMap.insert( { subBlockInfo.blockIndex, toReturn.rwlock } );
+         lockMap.insert( { subBlockInfo, toReturn.rwlock } );
          lockMapLock.unlock();
          #ifdef TEST
          printf( "No lock found for block %d. Making a new one. ", 
