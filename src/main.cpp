@@ -98,28 +98,28 @@ int main(int argc, char *argv[]) {
 
 	
 	// open every file in the pages directory
-	std::deque<std::string> files;
-	std::deque<Doc_object> documents;
-	threading::Mutex documentsMutex;
-	threading::ConditionVariable documentsCv;
-	DIR * dir;
-	struct dirent * ent; 
-	if ((dir = opendir("pages")) != NULL) {
-		while ((ent = readdir(dir)) != NULL) {
-			files.push_back(ent->d_name);
-		}
-	}
+	// std::deque<std::string> files;
+	// std::deque<Doc_object> documents;
+	// threading::Mutex documentsMutex;
+	// threading::ConditionVariable documentsCv;
+	// DIR * dir;
+	// struct dirent * ent; 
+	// if ((dir = opendir("pages")) != NULL) {
+	// 	while ((ent = readdir(dir)) != NULL) {
+	// 		files.push_back(ent->d_name);
+	// 	}
+	// }
 
-	fprintf(stdout, "starting to parse\n");
+	// fprintf(stdout, "starting to parse\n");
 
-	std::thread threads[NUM_PARSING_THREADS];
-	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-		threads[i] = std::thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
-	}
-	for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
-		threads[i].join();
-	}
-	fprintf(stdout, "done parsing\n");
+	// std::thread threads[NUM_PARSING_THREADS];
+	// for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+	// 	threads[i] = std::thread(search::parseFiles, files, std::ref(documents), std::ref(documentsMutex), std::ref(documentsCv));
+	// }
+	// for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+	// 	threads[i].join();
+	// }
+	// fprintf(stdout, "done parsing\n");
 	
 	
 
@@ -127,11 +127,11 @@ int main(int argc, char *argv[]) {
 	// Index index(&documents, &documentsMutex, &documentsCv);
   // wait until all the parsing is actually complete
 	std::vector<std::string> seedListUrls;
-	for (size_t i = 0; i < documents.size(); ++i) {
-		for (size_t j = 0; i < documents[i].vector_of_link_anchor.size(); ++j) {
-			seedListUrls.push_back(documents[i].vector_of_link_anchor[j].link_url.CString());
-		}
-	}
+	// for (size_t i = 0; i < documents.size(); ++i) {
+	// 	for (size_t j = 0; i < documents[i].vector_of_link_anchor.size(); ++j) {
+	// 		seedListUrls.push_back(documents[i].vector_of_link_anchor[j].link_url.CString());
+	// 	}
+	// }
 	std::ifstream seedListFile(startFile);
 	std::string url;
 	while (std::getline(seedListFile, url)) {
