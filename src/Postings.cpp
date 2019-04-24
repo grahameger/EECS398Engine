@@ -158,7 +158,7 @@ void Postings::AddPostings( const FixedLengthString& word,
       MunmapSubBlock( plSubBlock );
 
       PRINTDEBUG( );
-      wordLock->lock( );
+      wordLock->unlock( );
 
       return;
       }
@@ -176,7 +176,7 @@ void Postings::AddPostings( const FixedLengthString& word,
       MunmapSubBlock( plSubBlock );
 
       PRINTDEBUG( );
-      wordLock->lock( );
+      wordLock->unlock( );
 
       return;
       }
@@ -188,7 +188,7 @@ void Postings::AddPostings( const FixedLengthString& word,
    SaveSplitPostingList( plSubBlock, split, word );
 
    PRINTDEBUG( );
-   wordLock->lock( );
+   wordLock->unlock( );
    }
 
 
