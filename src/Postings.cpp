@@ -337,25 +337,49 @@ IsrInfo Postings::GetPostingList( unsigned blockIndex )
    }
 
 
+// TODO: Find a better way to ensure that the return SubBlock is still
+// the subBlockIndex for this word, because spinning until they match could
+// POTENTIALLY run forever
 SubBlock Postings::GetPostingListSubBlock
       ( const FixedLengthString& word, bool writing )
    {
-   subBlockIndexLock.lock( );
-   auto wordIt = subBlockIndex.find( word );
+   SubBlockInfo oldExistingInfo = { 0, 0, 0 };
+   SubBlock toReturn;
+   bool notMatched = true;
 
-   // Return the last block in the chain of blocks stored
-   if ( wordIt != subBlockIndex.end( ) ) 
-      {
-      SubBlockInfo existingInfo = ( *wordIt ).second;
-      subBlockIndexLock.unlock( );
-      return GetSubBlock( existingInfo, writing, false );
-      }
-   // Return an empty block
-   else
-      {
-      subBlockIndexLock.unlock( );
-      return {true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
-      }
+   do {
+      subBlockIndexLock.lock( );
+      auto wordIt = subBlockIndex.find( word );
+
+      // word has a currentSubBlock
+      if ( wordIt != subBlockIndex.end( ) )
+         {
+         SubBlockInfo existingInfo = ( *wordIt ).second;
+         subBlockIndexLock.unlock( );
+
+         // we have the correct subBlock
+         if ( oldExistingInfo == existingInfo )
+            notMatched = false;
+         // we need a new subBlock
+         else
+            {
+            // unmap what we had
+            if ( toReturn.subBlockInfo.blockIndex != 0 )
+               MunmapSubBlock( toReturn );
+            // grab the new one
+            toReturn = GetSubBlock( existingInfo, writing, false );
+            }
+         }
+      // word has no currentSubBlock
+      else
+         {
+         subBlockIndexLock.unlock( );
+         notMatched = false;
+         toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
+         }
+      } while( notMatched );
+
+   return toReturn;
    }
 
 
@@ -373,9 +397,13 @@ SubBlock Postings::GetNewSubBlock( unsigned minSize )
 
 SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld )
    {
-   // Ensure this word exists
+   // If this subBlock isn't mapped to a word, return a dummy
    wordIndexLock.lock( );
-   assert( wordIndex.find( subBlockInfo ) != wordIndex.end( ) );
+   if ( !( wordIndex.find( subBlockInfo ) != wordIndex.end( ) ) )
+      {
+      wordIndexLock.unlock( );
+      return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
+      }
    wordIndexLock.unlock( );
 
    SubBlock subBlock = MmapSubBlock( subBlockInfo, endWanted, writeLockHeld );
