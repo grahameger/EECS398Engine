@@ -288,27 +288,28 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
             newSubBlock.subBlockInfo.subBlockIndex,
             newSubBlock.subBlockInfo.subBlockSize );
 
+      // If this was a blockSize update, re-map the word->subBlockInfo
+      if ( i == 1 )
+         {
+         subBlockIndexLock.lock( );
+         // Create if not there ( new postings list > blockSize )
+         // Or it is already there ( outgrew subBlock )
+         subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+         subBlockIndexLock.unlock( );
+
+         wordIndexLock.lock( );
+         wordIndex.insert( { newSubBlock.subBlockInfo, word } );
+         wordIndexLock.unlock( );
+         }
+
       MunmapSubBlock( newSubBlock );
       }
 
-   // Update subBlockIndex, and wordIndex, then Delete the outgrown subBlock
+   // Delete the outgrown subBlock
    assert( plSubBlock.subBlockInfo.subBlockSize != blockSize );
 
-   // If this was a blockSize update, re-map the word->subBlockInfo
-   if ( plSubBlock.subBlockInfo.blockIndex != 0 )
-      {
-      subBlockIndexLock.lock( );
-      // Create if not there ( new postings list > blockSize )
-      // Or it is already there ( outgrew subBlock )
-      subBlockIndex[ word ] = newSubBlock.subBlockInfo;
-      subBlockIndexLock.unlock( );
-
-      wordIndexLock.lock( );
-      wordIndex.insert( { newSubBlock.subBlockInfo, word } );
-      wordIndexLock.unlock( );
-      }
-
-   DeleteSubBlock( plSubBlock );
+   if ( plSubBlock.mmappedArea != nullptr )
+      DeleteSubBlock( plSubBlock );
    }
 
 
