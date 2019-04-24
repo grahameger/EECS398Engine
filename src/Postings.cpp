@@ -147,6 +147,7 @@ void Postings::AddPostings( const FixedLengthString& word,
       subBlockIndexLock.unlock( );
 
       wordIndexLock.lock( );
+      assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
       wordIndex.insert( { plSubBlock.subBlockInfo, word } );
       wordIndexLock.unlock( );
 
@@ -309,15 +310,16 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
       // If this was a blockSize update, re-map the word->subBlockInfo
       if ( i == 1 )
          {
+         wordIndexLock.lock( );
+         assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
+         wordIndex.insert( { newSubBlock.subBlockInfo, word } );
+         wordIndexLock.unlock( );
+
          subBlockIndexLock.lock( );
          // Create if not there ( new postings list > blockSize )
          // Or it is already there ( outgrew subBlock )
          subBlockIndex[ word ] = newSubBlock.subBlockInfo;
          subBlockIndexLock.unlock( );
-
-         wordIndexLock.lock( );
-         wordIndex.insert( { newSubBlock.subBlockInfo, word } );
-         wordIndexLock.unlock( );
          }
 
       MunmapSubBlock( newSubBlock );
@@ -502,6 +504,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    wordIndexLock.lock( );
    FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
    wordIndex.erase( lastUsed.subBlockInfo );
+   assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
    wordIndex.insert( { subBlock.subBlockInfo, word } );
    wordIndexLock.unlock( );
 
@@ -560,11 +563,15 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
       // We have the right open subBlock
       if ( openInfo == oldOpenInfo )
          {
-         SetLastUsed( openInfo, true );
-         // If the incremented next subBlock is invalid, make blockIndex invalid too
-         if ( ( ++openInfo.subBlockIndex %= blockSize / openInfo.subBlockSize ) == 0 )
-            openInfo.blockIndex = 0;
-         SetOpen( openInfo, true );
+         if ( openInfo.subBlockSize != blockSize )
+            {
+            SetLastUsed( openInfo, true );
+            // If the incremented next subBlock is invalid, make blockIndex invalid too
+            if ( ( ++openInfo.subBlockIndex %= blockSize / openInfo.subBlockSize ) == 0 )
+               openInfo.blockIndex = 0;
+            SetOpen( openInfo, true );
+            }
+
          if ( incrementedPage )
             IncrementNumBlocks( true );
          metaDataLock.unlock( );
