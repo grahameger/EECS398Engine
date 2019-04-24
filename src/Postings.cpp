@@ -496,53 +496,70 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
 
 SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
    {
-   metaDataLock.lock();
 
-   SubBlockInfo openSubBlock, toReturnInfo;
+   bool acquiredOpen = false;
+   SubBlockInfo oldOpenInfo = { 0, 0, 0 };
+   SubBlock toReturn;
 
-   // If we want a whole block, return nextBlockIndex and increment numBlocks
-   if ( subBlockSize == blockSize )
-      {
-      openSubBlock = { subBlockSize, nextBlockIndex, 0 };
-      IncrementNumBlocks( true );
-      }
-   else
-      {
-      // Size of each open/lastused entry
-      unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
-      // Indexed based on subBlockSize
-      offset *= blockSize / subBlockSize;
-      // Plus the original offset from the other data
-      offset += sizeof( unsigned ) * 2;
+   do {
+      bool incrementedPage = false;
 
-      openSubBlock.subBlockSize = subBlockSize;
-      openSubBlock.blockIndex = metaData.GetInString< unsigned >( offset );
-      offset += sizeof( unsigned );
-      openSubBlock.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+      SubBlockInfo openInfo;
 
-      // If open is invalid, allocate a new block for this size
-      if ( openSubBlock.blockIndex == 0 )
+      metaDataLock.lock();
+
+      // If we want a whole block, return nextBlockIndex and increment numBlocks
+      if ( subBlockSize == blockSize )
          {
-         openSubBlock = { subBlockSize, nextBlockIndex, 0 };
-         IncrementNumBlocks( true );
+         openInfo = { subBlockSize, nextBlockIndex, 0 };
+         incrementedPage = true;
          }
-      }
-   
-   // Set toReturnInfo to openSubBlock before we increment openSubBlock
-   toReturnInfo = openSubBlock;
-   SetLastUsed( openSubBlock, true );
+      else
+         {
+         // Size of each open/lastused entry
+         unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+         // Indexed based on subBlockSize
+         offset *= blockSize / subBlockSize;
+         // Plus the original offset from the other data
+         offset += sizeof( unsigned ) * 2;
 
-   // If the incremented next subBlock is invalid, make blockIndex invalid too
-   if ( ( ++openSubBlock.subBlockIndex %= blockSize / openSubBlock.subBlockSize ) == 0 )
-      openSubBlock.blockIndex = 0;
+         openInfo.subBlockSize = subBlockSize;
+         openInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+         offset += sizeof( unsigned );
+         openInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
 
-   // Increment open
-   SetOpen( openSubBlock, true );
+         // If open is invalid, allocate a new block for this size
+         if ( openInfo.blockIndex == 0 )
+            {
+            openInfo = { subBlockSize, nextBlockIndex, 0 };
+            incrementedPage = true;
+            }
+         }
+      
+      // We have the right open subBlock
+      if ( openInfo == oldOpenInfo )
+         {
+         SetLastUsed( openInfo, true );
+         // If the incremented next subBlock is invalid, make blockIndex invalid too
+         if ( ( ++openInfo.subBlockIndex %= blockSize / openInfo.subBlockSize ) == 0 )
+            openInfo.blockIndex = 0;
+         SetOpen( openInfo, true );
+         if ( incrementedPage )
+            IncrementNumBlocks( true );
+         metaDataLock.unlock( );
 
-   metaDataLock.unlock( );
+         return toReturn;
+         }
 
-   // Get the open sub block and set it to the last used for this size
-   SubBlock toReturn = MmapSubBlock( toReturnInfo, true, false );
+      // unmap what we had
+      if ( oldOpenInfo.blockIndex != 0 )
+         MunmapSubBlock( toReturn );
+      metaDataLock.unlock( );
+
+      // Get the open sub block and set it to the last used for this size
+      toReturn = MmapSubBlock( openInfo, true, false );
+      oldOpenInfo = openInfo;
+      } while ( !acquiredOpen );
 
    return toReturn;
    }
