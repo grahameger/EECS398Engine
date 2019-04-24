@@ -143,11 +143,12 @@ void Postings::AddPostings( const FixedLengthString& word,
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
       subBlockIndexLock.lock( );
+      assert( !( subBlockIndex.find( word ) != subBlockIndex.end( ) ) );
       subBlockIndex.insert( { word, plSubBlock.subBlockInfo } );
       subBlockIndexLock.unlock( );
 
       wordIndexLock.lock( );
-      assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
+      assert( !( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) ) );
       wordIndex.insert( { plSubBlock.subBlockInfo, word } );
       wordIndexLock.unlock( );
 
@@ -167,6 +168,15 @@ void Postings::AddPostings( const FixedLengthString& word,
    // Update in place ( if possible ) and return
    if ( postingList.GetByteSize( ) <= plSubBlock.subBlockInfo.subBlockSize )
       {
+
+      wordIndexLock.lock( );
+      assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) );
+      wordIndexLock.unlock( );
+
+      subBlockIndexLock.lock( );
+      assert( subBlockIndex.find( word ) != subBlockIndex.end( ) );
+      subBlockIndexLock.unlock( );
+
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
       DEBUG( "Putting posting list back in subBlock (%u, %u) of size %u\n",
@@ -272,16 +282,16 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
 
    DEBUG( "Putting posting list into %lu blocks:\n", split.size( ) );
 
-   SubBlock newSubBlock;
+   SubBlock newSubBlock = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
 
    for ( unsigned i = split.size( ); i > 0; i-- )
       {
-      // This is a completely new block for the overflow data or
+      // This is a completely new block for the overflow data
+      if ( i > 1 || ( split.size( ) > 1 && plSubBlock.subBlockInfo.subBlockSize != blockSize ) )
+         newSubBlock = GetNewSubBlock( blockSize - BlockDataOffset );
       // The old block is not a full block and needs to be re-allocated
-      if ( i > 1 || plSubBlock.subBlockInfo.subBlockSize != blockSize ) 
-         {
+      else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize ) 
          newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
-         }
       // The old block was a full sized block and just needs to be updated
       else
          {
@@ -311,7 +321,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
       if ( i == 1 )
          {
          wordIndexLock.lock( );
-         assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
+         assert( !( wordIndex.find( newSubBlock.subBlockInfo ) != wordIndex.end( ) ) );
          wordIndex.insert( { newSubBlock.subBlockInfo, word } );
          wordIndexLock.unlock( );
 
@@ -509,6 +519,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    wordIndexLock.unlock( );
 
    subBlockIndexLock.lock( );
+   assert( subBlockIndex.at( word ) == subBlock.subBlockInfo );
    subBlockIndex.at( word ) = lastUsed.subBlockInfo;
    subBlockIndexLock.unlock( );
 
