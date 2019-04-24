@@ -97,6 +97,15 @@ namespace std
                std::hash< unsigned char >( )( sbi.subBlockIndex );
          }
       };
+
+   template <>
+   struct hash< FixedLengthString >
+      {
+      std::size_t operator( )( const FixedLengthString &fls ) const
+         {
+         return std::hash< const char* >( )( fls.Characters( ) );
+         }
+      };
    }
 
 
@@ -177,6 +186,9 @@ class Postings
       // subBlock to rwLock
       std::unordered_map< SubBlockInfo, threading::ReadWriteLock* > lockMap;
       threading::Mutex lockMapLock;
+      // word to lock
+      std::unordered_map< FixedLengthString, threading::Mutex* > wordModifyMap;
+      threading::Mutex wordModifyLock;
 
       threading::Mutex metaDataLock;
 

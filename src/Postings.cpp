@@ -103,6 +103,21 @@ Postings* Postings::GetPostings( )
 void Postings::AddPostings( const FixedLengthString& word, 
       const Vector< unsigned long long >* postings )
    {
+   wordModifyLock.lock( );
+   auto wordModifyIt = wordModifyMap.find( word );
+   
+   threading::Mutex* wordLock;
+   if ( wordModifyIt != wordModifyMap.end( ) )
+      wordLock = ( *wordModifyIt ).second;
+   else
+      {
+      wordLock = new threading::Mutex;
+      wordModifyMap.insert( { word, wordLock } );
+      }
+   wordModifyLock.unlock( );
+
+   wordLock->lock( );
+
    RESETDEBUG( &word );
 
    SubBlock plSubBlock = GetPostingListSubBlock( word, true );
@@ -143,6 +158,7 @@ void Postings::AddPostings( const FixedLengthString& word,
       MunmapSubBlock( plSubBlock );
 
       PRINTDEBUG( );
+      wordLock->lock( );
 
       return;
       }
@@ -160,6 +176,7 @@ void Postings::AddPostings( const FixedLengthString& word,
       MunmapSubBlock( plSubBlock );
 
       PRINTDEBUG( );
+      wordLock->lock( );
 
       return;
       }
@@ -171,6 +188,7 @@ void Postings::AddPostings( const FixedLengthString& word,
    SaveSplitPostingList( plSubBlock, split, word );
 
    PRINTDEBUG( );
+   wordLock->lock( );
    }
 
 
