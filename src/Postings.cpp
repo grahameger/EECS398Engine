@@ -556,45 +556,56 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
    // Should never be called for blockSize
    assert( subBlockSize != blockSize );
 
-   metaDataLock.lock();
+   bool acquiredLastUsed = false;
+   SubBlockInfo oldLastUsedInfo = { 0, 0, 0 };
+   SubBlock toReturn;
 
-   SubBlockInfo lastUsedSubBlock, toReturnInfo;
+   do {
+      metaDataLock.lock();
 
-   // Size of each open/lastused entry
-   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
-   // Indexed based on subBlockSize
-   offset *= blockSize / subBlockSize;
-   // Plus the original offset from the other data
-   offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
+      SubBlockInfo lastUsedInfo;
 
-   lastUsedSubBlock.subBlockSize = subBlockSize;
-   lastUsedSubBlock.blockIndex = metaData.GetInString< unsigned >( offset );
-   offset += sizeof( unsigned );
-   lastUsedSubBlock.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+      // Size of each open/lastused entry
+      unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+      // Indexed based on subBlockSize
+      offset *= blockSize / subBlockSize;
+      // Plus the original offset from the other data
+      offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
 
-   // If lastUsedSubBlock is invalid, return a dummy because there is no lastUsed
-   if ( lastUsedSubBlock.blockIndex == 0 )
-      {
-      metaDataLock.unlock( );
-      return { true, nullptr, 0, lastUsedSubBlock, nullptr, true };
-      }
+      lastUsedInfo.subBlockSize = subBlockSize;
+      lastUsedInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+      offset += sizeof( unsigned );
+      lastUsedInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
 
-   toReturnInfo = lastUsedSubBlock;
-   SetOpen( lastUsedSubBlock, true );
+      // If lastUsedSubBlock is invalid, return a dummy because there is no lastUsed
+      if ( lastUsedInfo.blockIndex == 0 )
+         {
+         metaDataLock.unlock( );
+         return { true, nullptr, 0, lastUsedInfo, nullptr, true };
+         }
 
-   // If decremented lastUsedSubBlock is invalid, set a sentinel
-   if ( lastUsedSubBlock.subBlockIndex-- == 0 )
-      lastUsedSubBlock.blockIndex = 0;
+      // If we've acquired the correct subBlock
+      if ( oldLastUsedInfo == lastUsedInfo )
+         {
+         SetOpen( lastUsedInfo, true );
 
-   // Decrement lastUsedSubBlock
-   SetLastUsed( lastUsedSubBlock, true );
+         if ( lastUsedInfo.subBlockIndex-- == 0 )
+            lastUsedInfo.blockIndex = 0;
 
-   // Handoff to prevent race with GetOpenSubBlock
-   acquiringSubBlockLock.lock( );
-   metaDataLock.unlock();
+         SetLastUsed( lastUsedInfo, true );
 
-   SubBlock toReturn = MmapSubBlock( toReturnInfo, true, toReturnInfo == subBlockHeld );
-   acquiringSubBlockLock.unlock( );
+         metaDataLock.unlock( );
+         return toReturn;
+         }
+
+      // Handoff to prevent race with GetOpenSubBlock
+      acquiringSubBlockLock.lock( );
+      metaDataLock.unlock();
+
+      toReturn = MmapSubBlock( toReturnInfo, true, toReturnInfo == subBlockHeld );
+      oldLastUsedInfo == lastUsedInfo;
+      acquiringSubBlockLock.unlock( );
+   } while ( !acquiredLastUsed );
 
    return toReturn;
    }
