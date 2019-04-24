@@ -23,7 +23,8 @@ IsrWord::~IsrWord( )
    for( unsigned i = 0; i < postingLists.size( ); i++ )
       delete postingLists[ i ];
    for( unsigned i = 0; i < subBlocks.size( ); i++ )
-      Postings::GetPostings( )->MunmapSubBlock( subBlocks[ i ] );
+      if ( subBlocks[ i ].mmappedArea != nullptr )
+         Postings::GetPostings( )->MunmapSubBlock( subBlocks[ i ] );
    }
 
 

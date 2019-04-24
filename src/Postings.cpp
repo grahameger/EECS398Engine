@@ -105,7 +105,6 @@ void Postings::AddPostings( const FixedLengthString& word,
    {
    RESETDEBUG( &word );
 
-   // Get a stringView for where the postingList of this word goes
    SubBlock plSubBlock = GetPostingListSubBlock( word, true );
 
    // Create the posting list for this word
@@ -315,9 +314,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
 
 IsrInfo Postings::GetPostingList( const FixedLengthString& word )
    {
-   // Get a stringView for where the postingList of this word goes
-   SubBlock plSubBlock = GetPostingListSubBlock( word );
-   StringView plStringView = plSubBlock.ToStringView( );
+   SubBlock plSubBlock = GetPostingListSubBlock( word, false );
 
    unsigned nextPtr = plSubBlock.subBlockInfo.subBlockSize != blockSize ? 0 :
          *( unsigned* )plSubBlock.mmappedArea;
@@ -325,9 +322,9 @@ IsrInfo Postings::GetPostingList( const FixedLengthString& word )
    // Create the posting list for this word
    PostingList* postingList;
    if ( !plSubBlock.uninitialized )
-      postingList = new PostingList( plStringView );
+      postingList = new PostingList( plSubBlock.ToStringView( ) );
    else
-      postingList = new PostingList( );
+      postingList = nullptr;
 
    return { nextPtr, postingList, plSubBlock };
    }
@@ -337,11 +334,10 @@ IsrInfo Postings::GetPostingList( unsigned blockIndex )
    {
    // Grab that block
    SubBlock plSubBlock = GetSubBlock( { blockSize, blockIndex, 0 }, false, false );
-   StringView plStringView = plSubBlock.ToStringView( );
 
    unsigned nextPtr = *( unsigned* )plSubBlock.mmappedArea;
 
-   PostingList* postingList = new PostingList( plStringView );
+   PostingList* postingList = new PostingList( plSubBlock.ToStringView( ) );
 
    return { nextPtr, postingList, plSubBlock };
    }
@@ -378,6 +374,7 @@ SubBlock Postings::GetPostingListSubBlock
                MunmapSubBlock( toReturn );
             // grab the new one
             toReturn = GetSubBlock( existingInfo, writing, false );
+            oldExistingInfo = existingInfo;
             }
          }
       // word has no currentSubBlock
