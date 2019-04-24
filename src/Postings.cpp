@@ -441,7 +441,8 @@ SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool 
       while ( ( nextBlockPtr = *( unsigned* )subBlock.mmappedArea ) != 0 )
          {
          // Unmap current sub block
-         MunmapSubBlock( subBlock );
+         if ( subBlock.rwlock != nullptr )
+            MunmapSubBlock( subBlock );
          // Change to new sub block
          subBlockInfo.blockIndex = nextBlockPtr;
          subBlockInfo.subBlockIndex = 0;
@@ -478,6 +479,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
       {
       DEBUG( "\tNo lastUsed, nothing to move. \n" );
 
+      assert( lastUsed.rwlock == nullptr );
       MunmapSubBlock( subBlock );
       return;
       }
@@ -487,6 +489,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
       {
       DEBUG( "\tDeleting the lastUsed, nothing to move.\n" );
 
+      assert( lastUsed.rwlock == nullptr );
       MunmapSubBlock( subBlock );
       return;
       }
@@ -506,7 +509,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    subBlockIndex.at( word ) = lastUsed.subBlockInfo;
    subBlockIndexLock.unlock( );
 
-   if ( lastUsed.rwlock )
+   if ( lastUsed.rwlock != nullptr )
       MunmapSubBlock( lastUsed );
    MunmapSubBlock( subBlock );
    }
@@ -570,7 +573,7 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
          }
 
       // unmap what we had
-      if ( oldOpenInfo.blockIndex != 0 )
+      if ( toReturn.rwlock != nullptr )
          MunmapSubBlock( toReturn );
       metaDataLock.unlock( );
 
@@ -613,6 +616,10 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
       if ( lastUsedInfo.blockIndex == 0 )
          {
          metaDataLock.unlock( );
+
+         if ( toReturn.rwlock != nullptr )
+            MunmapSubBlock( toReturn );
+
          return { true, nullptr, 0, lastUsedInfo, nullptr, true };
          }
 
@@ -631,7 +638,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
          }
 
       // unmap what we had
-      if ( oldLastUsedInfo.blockIndex != 0 && oldLastUsedInfo != subBlockHeld )
+      if ( toReturn.rwlock != nullptr )
          MunmapSubBlock( toReturn );
       metaDataLock.unlock();
 
