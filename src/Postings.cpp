@@ -539,13 +539,10 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
    // Increment open
    SetOpen( openSubBlock, true );
 
-   // Locking handoff to prevent race with GetLastUsed
-   acquiringSubBlockLock.lock( );
    metaDataLock.unlock( );
 
    // Get the open sub block and set it to the last used for this size
    SubBlock toReturn = MmapSubBlock( toReturnInfo, true, false );
-   acquiringSubBlockLock.unlock( );
 
    return toReturn;
    }
@@ -598,13 +595,10 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
          return toReturn;
          }
 
-      // Handoff to prevent race with GetOpenSubBlock
-      acquiringSubBlockLock.lock( );
       metaDataLock.unlock();
 
-      toReturn = MmapSubBlock( toReturnInfo, true, toReturnInfo == subBlockHeld );
-      oldLastUsedInfo == lastUsedInfo;
-      acquiringSubBlockLock.unlock( );
+      toReturn = MmapSubBlock( lastUsedInfo, true, lastUsedInfo == subBlockHeld );
+      oldLastUsedInfo = lastUsedInfo;
    } while ( !acquiredLastUsed );
 
    return toReturn;

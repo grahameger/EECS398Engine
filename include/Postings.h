@@ -179,7 +179,6 @@ class Postings
       threading::Mutex lockMapLock;
 
       threading::Mutex metaDataLock;
-      threading::Mutex acquiringSubBlockLock;
 
    friend SubBlock;
    friend IsrWord;
