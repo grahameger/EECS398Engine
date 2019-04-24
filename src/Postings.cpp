@@ -706,6 +706,7 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
 
 void Postings::MunmapSubBlock( SubBlock subBlock )
    {
+   assert( subBlock.mmappedArea != nullptr && blockSize != 0 );
    char* mmappedArea = subBlock.mmappedArea -
          subBlock.subBlockInfo.subBlockIndex * subBlock.subBlockInfo.subBlockSize;
 
