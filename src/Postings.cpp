@@ -42,7 +42,9 @@ thread_local unsigned bufferIndex = 0;
       bufferIndex += sprintf( Buffer + bufferIndex, args )
 
 // Reset the debug varialbes
-#define RESETDEBUG( newWord ) curWord = newWord; bufferIndex = 0
+#define RESETDEBUG( newWord ) curWord = newWord; bufferIndex = 0;                       \
+      printf( "Resetting debug info, word is now: %s, bufferIndex is %u\n",             \
+      curWord->Characters( ), bufferIndex );
 // Print the current buffer
 #define PRINTDEBUG( ) printf( "%s\n", Buffer )
 
