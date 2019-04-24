@@ -11,11 +11,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstring>
+#include <cassert>
 
 static const size_t PAGE_SIZE = getpagesize();
 
 // just wrap mmap and do the error checking here
 void * mmapWrapper(int fd, size_t size, size_t offset) {
+    assert( size != 0 );
     offset = roundUp(offset, PAGE_SIZE);
     extendFile(fd, size + offset);
     void * rv = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);

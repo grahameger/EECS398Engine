@@ -6,8 +6,8 @@
 #include "StringView.h"
 #include "PersistentHashMap.h"
 #include "threading.h"
+#include "hash.h"
 
-class SubBlock;
 class PostingList;
 class IsrWord;
 
@@ -20,6 +20,8 @@ class FixedLengthString
    {
    public:
       FixedLengthString( const char* cstring );
+
+      const char* Characters( ) const { return characters; }
 
       bool operator== ( const FixedLengthString& other ) const;
       FixedLengthString();
@@ -34,10 +36,12 @@ class FixedLengthURL
    public:
       FixedLengthURL( const char* cstring );
 
+      const char* Characters( ) const { return characters; }
+
       bool operator== ( const FixedLengthURL& other ) const;
       FixedLengthURL();
    private:
-      static const unsigned MaxLength = 199;
+      static const unsigned MaxLength = 255;
       char characters[ MaxLength + 1 ];
 
    };
@@ -48,13 +52,13 @@ struct SubBlockInfo
    unsigned blockIndex;
    unsigned char subBlockIndex;
 
-   bool operator!= ( const SubBlockInfo& other )
+   bool operator!= ( const SubBlockInfo& other ) const
       { 
       return blockIndex != other.blockIndex || 
             subBlockIndex != other.subBlockIndex; 
       }
 
-   bool operator== ( const SubBlockInfo& other )
+   bool operator== ( const SubBlockInfo& other ) const
       {
       return blockIndex == other.blockIndex &&
             subBlockIndex == other.subBlockIndex;
@@ -77,19 +81,23 @@ struct SubBlock
    bool operator!= ( const SubBlock& other ) const;
    bool operator== ( const SubBlock& other ) const;
    StringView ToStringView( );
+   unsigned AvailableSize( ) const
+      { return subBlockInfo.subBlockSize - dataOffset; }
    };
 
-namespace hash {
-   template <> struct Hash<SubBlockInfo> {
-   static uint64_t get(const SubBlockInfo& subBlockInfo) {
-      return subBlockInfo.blockIndex + ((uint64_t)(subBlockInfo.subBlockIndex) << 32);
-   }
-   uint64_t operator()(const SubBlockInfo& subBlockInfo)
+namespace std 
    {
-      return get(subBlockInfo);
+   template <> 
+   struct hash< SubBlockInfo >
+      {
+      std::size_t operator( )( const SubBlockInfo &sbi ) const
+         {
+         return std::hash< unsigned >( )( sbi.blockIndex ) ^
+               std::hash< unsigned >( )( sbi.subBlockSize ) ^
+               std::hash< unsigned char >( )( sbi.subBlockIndex );
+         }
+      };
    }
-   }; // this should help?
-}
 
 
 struct IsrInfo
@@ -114,6 +122,7 @@ class Postings
       static const unsigned DefaultBlockSize;
       static const unsigned DefaultNumSizes;
       static const char* Filename;
+      static threading::Mutex constructorMutex;
 
    // Instance
    public:
@@ -125,7 +134,7 @@ class Postings
       Postings( );
 
       void CreateNewPostingsFile( );
-      void SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
+      void SaveSplitPostingList( SubBlock plSubBlock,
             Vector< PostingList* >& split, const FixedLengthString& word );
 
       IsrInfo GetPostingList( const FixedLengthString& word );
@@ -134,12 +143,14 @@ class Postings
       SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
 
+      // Necessary?
       SubBlock GetNewSubBlock( unsigned minSize );
-      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld );
-      void DeleteSubBlock( SubBlock subBlock );
 
       SubBlock GetOpenSubBlock( unsigned subBlockSize );
-      SubBlock GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockIndexHeld );
+      SubBlock GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subBlockHeld );
+      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld );
+
+      void DeleteSubBlock( SubBlock subBlock );
 
       void IncrementOpenSubBlock( unsigned subBlockSize, bool metaDataHeld );
       void IncrementNumBlocks( bool metaDataHeld );
@@ -159,14 +170,15 @@ class Postings
 
       // Word to subBlock
       PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
+      threading::Mutex subBlockIndexLock;
       // subBlock to word
       PersistentHashMap< SubBlockInfo, FixedLengthString > wordIndex;
-      // subBlock to rwLock
-      std::unordered_map< unsigned, threading::ReadWriteLock* > lockMap;
-      threading::Mutex lockMapLock;
-      threading::Mutex metaDataLock;
-      threading::Mutex subBlockIndexLock;
       threading::Mutex wordIndexLock;
+      // subBlock to rwLock
+      std::unordered_map< SubBlockInfo, threading::ReadWriteLock* > lockMap;
+      threading::Mutex lockMapLock;
+
+      threading::Mutex metaDataLock;
 
    friend SubBlock;
    friend IsrWord;

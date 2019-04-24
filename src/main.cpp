@@ -39,13 +39,15 @@ static void sig_handler(int _)
     keep_running = 0;
 }
 
+/*
 static struct option longopts[] = {
    {"indexFilePrefix", required_argument, nullptr, 'i'},
    {"seedList", required_argument, nullptr, 's'},
    {"domainList", required_argument, nullptr, 'd'},
    {0, 0, 0, 0} //default
 };
-static const char startFile[] = "/home/eger/crawl/seedlist.txt";
+*/
+static const char startFile[] = "/home/eger/wiki/urls.txt";
 // static const char startFile[] = "/data/crawl/dmoz/dmoz.base.urls";
 
 // static const std::vector<std::string> startFiles = {
@@ -57,6 +59,8 @@ static const char startFile[] = "/home/eger/crawl/seedlist.txt";
 static const size_t NUM_PARSING_THREADS = 24;
 
 FILE * fileOut;
+
+static const unsigned MAXFILES = 20;
 
 int main(int argc, char *argv[]) {
 
@@ -142,4 +146,47 @@ int main(int argc, char *argv[]) {
 	fprintf(stdout, "Seedlist of %zd URLs imported from %s\n", seedListUrls.size(), startFile);
 	fprintf(stdout, "Using %zd threads!\n", search::Crawler::NUM_CRAWLER_THREADS);
 	search::Crawler crawler(seedListUrls);
+
+	/* IndexBuild code
+   memset( &sa, 0, sizeof(sa) );
+   sa.sa_handler = sig_handler;
+   sigfillset(&sa.sa_mask);
+   sigaction(SIGINT,&sa,NULL);
+
+   std::string indexFilePrefix;
+   std::string seedList;
+   std::string domainList;
+   
+   // open every file in the pages directory
+   std::deque<std::string> files;
+   std::deque<Doc_object> documents;
+   threading::Mutex documentsMutex;
+   threading::ConditionVariable documentsFullCv;
+   threading::ConditionVariable documentsEmptyCv;
+   DIR * dir;
+   struct dirent * ent; 
+   if ((dir = opendir("pages")) != NULL) {
+      // TODO: Remove
+      unsigned FilesAdded = 0;
+      while (FilesAdded++ != MAXFILES && (ent = readdir(dir)) != NULL) {
+         files.push_back(ent->d_name);
+      }
+      fprintf(stdout, "%u files added\n", FilesAdded);
+   }
+
+   fprintf(stdout, "starting to parse\n");
+
+   std::thread threads[NUM_PARSING_THREADS];
+   for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+      threads[i] = std::thread(search::parseFiles, std::ref(files), std::ref(documents), std::ref(documentsMutex), std::ref(documentsFullCv), std::ref(documentsEmptyCv));
+   }
+   for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+      threads[i].join();
+   }
+   fprintf(stdout, "done parsing\n");
+
+   Index index(&documents, &documentsMutex, &documentsFullCv, &documentsEmptyCv);
+
+   // Do Nothing
+   */
 }

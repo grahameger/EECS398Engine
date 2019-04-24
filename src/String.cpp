@@ -166,6 +166,7 @@ String& String::operator+= ( const String& rhs )
    if ( cstring != nullptr )
       memcpy( newCString, cstring, size );
    memcpy( newCString + size, rhs.cstring, rhs.size );
+   newCString[ newSize ] = 0;
 
    if (cstring != nullString)
       delete[ ] cstring;

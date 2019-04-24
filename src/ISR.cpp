@@ -10,8 +10,7 @@
 #include "Postings.h"
 
 IsrWord::IsrWord( String word )
-<<<<<<< HEAD
-: validISR( true ), currentLocation(0){
+        : validISR( true ), currentLocation(0){
     
     IsrInfo isrInfo = Postings::GetPostings( )->GetPostingList( word.CString( ) );
     nextPtr = isrInfo.nextPtr;
@@ -29,7 +28,8 @@ IsrWord::~IsrWord(){
     for( unsigned i = 0; i < postingLists.size(); i++ )
         delete postingLists[ i ];
     for( unsigned i = 0; i < subBlocks.size(); i++ )
-        Postings::GetPostings()->MunmapSubBlock( subBlocks[i] );
+        if ( subBlocks[ i ].mmappedArea != nullptr )
+            Postings::GetPostings()->MunmapSubBlock( subBlocks[i] );
 }
 
 
@@ -68,10 +68,15 @@ Location IsrWord::CurInstance( ) const{
     return currentLocation;
 }
 
+IsrWord::operator bool( ) const
+   {
+   return validISR;
+   }
+
 //////////////
 //EndDoc ISR//
 //////////////
-IsrEndDoc::IsrEndDoc( ) : IsrWord( "" ){
+IsrEndDoc::IsrEndDoc( ) : IsrWord( String() ){
 }
 
 //////////
@@ -149,29 +154,6 @@ Location ISROr::nextInstance(){
     }
 
 }
-=======
-      : validISR( true ), currentLocation( 0 )
-   {
-   IsrInfo isrInfo = Postings::GetPostings( )->GetPostingList( word.CString( ) );
-   nextPtr = isrInfo.nextPtr;
-
-   if ( isrInfo.postingList )
-      postingLists.push_back( isrInfo.postingList );
-   else
-      validISR = false;
-
-   subBlocks.push_back( isrInfo.subBlock );
-   }
-
-
-IsrWord::~IsrWord( )
-   {
-   for( unsigned i = 0; i < postingLists.size( ); i++ )
-      delete postingLists[ i ];
-   for( unsigned i = 0; i < subBlocks.size( ); i++ )
-      Postings::GetPostings( )->MunmapSubBlock( subBlocks[ i ] );
-   }
->>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
 
 
 /////////////////
@@ -190,7 +172,6 @@ ISRAnd::ISRAnd(Vector<Isr> phrasesToInsert){
 }
 
 
-<<<<<<< HEAD
 Location ISRAnd::seek(Location target){
     //Algorithm
     // 1. Seek all ISRs to the first occurrence beginning at the target location.
@@ -274,19 +255,6 @@ Location ISRAnd::seek(Location target){
 //////////////////
 //End of AND ISR//
 //////////////////
-=======
-   while ( nextPtr != 0 )
-      {
-      IsrInfo isrInfo = Postings::GetPostings( )->GetPostingList( nextPtr );
-      nextPtr = isrInfo.nextPtr;
-      postingLists.push_back( isrInfo.postingList );
-      subBlocks.push_back( isrInfo.subBlock );
-
-      Location posting = isrInfo.postingList->GetPosting( seekDestination );
-      if ( posting != 0 )
-         return currentLocation = posting;
-      }
->>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
 
 //////////////
 //Phrase ISR//
@@ -407,12 +375,9 @@ Location ISRPhrase::seek(Location target){
     IsrWord endPage("");
     nearestEndLocation = endPage.SeekToLocation(nearestStartLocation);
     return locationTracker[0];
+    }
 
-<<<<<<< HEAD
-}
-=======
-IsrEndDoc::IsrEndDoc( ) : IsrWord( ( char* )"" )
+IsrEndDoc::IsrEndDoc( ) : IsrWord( String( ) )
    { }
->>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
 
 

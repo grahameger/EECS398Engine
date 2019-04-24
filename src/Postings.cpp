@@ -30,6 +30,41 @@ void ErrExit( )
    }
 
 
+#ifdef TEST
+// Debug variables
+thread_local const FixedLengthString* curWord;
+thread_local char Buffer[ 4096 ];
+thread_local unsigned bufferIndex = 0;
+
+// Reset the debug varialbes
+#define RESETDEBUG( newWord ) curWord = newWord; bufferIndex = 0;                       \
+      printf( "Resetting debug info, word is now: %s, bufferIndex is %u\n",             \
+      curWord->Characters( ), bufferIndex );
+
+// Print the current buffer
+#define PRINTDEBUG( ) printf( "%s\n", Buffer )
+
+// Add to debug buffer
+#define DEBUG( args... )                                                                \
+      {                                                                                 \
+      if ( bufferIndex > 4000 )                                                         \
+         {                                                                              \
+         PRINTDEBUG( );                                                                 \
+         RESETDEBUG( curWord );                                                                 \
+         }                                                                              \
+      bufferIndex += sprintf( Buffer + bufferIndex, "(%s)\t", curWord->Characters( ) ); \
+      bufferIndex += sprintf( Buffer + bufferIndex, args );                             \
+      }
+
+#else
+// Get rid of the debug lines
+#define RESETDEBUG( newWord )
+#define PRINTDEBUG( )
+#define DEBUG( args... )
+
+#endif
+
+
 // ######################
 // Postings Static Variables
 // ######################
@@ -47,6 +82,7 @@ unsigned Postings::blockSize = Postings::DefaultBlockSize;
 const char* Postings::Filename = "testIndex";
 // The singleton variable
 Postings* Postings::CurPostings = nullptr;
+threading::Mutex Postings::constructorMutex;
 
 
 // ######################
@@ -55,8 +91,10 @@ Postings* Postings::CurPostings = nullptr;
 
 Postings* Postings::GetPostings( )
    {
+   constructorMutex.lock( );
    if ( CurPostings == nullptr )
       CurPostings = new Postings( );
+   constructorMutex.unlock( );
 
    return CurPostings;
    }
@@ -65,55 +103,80 @@ Postings* Postings::GetPostings( )
 void Postings::AddPostings( const FixedLengthString& word, 
       const Vector< unsigned long long >* postings )
    {
-   // Get a stringView for where the postingList of this word goes
+   RESETDEBUG( &word );
+
    SubBlock plSubBlock = GetPostingListSubBlock( word, true );
-   StringView plStringView = plSubBlock.ToStringView( );
 
    // Create the posting list for this word
    PostingList postingList;
    if ( !plSubBlock.uninitialized )
-      postingList = PostingList( plStringView );
+      postingList = PostingList( plSubBlock.ToStringView( ) );
 
    // Add each posting
    for ( unsigned i = 0; i < postings->size( ); i ++ )
       postingList.AddPosting( postings->at( i ) );
 
-   #ifdef TEST
-   printf("Added postings to %s posting list at SubBlock: (%u, %u) of size %u.\n", 
-         plSubBlock.uninitialized ? "new" : "existing", 
-         plSubBlock.subBlockInfo.blockIndex, plSubBlock.subBlockInfo.subBlockIndex, 
-         plSubBlock.subBlockInfo.subBlockSize);
-   printf("Posting list is now %u bytes.\n", postingList.GetByteSize( ));
-   #endif
+   DEBUG( "Appended %lu postings to %sposting list\n", postings->size( ), 
+         plSubBlock.subBlockInfo.blockIndex ? "" : "new " );
+   DEBUG( "Posting list is now %u bytes.\n", postingList.GetByteSize( ) );
+
+   // If this is going in a new block
+   if ( plSubBlock.subBlockInfo.blockIndex == 0 && 
+         postingList.GetByteSize( ) < blockSize - BlockDataOffset )
+      {
+      plSubBlock = GetNewSubBlock( postingList.GetByteSize( ) );
+      postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
+
+      subBlockIndexLock.lock( );
+      subBlockIndex.insert( { word, plSubBlock.subBlockInfo } );
+      subBlockIndexLock.unlock( );
+
+      wordIndexLock.lock( );
+      wordIndex.insert( { plSubBlock.subBlockInfo, word } );
+      wordIndexLock.unlock( );
+
+      DEBUG( "Posting list added to NEW block at (%u, %u) of size %u\n",
+            plSubBlock.subBlockInfo.blockIndex,
+            plSubBlock.subBlockInfo.subBlockIndex,
+            plSubBlock.subBlockInfo.subBlockSize );
+
+      MunmapSubBlock( plSubBlock );
+
+      PRINTDEBUG( );
+
+      return;
+      }
 
    // Update in place ( if possible ) and return
-   if ( postingList.GetByteSize( ) <= plStringView.Size( ) )
+   if ( postingList.GetByteSize( ) <= plSubBlock.subBlockInfo.subBlockSize )
       {
-      #ifdef TEST
-      printf("Putting posting list back in place\n");
-      #endif
+      postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
-      postingList.UpdateInPlace( plStringView );
+      DEBUG( "Putting posting list back in subBlock (%u, %u) of size %u\n",
+            plSubBlock.subBlockInfo.blockIndex,
+            plSubBlock.subBlockInfo.subBlockIndex,
+            plSubBlock.subBlockInfo.subBlockSize );
+
       MunmapSubBlock( plSubBlock );
+
+      PRINTDEBUG( );
+
       return;
       }
 
    // Split new end posting into x blocks
    auto split = postingList.Split( blockSize - BlockDataOffset );
 
-   #ifdef TEST
-   printf("Putting posting list back into %lu block%s", split.size( ), 
-         split.size( ) == 1 ? "" : "s" );
-   #endif
-
    // Save the new split postingLists
-   SaveSplitPostingList( plSubBlock, plStringView, split, word );
+   SaveSplitPostingList( plSubBlock, split, word );
+
+   PRINTDEBUG( );
    }
 
 
-// #######################
+// ##########################
 // Private Postings Functions
-// #######################
+// ##########################
 
 Postings::Postings( ) : indexFD( open( Filename, O_RDWR ) ),
       subBlockIndex( String( Filename ) + "_SBhash" ),
@@ -135,6 +198,8 @@ Postings::Postings( ) : indexFD( open( Filename, O_RDWR ) ),
    if ( blockSize != DefaultBlockSize )
       printf( "Warning: using existing blockSize of %u instead of suggested %u\n", 
             blockSize, DefaultBlockSize );
+
+   assert( blockSize != 0 );
    // Set metaData to the mmapped first block
    metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
    // Second num is numBlocks
@@ -154,6 +219,7 @@ void Postings::CreateNewPostingsFile( )
    // Set it to the correct size (1 for metadata, 1 for each size)
    ftruncate( indexFD, blockSize * ( DefaultNumSizes + 1 ) );
 
+   assert( blockSize != 0 );
    // Open the first block
    metaData = StringView( ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize );
    unsigned currentOffset = 0;
@@ -173,91 +239,82 @@ void Postings::CreateNewPostingsFile( )
       {
       SubBlockInfo sizeInfo{ curSize, block, 0 };
       SetOpen( sizeInfo, true );
-      SetLastUsed( sizeInfo, true );
+      SetLastUsed( { curSize, 0, 0 }, true );
       }
 
    munmapWrapper( metaData.RawCString( ), metaData.Size( ) );
    }
 
 
-void Postings::SaveSplitPostingList( SubBlock plSubBlock, StringView plStringView, 
+void Postings::SaveSplitPostingList( SubBlock plSubBlock,
       Vector< PostingList* >& split, const FixedLengthString& word )
    {
    unsigned blockIndexPtr = 0;
-   // bool newAllocated = false;
+
+   DEBUG( "Putting posting list into %lu blocks:\n", split.size( ) );
+
+   SubBlock newSubBlock;
 
    for ( unsigned i = split.size( ); i > 0; i-- )
       {
-      SubBlock newSubBlock;
-
-      // This is a completely new block for the overflow data
-      if ( i > 1 ) 
-         newSubBlock = GetNewSubBlock( blockSize );
-
-      // The old block wasn't full sized and needs to be upgraded
-      else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize )
+      // This is a completely new block for the overflow data or
+      // The old block is not a full block and needs to be re-allocated
+      if ( i > 1 || plSubBlock.subBlockInfo.subBlockSize != blockSize ) 
          {
          newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
-	 subBlockIndexLock.lock( );
-         subBlockIndex[ word ] = newSubBlock.subBlockInfo;
-	 subBlockIndexLock.unlock( );
-	 wordIndexLock.lock( );
-         wordIndex.insert( { newSubBlock.subBlockInfo, word } );
-	 wordIndexLock.unlock( );
          }
-
       // The old block was a full sized block and just needs to be updated
       else
          {
-         #ifdef TEST
-         printf(", and the old block at (%u, %u) of size %u\n", 
-               plSubBlock.subBlockInfo.blockIndex, 
-               plSubBlock.subBlockInfo.subBlockIndex, 
-               plSubBlock.subBlockInfo.subBlockSize);
-         #endif
-
-         split[ i - 1 ]->UpdateInPlace( plStringView );
+         split[ 0 ]->UpdateInPlace( plSubBlock.ToStringView( ) );
          plSubBlock.SetNextPtr( blockIndexPtr );
+
+         DEBUG( "\t(%u, %u) of size %u (The original block)\n",
+               plSubBlock.subBlockInfo.blockIndex,
+               plSubBlock.subBlockInfo.subBlockIndex,
+               plSubBlock.subBlockInfo.subBlockSize );
+
          MunmapSubBlock( plSubBlock );
          return;
          }
 
-      #ifdef TEST
-      printf("%s at (%u, %u) of size %u", 
-            i == split.size( ) ? "" : i == 1 ? ", and" : ",", 
-            newSubBlock.subBlockInfo.blockIndex, 
-            newSubBlock.subBlockInfo.subBlockIndex, 
-            newSubBlock.subBlockInfo.subBlockSize);
-      #endif
-
-      // Set it's nextPtr
+      split[ i - 1 ]->FullUpdate( newSubBlock.ToStringView( ) );
       if ( newSubBlock.subBlockInfo.subBlockSize == blockSize )
          newSubBlock.SetNextPtr( blockIndexPtr );
-
-      // Fill in Posting List data
-      StringView data( newSubBlock.mmappedArea + newSubBlock.dataOffset, 
-            newSubBlock.subBlockInfo.subBlockSize - newSubBlock.dataOffset );
-      split[ i - 1 ]->FullUpdate( data );
-
       blockIndexPtr = newSubBlock.subBlockInfo.blockIndex;
+
+      DEBUG( "\t(%u, %u) of size %u\n",
+            newSubBlock.subBlockInfo.blockIndex,
+            newSubBlock.subBlockInfo.subBlockIndex,
+            newSubBlock.subBlockInfo.subBlockSize );
+
       MunmapSubBlock( newSubBlock );
       }
 
-   #ifdef TEST
-   printf("\n");
-   #endif
+   // Update subBlockIndex, and wordIndex, then Delete the outgrown subBlock
+   assert( plSubBlock.subBlockInfo.subBlockSize != blockSize );
 
-   // Delete the outgrown subBlock
-   if ( split.size( ) == 1 ) 
-      DeleteSubBlock( plSubBlock );
+   // If this was a blockSize update, re-map the word->subBlockInfo
+   if ( plSubBlock.subBlockInfo.blockIndex != 0 )
+      {
+      subBlockIndexLock.lock( );
+      // Create if not there ( new postings list > blockSize )
+      // Or it is already there ( outgrew subBlock )
+      subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+      subBlockIndexLock.unlock( );
+
+      wordIndexLock.lock( );
+      wordIndex.insert( { newSubBlock.subBlockInfo, word } );
+      wordIndexLock.unlock( );
+      }
+
+   DeleteSubBlock( plSubBlock );
    }
 
 
 IsrInfo Postings::GetPostingList( const FixedLengthString& word )
    {
-   // Get a stringView for where the postingList of this word goes
-   SubBlock plSubBlock = GetPostingListSubBlock( word );
-   StringView plStringView = plSubBlock.ToStringView( );
+   SubBlock plSubBlock = GetPostingListSubBlock( word, false );
 
    unsigned nextPtr = plSubBlock.subBlockInfo.subBlockSize != blockSize ? 0 :
          *( unsigned* )plSubBlock.mmappedArea;
@@ -265,9 +322,9 @@ IsrInfo Postings::GetPostingList( const FixedLengthString& word )
    // Create the posting list for this word
    PostingList* postingList;
    if ( !plSubBlock.uninitialized )
-      postingList = new PostingList( plStringView );
+      postingList = new PostingList( plSubBlock.ToStringView( ) );
    else
-      postingList = new PostingList( );
+      postingList = nullptr;
 
    return { nextPtr, postingList, plSubBlock };
    }
@@ -277,41 +334,58 @@ IsrInfo Postings::GetPostingList( unsigned blockIndex )
    {
    // Grab that block
    SubBlock plSubBlock = GetSubBlock( { blockSize, blockIndex, 0 }, false, false );
-   StringView plStringView = plSubBlock.ToStringView( );
 
    unsigned nextPtr = *( unsigned* )plSubBlock.mmappedArea;
 
-   PostingList* postingList = new PostingList( plStringView );
+   PostingList* postingList = new PostingList( plSubBlock.ToStringView( ) );
 
    return { nextPtr, postingList, plSubBlock };
    }
 
 
+// TODO: Find a better way to ensure that the return SubBlock is still
+// the subBlockIndex for this word, because spinning until they match could
+// POTENTIALLY run forever
 SubBlock Postings::GetPostingListSubBlock
       ( const FixedLengthString& word, bool writing )
    {
-   subBlockIndexLock.lock( );
-   auto wordIt = subBlockIndex.find( word );
+   SubBlockInfo oldExistingInfo = { 0, 0, 0 };
+   SubBlock toReturn;
+   bool notMatched = true;
 
-   // Return the last block in the chain of blocks stored
-   if ( wordIt != subBlockIndex.end( ) ) 
-      {
-      subBlockIndexLock.unlock( );
-      return GetSubBlock( ( *wordIt ).second, writing, false );
-      }
-   // Return a new block
-   else
-      {
-      subBlockIndexLock.unlock( );
-      SubBlock subBlock = GetNewSubBlock( SmallestSubBlockSize( ) );
+   do {
       subBlockIndexLock.lock( );
-      subBlockIndex.insert( { word, subBlock.subBlockInfo } );
-      subBlockIndexLock.unlock( );
-      wordIndexLock.lock( );
-      wordIndex.insert( { subBlock.subBlockInfo, word } );
-      wordIndexLock.unlock( );
-      return subBlock;
-      }
+      auto wordIt = subBlockIndex.find( word );
+
+      // word has a currentSubBlock
+      if ( wordIt != subBlockIndex.end( ) )
+         {
+         SubBlockInfo existingInfo = ( *wordIt ).second;
+         subBlockIndexLock.unlock( );
+
+         // we have the correct subBlock
+         if ( oldExistingInfo == existingInfo )
+            notMatched = false;
+         // we need a new subBlock
+         else
+            {
+            // unmap what we had
+            if ( oldExistingInfo.blockIndex != 0 )
+               MunmapSubBlock( toReturn );
+            // grab the new one
+            toReturn = GetSubBlock( existingInfo, writing, false );
+            oldExistingInfo = existingInfo;
+            }
+         }
+      // word has no currentSubBlock
+      else
+         {
+         subBlockIndexLock.unlock( );
+         return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
+         }
+      } while( notMatched );
+
+   return toReturn;
    }
 
 
@@ -329,6 +403,15 @@ SubBlock Postings::GetNewSubBlock( unsigned minSize )
 
 SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld )
    {
+   // If this subBlock isn't mapped to a word, return a dummy
+   wordIndexLock.lock( );
+   if ( !( wordIndex.find( subBlockInfo ) != wordIndex.end( ) ) )
+      {
+      wordIndexLock.unlock( );
+      return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
+      }
+   wordIndexLock.unlock( );
+
    SubBlock subBlock = MmapSubBlock( subBlockInfo, endWanted, writeLockHeld );
 
    // If we need to follow nextPtrs to get to end
@@ -356,116 +439,186 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    {
    assert( subBlock.subBlockInfo.subBlockSize != blockSize );
 
-   // Get the last used sub block of this size
-   SubBlock lastUsed = 
-         GetLastUsedSubBlock( subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo.blockIndex );
+   // Remove that subBlock from the wordIndex
+   wordIndexLock.lock( );
+   wordIndex.erase( subBlock.subBlockInfo );
+   wordIndexLock.unlock( );
 
+   // Get the last used sub block of this size
+   SubBlock lastUsed = GetLastUsedSubBlock(
+         subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo );
+   
+   DEBUG( "Deleting (%u, %u), lastUsed of size %u is (%u, %u)\n",
+         subBlock.subBlockInfo.blockIndex,
+         subBlock.subBlockInfo.subBlockIndex,
+         subBlock.subBlockInfo.subBlockSize,
+         lastUsed.subBlockInfo.blockIndex,
+         lastUsed.subBlockInfo.subBlockIndex );
+         
    if ( lastUsed.subBlockInfo.blockIndex == 0 )
       {
+      DEBUG( "\tNo lastUsed, nothing to move. \n" );
+
       MunmapSubBlock( subBlock );
       return;
       }
 
-   // This was not the last subBlock
-   if ( lastUsed.subBlockInfo != subBlock.subBlockInfo )
+   // This was the last subBlock
+   if ( lastUsed.subBlockInfo == subBlock.subBlockInfo )
       {
-      // Copy it into current subBlock
-      memcpy( subBlock.mmappedArea, lastUsed.mmappedArea, 
-            lastUsed.subBlockInfo.subBlockSize );
-      // Fix hashmaps
-      wordIndexLock.lock( );
-      FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
-      wordIndex.erase( lastUsed.subBlockInfo );
-      wordIndex.at( subBlock.subBlockInfo ) = word;
-      wordIndexLock.unlock( );
-      subBlockIndexLock.lock( );
-      subBlockIndex.at( word ) = subBlock.subBlockInfo;
-      subBlockIndexLock.unlock( );
+      DEBUG( "\tDeleting the lastUsed, nothing to move.\n" );
+
+      MunmapSubBlock( subBlock );
+      return;
       }
+
+   // Copy it into current subBlock
+   memcpy( subBlock.mmappedArea, lastUsed.mmappedArea, 
+         lastUsed.subBlockInfo.subBlockSize );
+
+   // Update hashmaps
+   wordIndexLock.lock( );
+   FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
+   wordIndex.erase( lastUsed.subBlockInfo );
+   wordIndex.insert( { subBlock.subBlockInfo, word } );
+   wordIndexLock.unlock( );
+
+   subBlockIndexLock.lock( );
+   subBlockIndex.at( word ) = lastUsed.subBlockInfo;
+   subBlockIndexLock.unlock( );
 
    if ( lastUsed.rwlock )
       MunmapSubBlock( lastUsed );
-   // Unmap the deleted block
    MunmapSubBlock( subBlock );
    }
 
 
 SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
    {
-   metaDataLock.lock();
-   
-   // Size of each open/lastused entry
-   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
-   // Indexed based on subBlockSize
-   offset *= blockSize / subBlockSize;
-   // Plus the original offset from the other data
-   offset += sizeof( unsigned ) * 2;
 
-   SubBlockInfo openSubBlock;
-   if ( subBlockSize == blockSize )
-      {
-      openSubBlock = { subBlockSize, nextBlockIndex, 0 };
-      IncrementNumBlocks( true );
-      }
-   else
-      {
-      openSubBlock.subBlockSize = subBlockSize;
-      openSubBlock.blockIndex = metaData.GetInString< unsigned >( offset );
-      offset += sizeof( unsigned );
-      openSubBlock.subBlockIndex = metaData.GetInString< unsigned char >( offset );
-      }
+   bool acquiredOpen = false;
+   SubBlockInfo oldOpenInfo = { 0, 0, 0 };
+   SubBlock toReturn;
 
-   if ( openSubBlock.blockIndex == 0 )
-      {
-      openSubBlock = { subBlockSize, nextBlockIndex, 0 };
-      IncrementNumBlocks( true );
-      }
+   do {
+      bool incrementedPage = false;
 
-   if ( ( ++openSubBlock.subBlockIndex %= blockSize / openSubBlock.subBlockSize ) == 0 )
-      openSubBlock.blockIndex = 0;
+      SubBlockInfo openInfo;
 
-   SubBlock toReturn = MmapSubBlock( openSubBlock, true, false );
+      metaDataLock.lock();
 
-   SetOpen( openSubBlock, true );
+      // If we want a whole block, return nextBlockIndex and increment numBlocks
+      if ( subBlockSize == blockSize )
+         {
+         openInfo = { subBlockSize, nextBlockIndex, 0 };
+         incrementedPage = true;
+         }
+      else
+         {
+         // Size of each open/lastused entry
+         unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+         // Indexed based on subBlockSize
+         offset *= blockSize / subBlockSize;
+         // Plus the original offset from the other data
+         offset += sizeof( unsigned ) * 2;
 
-   metaDataLock.unlock();
+         openInfo.subBlockSize = subBlockSize;
+         openInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+         offset += sizeof( unsigned );
+         openInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+
+         // If open is invalid, allocate a new block for this size
+         if ( openInfo.blockIndex == 0 )
+            {
+            openInfo = { subBlockSize, nextBlockIndex, 0 };
+            incrementedPage = true;
+            }
+         }
+      
+      // We have the right open subBlock
+      if ( openInfo == oldOpenInfo )
+         {
+         SetLastUsed( openInfo, true );
+         // If the incremented next subBlock is invalid, make blockIndex invalid too
+         if ( ( ++openInfo.subBlockIndex %= blockSize / openInfo.subBlockSize ) == 0 )
+            openInfo.blockIndex = 0;
+         SetOpen( openInfo, true );
+         if ( incrementedPage )
+            IncrementNumBlocks( true );
+         metaDataLock.unlock( );
+
+         return toReturn;
+         }
+
+      // unmap what we had
+      if ( oldOpenInfo.blockIndex != 0 )
+         MunmapSubBlock( toReturn );
+      metaDataLock.unlock( );
+
+      // Get the open sub block and set it to the last used for this size
+      toReturn = MmapSubBlock( openInfo, true, false );
+      oldOpenInfo = openInfo;
+      } while ( !acquiredOpen );
 
    return toReturn;
    }
 
 
-SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, unsigned blockHeld )
+SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subBlockHeld )
    {
    // Should never be called for blockSize
    assert( subBlockSize != blockSize );
 
-   metaDataLock.lock();
-   // Size of each open/lastused entry
-   unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
-   // Indexed based on subBlockSize
-   offset *= blockSize / subBlockSize;
-   // Plus the original offset from the other data
-   offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
+   bool acquiredLastUsed = false;
+   SubBlockInfo oldLastUsedInfo = { 0, 0, 0 };
+   SubBlock toReturn;
 
-   SubBlockInfo subBlockInfo;
+   do {
+      metaDataLock.lock();
 
-   subBlockInfo.subBlockSize = subBlockSize;
-   subBlockInfo.blockIndex = metaData.GetInString< unsigned >( offset );
-   offset += sizeof( unsigned );
-   subBlockInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+      SubBlockInfo lastUsedInfo;
 
-   SubBlock toReturn{ false, nullptr, 0, subBlockInfo, nullptr, true};
-   if ( subBlockInfo.blockIndex == 0 )
-      {
+      // Size of each open/lastused entry
+      unsigned offset = sizeof( unsigned ) * 2 + sizeof( unsigned char ) * 2;
+      // Indexed based on subBlockSize
+      offset *= blockSize / subBlockSize;
+      // Plus the original offset from the other data
+      offset += sizeof( unsigned ) * 3 + sizeof( unsigned char );
+
+      lastUsedInfo.subBlockSize = subBlockSize;
+      lastUsedInfo.blockIndex = metaData.GetInString< unsigned >( offset );
+      offset += sizeof( unsigned );
+      lastUsedInfo.subBlockIndex = metaData.GetInString< unsigned char >( offset );
+
+      // If lastUsedSubBlock is invalid, return a dummy because there is no lastUsed
+      if ( lastUsedInfo.blockIndex == 0 )
+         {
+         metaDataLock.unlock( );
+         return { true, nullptr, 0, lastUsedInfo, nullptr, true };
+         }
+
+      // If we've acquired the correct subBlock
+      if ( oldLastUsedInfo == lastUsedInfo )
+         {
+         SetOpen( lastUsedInfo, true );
+
+         if ( lastUsedInfo.subBlockIndex-- == 0 )
+            lastUsedInfo.blockIndex = 0;
+
+         SetLastUsed( lastUsedInfo, true );
+
+         metaDataLock.unlock( );
+         return toReturn;
+         }
+
+      // unmap what we had
+      if ( oldLastUsedInfo.blockIndex != 0 && oldLastUsedInfo != subBlockHeld )
+         MunmapSubBlock( toReturn );
       metaDataLock.unlock();
-      return toReturn;
-      }
 
-   toReturn = MmapSubBlock( subBlockInfo, true, true );
-
-   SetOpen( subBlockInfo, true );
-
-   metaDataLock.unlock();
+      toReturn = MmapSubBlock( lastUsedInfo, true, lastUsedInfo == subBlockHeld );
+      oldLastUsedInfo = lastUsedInfo;
+   } while ( !acquiredLastUsed );
 
    return toReturn;
    }
@@ -546,27 +699,23 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
       try
          { 
          lockMapLock.lock();
-         toReturn.rwlock = lockMap.at( subBlockInfo.blockIndex ); 
+         toReturn.rwlock = lockMap.at( subBlockInfo ); 
          lockMapLock.unlock();
-         #ifdef TEST
-         printf( "Found a lock for block %d. ",
-               subBlockInfo.blockIndex );
-         #endif
+
+         DEBUG( "Found a lock for (%u, %u).\n",
+               subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
          }
       catch ( const std::out_of_range& )
          { 
          toReturn.rwlock = new threading::ReadWriteLock( );
-         lockMap.insert( { subBlockInfo.blockIndex, toReturn.rwlock } );
+         lockMap.insert( { subBlockInfo, toReturn.rwlock } );
          lockMapLock.unlock();
-         #ifdef TEST
-         printf( "No lock found for block %d. Making a new one. ", 
-               subBlockInfo.blockIndex );
-         #endif
+
+         DEBUG( "No lock found for block (%u, %u). Making a new one.\n",
+               subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
          }
 
-      #ifdef TEST
-      printf( "Getting a %s lock on it.\n", writing ? "write" : "read" );
-      #endif
+      DEBUG( "Getting a %s lock on it.\n", writing ? "write" : "read" );
 
       if ( writing )
          toReturn.rwlock->writeLock( );
@@ -574,10 +723,10 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
          toReturn.rwlock->readLock( );
       }
 
-   #ifdef TEST
-   printf( "Lock acquired for %d.\n", subBlockInfo.blockIndex );
-   #endif
+   DEBUG( "Lock acquired for (%u, %u).\n",
+         subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
 
+   assert( blockSize != 0 );
    toReturn.mmappedArea = 
          ( char* )mmapWrapper( indexFD, blockSize, blockOffset );
    toReturn.mmappedArea += subBlockOffset;
@@ -588,6 +737,7 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
 
 void Postings::MunmapSubBlock( SubBlock subBlock )
    {
+   assert( subBlock.mmappedArea != nullptr && blockSize != 0 );
    char* mmappedArea = subBlock.mmappedArea -
          subBlock.subBlockInfo.subBlockIndex * subBlock.subBlockInfo.subBlockSize;
 
@@ -600,11 +750,9 @@ void Postings::MunmapSubBlock( SubBlock subBlock )
       exit( 1 );
       }
 
-   #ifdef TEST
-   printf("Unlocking the %s lock on %d.\n", 
+   DEBUG( "Unlocking the %s lock on (%u, %u).\n",
          subBlock.writingLock ? "write" : "read",
-         subBlock.subBlockInfo.blockIndex );
-   #endif
+         subBlock.subBlockInfo.blockIndex, subBlock.subBlockInfo.subBlockIndex );
 
    subBlock.rwlock->unlock( );
    }
@@ -674,6 +822,7 @@ FixedLengthURL::FixedLengthURL()
       characters[0] = 0;
       characters[MaxLength] = 0;
    }
+
 // SubBlock
 
 inline void SubBlock::SetNextPtr( unsigned blockIndex )

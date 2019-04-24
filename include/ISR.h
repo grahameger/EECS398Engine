@@ -34,7 +34,7 @@ class IsrWord
    };
 
 
-class IsrEndDoc : IsrWord
+class IsrEndDoc : public IsrWord
    {
    public:
       IsrEndDoc( );
