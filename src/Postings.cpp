@@ -595,6 +595,9 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
          return toReturn;
          }
 
+      // unmap what we had
+      if ( oldLastUsedInfo.blockIndex != 0 )
+         MunmapSubBlock( toReturn );
       metaDataLock.unlock();
 
       toReturn = MmapSubBlock( lastUsedInfo, true, lastUsedInfo == subBlockHeld );
