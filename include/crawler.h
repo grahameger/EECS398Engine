@@ -23,12 +23,14 @@
 #include <time.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <atomic>
+#include <optional>
 
+#include "Parser.hpp"
 #include "RobotsTxt.h"
 #include "http.h"
 #include "threading.h"
 #include "BloomFilter.h"
-#include "File.h"
 
 class RobotsTxt;
 
@@ -41,7 +43,7 @@ namespace search {
         ~Crawler();
         void * stub();
         void * print();
-        void print2(double &prevGiB);
+        void print2(double &prevGiB, time_t& prevTime);
         static void * stubHelper(void * context);
         static void * printHelper(void * context);
         bool haveRobots(const std::string &domain);
@@ -52,8 +54,8 @@ namespace search {
         static void domainLock();
         static void domainUnlock();
 
-        static const size_t NUM_CRAWLER_THREADS = 4000;
-        static const size_t DOMAIN_REHIT_WAIT_TIME = 7;
+        static const size_t NUM_CRAWLER_THREADS = 7000;
+        static const size_t DOMAIN_REHIT_WAIT_TIME = 4;
     private:
         friend class HTTPClient;
         threading::ThreadQueue<std::string> readyQueue;
@@ -66,10 +68,39 @@ namespace search {
         
         // when a page is really bad and we don't want to crawl it again, it meets the killFilter
         BloomFilter<std::string> killFilter; 
-        static const size_t killFilterSize; // TODO: we need to write the bad pages to disk somewhere too
+        BloomFilter<std::string> pageFilter;
+        std::set<std::string> robotsDomains;
         std::map<std::string, std::set<std::string> > waitingForRobots;
-        pthread_mutex_t waitingForRobotsLock;
+        inline static pthread_mutex_t waitingForRobotsLock;
+        std::atomic<size_t> numBytes; 
+        std::atomic<size_t> numPages; 
+        std::atomic<size_t> numRobots; 
+        // std::atomic<size_t> is the only way I've found to use the ISO C11 atomic intrinsics (stdatomic.h) in a C++ class 
+        // Without actually handwriting the assembly. You can sort of apply extern "C" to a member function via a very convoluted hack,
+        // but it is not portable to all compiler versions.
     };
+
+    struct MemoryMappedFile {
+        char * ptr;
+        size_t size;
+    };
+
+    struct AlexaRanking {
+        inline static const std::string filename = "alexa_index_sort";
+        AlexaRanking();
+        Vector<std::pair<std::string, int >> sorted;
+    };
+
+    std::optional<MemoryMappedFile> memoryMapFile(const std::string &filename);
+    void parseFileOnDisk( std::string filename,
+                                std::deque<Doc_object>& d,
+                                threading::Mutex &m,
+                                threading::ConditionVariable& cv);
+    
+    void parseFiles(std::deque<std::string> filenames,
+                    std::deque<Doc_object>& d,
+                    threading::Mutex& m,
+                    threading::ConditionVariable& cv);
 }
 
 #endif

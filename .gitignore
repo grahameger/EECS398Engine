@@ -75,6 +75,10 @@ DerivedData/
 bin/engine
 test/parsed.urls
 
+# Scripts
+startCodeServer.sh
+fileWrites.log
+overflow.urls
 # VIM
 .vimrc
 *.swp

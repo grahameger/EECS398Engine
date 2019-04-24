@@ -46,7 +46,7 @@ void TokenStream::DiscardWhitespace( )
 
 bool TokenStream::MatchKeyword( const String& keyword ) 
    {
-   for( int i = 0; i < keyword.Size( ); i++ ) 
+   for( unsigned i = 0; i < keyword.Size( ); i++ ) 
       {
 	  if( PeekNext( ) == keyword[ i ] )
 	     continue;
@@ -103,7 +103,7 @@ bool TokenStream::MatchNextKeyword( const String& keyword )
       {
 	  if ( next != keyword[ 0 ] ) continue;
 
-	  int i;
+	  unsigned i;
 	  for ( i = 1; i < keyword.Size( ); i++ )
 		 if ( ( next = PeekNext( ) ) != keyword[ i ] ) break;
 	  
@@ -115,7 +115,7 @@ bool TokenStream::MatchNextKeyword( const String& keyword )
 		 return true;
 		 }
 
-	  for ( int j = 0; j < i; j++ )
+	  for ( unsigned j = 0; j < i; j++ )
 	     DecrementPeek( );
 
 	  }

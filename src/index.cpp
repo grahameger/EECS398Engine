@@ -8,15 +8,17 @@
 
 void* readerWrapper(void* index){
    static_cast<Index*>(index)->reader();
+   return nullptr;
 }
 
 void* writerWrapper(void* index){
    static_cast<Index*>(index)->writerDriver();
+   return nullptr;
 }
 
 
 Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, threading::ConditionVariable* CV)
-   :currentLocation(0), totalDocLength(0), currentDocId(0), urlMap(String("urlTable")), metaMap(String("metaTable")), currentWriteDocId(0), readThreads(10), writeThreads(10), emptyQueue(false) {
+   : totalDocLength(0), urlMap("urlTable"), metaMap("metaTable"), currentLocation(0), emptyQueue(false), currentDocId(0), currentWriteDocId(0), readThreads(1), writeThreads(1) {
 
    fd = open("averageDocLength.bin", O_RDWR | O_CREAT, S_IRWXU);
    ftruncate(fd, sizeof(unsigned long long));
@@ -30,6 +32,7 @@ Index::Index(std::deque<Doc_object>* docQueue, threading::Mutex* queueLock, thre
    for(unsigned i = 0; i < 10; i++){
       pthread_create(&writeThreads[i], NULL, &writerWrapper, this);
    }
+   pthread_join(readThreads[0], nullptr);
    //reader(docQueue);
 }
 
@@ -65,11 +68,11 @@ void Index::reader(){
       while(documentQueue->empty()){
          documentQueueLock->unlock();
          documentQueueLock->lock();
-         
       }
       //think about dynamicness
       Doc_object doc = documentQueue->front();
       documentQueue->pop_front();
+      std::cout << "Popped: " << doc.doc_url << std::endl;
       unsigned long long startLocation = currentLocation;
       int docSize = doc.Words.size();
       //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
@@ -82,6 +85,7 @@ void Index::reader(){
       currentDocId++;
       //can't read in next doc until current location and currentDocId are updated
       documentQueueLock->unlock();
+      dequeCV->signal();
       hash_table<Vector<unsigned long long> > localMap;
       //pass urls and doc ends to newDoc somehow, probably a queue of url, docEnd pairs
       //parse into word, vector<ull>location pairs
@@ -107,7 +111,8 @@ void Index::reader(){
       }
       //docEnd
       (*(localMap[String("")])).push_back(startLocation);
-      urlMap[startLocation] = FixedLengthURL(doc.doc_url.CString());
+      auto fixedLengthUrl = FixedLengthURL(doc.doc_url.CString());
+      urlMap[startLocation] = fixedLengthUrl;
       startLocation++;
       //parse anchor texts
       for(unsigned i = 0; i < doc.vector_of_link_anchor.size(); i++){
@@ -115,11 +120,11 @@ void Index::reader(){
             //probably gonna need to use the same map here
             (*(localMap[String("@") + doc.vector_of_link_anchor[i].anchor_words[j].word])).push_back(startLocation);
             startLocation++;
-            
          }
          //docEnd map here
          (*(localMap[String("")])).push_back(startLocation);
-         urlMap[startLocation] = FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString());
+         auto fixedLengthUrl = FixedLengthURL(doc.vector_of_link_anchor[i].link_url.CString());
+         urlMap[startLocation] = fixedLengthUrl;
          startLocation++;
       }
       urlMetadata metadata(doc.Words.size(), doc.doc_url.Size(), doc.num_slash_in_url, metaMap[FixedLengthURL(doc.doc_url.CString())].inLinks, doc.vector_of_link_anchor.size(),doc.domain_type, doc.domain_rank);
@@ -153,10 +158,10 @@ void Index::reader(){
          emptyQueue = false;
          queueReadCV.broadcast();
       }
+      currentWriteDocId++;
       queueWriteCV.broadcast();
       dequeCV->signal();
       currentWriteDocIdMutex.lock();
-      currentWriteDocId++;
       currentWriteDocIdMutex.unlock();
    }
 }

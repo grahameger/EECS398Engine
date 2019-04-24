@@ -123,13 +123,15 @@ void DomainRules::WriteRulesToDisc(std::string& domain, string& RulesFolderPath)
    {
    string writePath = RulesFolderPath + "/" + domain;
    FILE *file = nullptr;
-   for(int i = 0; i < 10, !file; ++i) //try to open file 10 times in case of disk busy
+   for(int i = 0; i < 10; ++i) //try to open file 10 times in case of disk busy
       {
       file = fopen(writePath.c_str(), "w");
+      if (file)
+         break;
       }
    if(!file)
       {
-      fprintf(stderr, "Error writing robotstxt file for domain %s to disk!", domain.c_str());
+      fprintf(stderr, "Error writing robotstxt file for domain %s to disk. - %s\n", domain.c_str(), strerror(errno));
       throw(1);
       }
    root->SaveToFile(file);

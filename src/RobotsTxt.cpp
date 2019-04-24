@@ -184,7 +184,7 @@ void RobotsTxt::unlock() {
 void RobotsTxt::makeDir(const char * name) {
    struct stat st = {0};
    if (stat(name, &st) == -1) {
-      int rv = mkdir(name, 0755);
+      int rv = mkdir(name, 0766);
       if (rv == -1) {
          fprintf(stderr, "error creating directory %s - %s\n", name, strerror(errno));
          exit(1);

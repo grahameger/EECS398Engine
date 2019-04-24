@@ -10,7 +10,6 @@
 #include <string>
 #include "String.h"
 
-
 namespace hash {
     // templated Murmur64A
     template <typename T> struct Hash {

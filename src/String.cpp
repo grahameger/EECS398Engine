@@ -7,8 +7,13 @@
 
 const char* String::nullString = "";
 
-String::String( ) : cstring( nullptr ), size( 0 )
+String::String( const unsigned size ) : cstring( nullptr ), size( size )
    {
+   if ( size > 0 )
+      {
+      cstring = new char[ size + 1 ];
+      cstring[ size ] = 0;
+      }
    }
 
 String::String( const char single_char ) : size( 1 )
@@ -18,9 +23,9 @@ String::String( const char single_char ) : size( 1 )
    cstring[1] = 0;
    }
 
-String::String( const char* toCopy, int length ) : size( length )
+String::String( const char* toCopy, unsigned length ) : size( length )
    {
-   if ( length == -1 )
+   if ( length == 0 )
       size = strlen( toCopy );
    cstring = new char[ size + 1 ];
    cstring[ size ] = 0;
@@ -28,11 +33,11 @@ String::String( const char* toCopy, int length ) : size( length )
    }
 
 
-String::String( char*&& toMove, int length ) : cstring( toMove ), 
+String::String( char*&& toMove, unsigned length ) : cstring( toMove ), 
       size( length )
    {
    toMove = nullptr;
-   if ( length == -1 )
+   if ( length == 0 )
       size = strlen( cstring );
    }
 
@@ -60,6 +65,17 @@ String::String( String&& toMove )
    toMove.cstring = nullptr;
    }
 
+String::String( const std::string& toCopy ) 
+{
+    size = toCopy.size();
+    if (size) {
+        cstring = new char [ size + 1 ];
+        memcpy(cstring, toCopy.c_str(), size + 1);
+    } else {
+        cstring = nullptr;
+    }
+}
+
 
 String& String::operator = ( const String& toCopy )
    {
@@ -86,7 +102,7 @@ String::~String( )
 void String::Swap( String& toSwap )
    {
    char* tempCString = cstring;
-   int tempSize = size;
+   unsigned tempSize = size;
    cstring = toSwap.cstring;
    size = toSwap.size;
    toSwap.cstring = tempCString;
@@ -97,7 +113,7 @@ void String::Swap( String& toSwap )
 bool String::Empty( ) const { return size == 0; }
 
 
-int String::Size( ) const { return size; }
+unsigned String::Size( ) const { return size; }
 
 
 const char* String::CString( ) const
@@ -110,14 +126,14 @@ bool String::Compare( const String& other ) const
    {
    if ( size != other.size ) return false;
     
-   int index = 0, i;
+   unsigned index = 0, i;
    while ( ( i = index++ ) != size && cstring[ i ] == other.cstring[ i ]) { }
     
    return index > size;
    }
 
 
-const char String::operator[ ] ( int index ) const
+const char String::operator[ ] ( unsigned index ) const
    {
    if ( cstring == nullptr )
       return nullString[ index ];
@@ -126,7 +142,7 @@ const char String::operator[ ] ( int index ) const
    }
 
 
-char& String::operator[ ] ( int index )
+char& String::operator[ ] ( unsigned index )
    {
    if ( cstring == nullptr )
       {
@@ -144,24 +160,44 @@ String& String::operator+= ( const String& rhs )
    if ( rhs.cstring == nullptr )
       return *this;
 
-   int newSize = size + rhs.size;
+   unsigned newSize = size + rhs.size;
    char* newCString = new char[ newSize + 1 ];
 
    if ( cstring != nullptr )
       memcpy( newCString, cstring, size );
    memcpy( newCString + size, rhs.cstring, rhs.size );
 
-   delete[ ] cstring;
+   if (cstring != nullString)
+      delete[ ] cstring;
    cstring = newCString;
    size = newSize;
 
    return *this;
    }
+
+   String& String::operator+= ( const char rhs )
+      {
+      unsigned newSize = size + 1;
+      char* newCString = new char [ newSize + 1 ];
+
+      if ( cstring != nullptr )
+         memcpy( newCString, cstring, size );
+      newCString[ size ] = rhs;
+      newCString[ newSize ] = 0;
+
+      if (cstring != nullString)
+         delete[ ] cstring;
+      cstring = newCString;
+      size = newSize;
+
+      return *this;
+      }
  
- String operator+( String lhs, const String& rhs) 
+ String operator+( const String lhs, const String& rhs) 
    {
-   lhs += rhs;
-   return lhs;
+   auto temp = lhs;
+   temp += rhs;
+   return temp;
    }
 
 String::operator bool( ) const
@@ -170,18 +206,18 @@ String::operator bool( ) const
    }
 
 
-void String::Allocate( const int length, bool after )
+void String::Allocate( const unsigned length, bool after )
    {
    if ( length < 1 )
       return;
 
-   int newSize = size + length;
+   unsigned newSize = size + length;
    char* newCString = new char[ newSize + 1 ];
 
    if ( cstring != nullptr )
       memcpy( newCString, cstring, size );
 
-   delete cstring;
+   delete[ ] cstring;
    cstring = newCString;
    size = newSize;
    }
@@ -205,11 +241,12 @@ void String::RemoveWhitespace( )
    }
 
 
-String operator+ ( String lhs, const char * toCat ) 
+String operator+ ( const String lhs, const char * toCat ) 
    {
    auto cat = String( toCat );
-   lhs += cat;
-   return lhs;
+   auto lhsString = lhs;
+   lhsString += cat;
+   return lhsString;
    }
 
 

@@ -52,7 +52,7 @@ public:
     //EFFECTS:  Returns (by reference) the element at the given index.
     T &at(size_t index);
 
-   const T& back();
+    const T& back();
 
     //REQUIRES: 0 <= index < number of elements in this IntVector
     //EFFECTS:  Returns (by reference) the element at the given index.

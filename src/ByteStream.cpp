@@ -21,7 +21,7 @@ const unsigned char InputByteStream::GetNextByte( )
    }
 
 
-OutputByteStream::OutputByteStream( bool forwards ) : writing( 63 ), 
+OutputByteStream::OutputByteStream( bool forwards ) : writing( 63u ), 
       byteNum( 0 ), forwardStream( forwards ), currentIterator( nullptr )
    {
    if ( !forwardStream )
@@ -60,7 +60,7 @@ unsigned OutputByteStream::Size( ) const
 // Warning: Here there be sketchy math
 const String OutputByteStream::HexString( ) const
    {
-   int size;
+   unsigned size;
 
    // (2 characters in hex per byte, bytes = byteNum)
    if ( forwardStream )
@@ -73,7 +73,7 @@ const String OutputByteStream::HexString( ) const
 
    String hexString( size );
 
-   for ( int i = 0; i < size; i++ )
+   for ( unsigned i = 0; i < size; i++ )
       {
       // If a spot for a space
       if ( i > 0 && ( i + 1 ) % 5 == 0 )
@@ -83,7 +83,7 @@ const String OutputByteStream::HexString( ) const
          }
 
       // The adjusted index into writing (curIndex - seen spaces)
-      int j = i - (i / 5);
+      unsigned j = i - (i / 5);
       if ( !forwardStream )
          j = ( byteNum + 1 ) * 2 + j;
 

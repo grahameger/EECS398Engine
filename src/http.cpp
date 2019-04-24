@@ -20,9 +20,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <zlib.h>
+#include <dirent.h>
 #include <map>
 #include "Parser.hpp"
+#include "Debug.h"
 
 namespace search {
 
@@ -30,11 +31,68 @@ namespace search {
         crawler = crawlerIn;
         robots = &threading::Singleton<RobotsTxt>::getInstance();
 
-        logFd = open("fileWrites.log", O_WRONLY | O_APPEND | O_CREAT, 0755);
+        const char fileWritesLogName[] = "fileWrites.log";
+
+        struct stat st = {0};
+        int oFlags = O_WRONLY | O_APPEND;
+        if (stat(fileWritesLogName, &st) != 0) {
+            oFlags |= O_CREAT;
+        }
+        logFd = open(fileWritesLogName, oFlags, 0766);
         if (logFd < 0) {
             fprintf(stderr, "error opening log file");
             exit(1);
         }
+
+        // initialize the page filter
+        static const char robotsDir[] = "robots";
+        static const char pagesDir[] = "pages";
+        DIR * d;
+        struct dirent * dir;
+        char fullPath[1000];
+        d = opendir(robotsDir);
+        fprintf(stdout, "Initializing pages bloom filter\n");
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG) {
+                    fullPath[0] = '\0';
+                    strcat(fullPath, robotsDir);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, dir->d_name);
+                    struct stat st = {0};
+                    if (stat(fullPath, &st) == 0) {
+                        crawler->numBytes += st.st_size;
+                        crawler->numRobots++;
+                        auto s = std::string(fullPath);
+                        crawler->pageFilter.add(s);
+                        // add the file to the robots rules
+                    }
+                }
+            }
+        }
+        fprintf(stdout, "Initializing robots bloom filter\n");
+        closedir(d);
+        d = opendir(pagesDir);
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+                if (dir->d_type == DT_REG)  {
+                    fullPath[0] = '\0';
+                    strcat(fullPath, robotsDir);
+                    strcat(fullPath, "/");
+                    strcat(fullPath, dir->d_name);
+                    
+                    struct stat st = {0};
+                    if (stat(fullPath, &st) == 0) {
+                        crawler->numBytes += st.st_size;
+                        crawler->numPages++;
+                        auto s = std::string(fullPath);
+                        crawler->pageFilter.add(std::string(s));
+                        // open the file, parse it, add the links to a set
+                    }
+                }
+            }
+        }
+        closedir(d);
 
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
@@ -58,13 +116,6 @@ namespace search {
         signal(SIGPIPE, SIG_IGN);
     }
 
-    // returns true if the given url has already been fetched
-    bool alreadyFetched(const std::string &url) {
-        auto filename = HTTPRequest(url).filename();
-        struct stat buffer;
-        return (stat (filename.c_str(), &buffer) == 0);
-    }
-
     // returns a connected socket, -1 if error
     int HTTPClient::getConnToHost(const std::string &host, int port, bool blocking) {
         std::string portStr = std::to_string(port);
@@ -84,10 +135,10 @@ namespace search {
             }
         }
         if (rv == EAI_AGAIN) {
-            fprintf(stderr, "getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));
+            D(fprintf(stderr, "[DNS TIMEOUT] getaddrinfo timed out 5 times for host '%s' -- %s -- %s\n", host.c_str(), gai_strerror(rv), strerror(errno));)
         } else if (rv != 0) {
             return -1;
-            fprintf(stderr, "getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));
+            D(fprintf(stderr, "[DNS FAIL] getaddrinfo failed for host '%s' - %s - %s", host.c_str(), gai_strerror(rv), strerror(errno));)
         }
 
 
@@ -104,7 +155,7 @@ namespace search {
             if (!blocking) {
                 rv = fcntl(sockfd, F_SETFL, O_NONBLOCK);
                 if (rv == -1) {
-                    fprintf(stderr, "could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));
+                    D(fprintf(stderr, "[SET SOCKET FAILED] could not set socket to non-blocking for host '%s', strerror: %s\n", host.c_str(), gai_strerror(rv));)
                     close(sockfd);
                     freeaddrinfo(servinfo);
                     return -1;
@@ -113,13 +164,13 @@ namespace search {
             // timeout section of the show
             timeval tm = {constants::TIMEOUTSECONDS, constants::TIMEOUTUSECONDS};
             if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
-                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                D(fprintf(stderr, "[SETSOCKOPT] setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
                 close(sockfd);
                 freeaddrinfo(servinfo);
                 return -1;
             }
             if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
-                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                D(fprintf(stderr, "[SETSOCKOPT] setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));)
                 close(sockfd);
                 freeaddrinfo(servinfo);
                 return -1;
@@ -134,7 +185,7 @@ namespace search {
         }
         // end of list with no connection
         if (p == nullptr) {  
-            fprintf(stderr, "unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));
+            D(fprintf(stderr, "[CONNECT FAIL] unable to connect to host '%s' - %s\n", host.c_str(), strerror(errno));)
             freeaddrinfo(servinfo);
             return -1;
         }
@@ -208,7 +259,7 @@ namespace search {
     // Returns false if there is no Content-Type, or if the Content-Type
     // is not either "text/html" or "text/plain"
     // tested good
-    bool HTTPClient::goodMimeContentType(char * str, ssize_t len) {
+    bool HTTPClient::goodMimeContentType(const char * str, const ssize_t len) {
         // construct a string_view from our pointer and length
         // find "Content-Type" using the case insensitive find function
         // construct a string_view of the mime-type indicated in the header
@@ -226,8 +277,8 @@ namespace search {
             const std::string_view contentType = header.substr(firstTokenStart,
                                              header.find_first_of(" \f\n\r\t\v;", firstTokenStart));
             if (contentType.size() >= 9) {
-                auto firstToken = contentType.substr(0,4);
-                auto secondToken = contentType.substr(5,4);
+                std::string_view firstToken = contentType.substr(0,4);
+                std::string_view secondToken = contentType.substr(5,4);
                 return firstToken == "text" && (secondToken == "html" || secondToken == "plai");
             } else {
                 return false;
@@ -237,21 +288,70 @@ namespace search {
         }
     }
 
+    bool HTTPClient::response200or300(const char * str, ssize_t len) {
+        return len >= 10 ? str[9] == '2' || str[9] == '3' : false;
+    }
 
-    bool HTTPClient::response200or300(char * str, ssize_t len) {
-        return len >= 10 ? str[9] == '2' || str[9] == 3 : false;
+
+    // borrows all arguments
+    bool HTTPClient::headerChecks(const char * header, const size_t headerLen, const HTTPRequest& req, ssize_t& contentLength) {
+        if (!response200or300(header, headerLen)) {
+            auto uri = req.uri();
+            crawler->killFilter.add(uri);
+            D(fprintf(stderr, "[BAD RESPONSE] Non 20X or 30X HTTP response code - %s\n", uri.c_str());)
+            return false;
+        }
+        if (!req.robots() && !goodMimeContentType(header, headerLen) && header[9] != '3') {
+            auto uri = req.uri();
+            crawler->killFilter.add(uri);
+            D(fprintf(stderr, "[BAD CONTENT TYPE] Bad content type for request %s\n", uri.c_str());)
+            return false;
+        }
+        contentLength = getContentLength(std::string_view(header, headerLen));
+        if (( size_t )contentLength == CHUNKED) {
+            D(fprintf(stderr, "[CHUNKED] received a chunked encoding\n");)
+            return false;
+        }
+        return true;
+    }
+
+    void HTTPClient::robotsErrorCheck(const HTTPRequest& request) {
+        if (request.robots()) {
+            auto filename = request.filename();
+            // move all the waiting pages to the readyQueue;
+            pthread_mutex_lock(&crawler->waitingForRobotsLock);
+            crawler->robotsDomains.insert(request.host);
+            auto it = crawler->waitingForRobots.find(request.host);
+            if (it != crawler->waitingForRobots.end()) {
+                std::set<std::string> readyToCrawl;
+                readyToCrawl.insert(it->second.begin(), it->second.end());
+                crawler->waitingForRobots.erase(it);
+                pthread_mutex_unlock(&crawler->waitingForRobotsLock);
+                crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
+            } else {
+                pthread_mutex_unlock(&crawler->waitingForRobotsLock);
+            }
+            // create an empty file with the filename
+            int fd = open(filename.c_str(), O_RDWR | O_CREAT, 0766);
+            if (fd != -1) {
+                // write the null character to the file
+                dprintf(fd, "%c", '\0');
+            }
+            close(fd);
+        }
     }
 
 
     void HTTPClient::SubmitURLSync(const std::string &url, size_t redirCount) {
         if (redirCount > REDIRECT_MAX) {
-            fprintf(stderr, "Too many redirects ending in host %s\n", url.c_str());
             std::string uri = HTTPRequest(url).uri();
             crawler->killFilter.add(uri);
+            D(fprintf(stderr, "[TOO MANY REDIRECTS] %s\n", url.c_str());)
             return;
         }
         HTTPRequest request(url);
         if (request.host == "") {
+            D(fprintf(stderr, "[NOHOST] %s\n", url.c_str());)
             return;
         }
         std::unique_ptr<Socket> sock;
@@ -265,12 +365,14 @@ namespace search {
             sock = std::unique_ptr<Socket>(new Socket);
         }
         else {
+            D(fprintf(stderr, "[NOSCHEME] %s\n", url.c_str());)
             return;
         }
         // open a socket to the host
         int sockfd = getConnToHost(request.host, request.port , true);
         if (sockfd < 0) {
             crawler->killFilter.add(request.uri());
+            D(fprintf(stderr, "[CONN FAILED] %s\n", url.c_str());)
             return; 
         }
         ssize_t rv = sock->setFd(sockfd);
@@ -278,6 +380,7 @@ namespace search {
             // this error message was getting really annoying.
             // fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             crawler->killFilter.add(request.uri());
+            D(fprintf(stderr, "[SET FD FAILED] %s\n", url.c_str());)
             return;
         }
 
@@ -293,8 +396,11 @@ namespace search {
 
         // send request blocking
         const std::string requestStr = request.requestString();
+        const std::string uri = request.uri();
+        //fprintf(stderr, "uri: %s\n%s\n", uri.c_str(), requestStr.c_str());
         if (sock->send(requestStr.c_str(), requestStr.size()) == -1) {
-            fprintf(stderr, "error sending request to host for url '%s'\n", url.c_str());
+            D(fprintf(stderr, "[SEND ERROR] %s\n", url.c_str());)
+            robotsErrorCheck(request);
             crawler->killFilter.add(request.uri());
             return;
         }
@@ -308,8 +414,9 @@ namespace search {
             rv = sock->recv(fullResponse + bytesReceived, constants::BUFFER_SIZE - bytesReceived, 0);
             if (rv < 0) {
                 // error check
-                fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                D(fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());)
                 free(fullResponse);
+                robotsErrorCheck(request);
                 crawler->killFilter.add(request.uri());
                 return;
             } else if (rv == 0) {
@@ -323,21 +430,12 @@ namespace search {
                 headerPos = view.find("\r\n\r\n");
                 if (headerPos != std::string_view::npos) {
                     headerSize = headerPos + 4;
-                    // once we have the full header check the content type
-                    if (!isARobotsRequest && response200or300(fullResponse, headerSize) && !goodMimeContentType(fullResponse, headerSize)) {
-                        auto uri = request.uri();
-                        crawler->killFilter.add(request.uri());
-                        fprintf(stderr, "Bad content type for url %s\n", uri.c_str());
+                    if (!headerChecks(fullResponse, headerSize, request, contentLength)) {
+                        robotsErrorCheck(request);
                         free(fullResponse);
                         return;
                     }
-                    // search for "Content-Length"
-                    contentLength = getContentLength(std::string_view(fullResponse, bytesReceived));
-                    if (contentLength == CHUNKED) {
-                        fprintf(stderr, "received a chunked encoding\n");
-                        return;
-                    }
-                    if (contentLength != (size_t)-1) {
+                    if (contentLength != -1) {
                         totalSize = headerSize + contentLength;
                         ssize_t remaining = totalSize - bytesReceived;
                         if (remaining > 0) {
@@ -349,7 +447,7 @@ namespace search {
                                 bytesReceived += rv;
                                 break;
                             }
-                            if (rv < 0 || bytesReceived < contentLength) {
+                            if (rv < 0 || bytesReceived < (size_t)contentLength) {
                                 // error reading from socket
                                 break;
                             }
@@ -371,7 +469,8 @@ namespace search {
                         } while (rv > 0);
                         if (rv < 0) {
                             free(fullResponse);
-                            fprintf(stderr, "recv returned an error for url '%s'\n", url.c_str());
+                            D(fprintf(stderr, "[RECV FAILED] %s\n", url.c_str());)
+                            robotsErrorCheck(request);
                             crawler->killFilter.add(request.uri());
                             return;
                         }
@@ -386,37 +485,53 @@ namespace search {
 
         char * redirectUrl = checkRedirectsHelper(fullResponse, bytesReceived);
         if (redirectUrl) {
-            free(fullResponse);
             // make a non relative url from this 
             std::string newUrl = resolveRelativeUrl(url.c_str(), redirectUrl);
+            free(fullResponse);
             free(redirectUrl);
-            return SubmitURLSync(newUrl, ++redirCount);
+            redirCount++;
+            D(fprintf(stderr, "[REDIRECT] %s\n", newUrl.c_str());)
+            return SubmitURLSync(newUrl, redirCount);
         }
+
         if (!isARobotsRequest) {
             if (containsGzip(fullResponse, headerSize)) {
+                D(fprintf(stderr, "[GZIP] %s\n", url.c_str());)
+                robotsErrorCheck(request);
                 free(fullResponse);
                 return;
             } else {
+                if (currentBufferSize == bytesReceived) {
+                    fullResponse = (char*)realloc(fullResponse, bytesReceived + 1);
+                    fullResponse[bytesReceived] = '\0';
+                }
                 process(fullResponse + headerSize, bytesReceived - headerSize, url);
             }
         }
 
-        // either going to write to a file or add another request to the queue
         // write it to a file
-        std::string filename = request.filename();
+        if (!writeToFile(request, fullResponse, bytesReceived, headerSize)) {
+            // don't need to free?
+            // definitely need to free
+            D(fprintf(stderr, "[FILE WRITE FAILED] %s\n", url.c_str());)
+            return;
+        }
+
         if (isARobotsRequest) {
-            std::ofstream outfile(filename);
-            outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
-            outfile.close();
-            free(fullResponse);
-            dprintf(logFd, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
-            robots->SubmitRobotsTxt(request.host, filename);
-            robots->unlock();
+            auto filename = request.filename();
+            try {
+                robots->SubmitRobotsTxt(request.host, filename);
+                robots->unlock();
+            } catch (...) {
+                D(fprintf(stderr, "[ROBOTS SUBMIT FAILED] %s\n", url.c_str());)
+                robots->unlock();
+            }
             // move all the waiting pages to the readyQueue;
             pthread_mutex_lock(&crawler->waitingForRobotsLock);
+            crawler->robotsDomains.insert(request.host);
             auto it = crawler->waitingForRobots.find(request.host);
             std::set<std::string> readyToCrawl;
             if (it != crawler->waitingForRobots.end()) {
@@ -426,10 +541,86 @@ namespace search {
 	        // remove the iterator for the host from the map
             pthread_mutex_unlock(&crawler->waitingForRobotsLock);
             crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
+        }
+    }
+
+    // write an HTML file to disk
+    // we'll see if this segfaults :)
+    bool HTTPClient::writeToFile(const HTTPRequest& req, void * fullRespnose, size_t bytesReceived, size_t headerSize) {
+        
+        const auto filename = req.filename();
+        struct stat st = {0};
+        if (stat(filename.c_str(), &st) == 0) {
+            free(fullRespnose);
+            return false;
+        }
+        int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0766);
+        for (size_t i = 0; i < 5; ++i) {
+            fd = open(filename.c_str(), O_RDWR | O_CREAT, 0766);
+            if (fd == -1) {
+                // check errno
+                switch (errno) {
+                    // all of these cases can't be retried, the rest can
+                    case EACCES:
+                    case EDQUOT:
+                    case EINTR:
+                    case EINVAL:
+                    case EISDIR:
+                    case ELOOP:
+                    case EMFILE:
+                    case ENAMETOOLONG:
+                    case ENFILE:
+                    free(fullRespnose);
+                    return false;
+                    default:
+                    continue;
+                }
+            } else {
+                break;
+            }
+        }
+        if (fd == -1) {
+            dprintf(logFd, "[LOG ERROR] error opening file %s - %s", filename.c_str(), strerror(errno));
+            free(fullRespnose);
+            return false;
         } else {
-            // let's try out the file abstraction
-            dprintf(logFd, "wrote file %s\n", filename.c_str());
-            File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);
+            // write the file
+            ssize_t bytesWrote = 0;
+            const ssize_t bytesToWrite = bytesReceived - headerSize;
+            char * filePointer = (char*)fullRespnose + headerSize;
+            ssize_t rv = 0;
+            while (bytesWrote < bytesToWrite) {
+                rv = write(fd, filePointer + bytesWrote, bytesToWrite - bytesWrote);
+                if (rv > 0) {
+                    bytesWrote += rv;
+                } else if (rv == 0) {
+                    break;
+                } else if (rv < 0) {
+                    // destroy the file and return false
+                    remove(filename.c_str());
+                    close(fd);
+                    free(fullRespnose);
+                    return false;
+                }
+            }
+            if (bytesWrote != bytesToWrite) {
+                // destroy the file and return false
+                remove(filename.c_str());
+                close(fd);
+                free(fullRespnose);
+                return false;
+            }
+            close(fd);
+            crawler->numBytes += bytesWrote;
+            if (req.robots()) {
+                crawler->numRobots++;
+            } else {
+                crawler->pageFilter.add(filename);
+                crawler->numPages++;
+            }
+            dprintf(logFd, "wrote %s to disk.\n", filename.c_str());
+            free(fullRespnose);
+            return true;
         }
     }
 
@@ -442,13 +633,17 @@ namespace search {
 
     // this function would probably fit better in crawler.cpp
     void HTTPClient::process(char * file, size_t len, const std::string& currentUri) {
+        static AlexaRanking alexa;
+        crawler->readyQueue.push("");
         const char * baseUri = currentUri.c_str();
-        LinkFinder linkFinder; // each thread should probably just have they're own one of these
-        linkFinder.parse(file, len);
-        // TODO: refactor this, probably slow as shit. It's CPU not IO so lower priority.
+        LinkFinder linkFinder(file, len, currentUri, true); // each thread should probably just have they're own one of these
+        linkFinder.parse_html();
+        linkFinder.parse_url(alexa.sorted);
         std::set<std::string> toPush;
-        for (size_t i = 0; i < linkFinder.Link_vector.size(); ++i) {
-            toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Link_vector[i].CString()));
+        for (size_t i = 0; i < linkFinder.Document.vector_of_link_anchor.size(); ++i) {
+            if (linkFinder.Document.vector_of_link_anchor[i].link_url.Size() < 2083) {
+                toPush.insert(resolveRelativeUrl(baseUri, linkFinder.Document.vector_of_link_anchor[i].link_url.CString()));
+            }
         }
         crawler->readyQueue.push(toPush.begin(), toPush.end());
     }
@@ -508,7 +703,7 @@ namespace search {
         std::string base(baseUri);
          // remove everything after the last / in the base Uri path unless the last thing is a slash
         base.erase(base.find_last_of('/') + 1, std::string::npos);
-        std::string timBernersLeeBuffer = std::string(base.begin(), base.end());
+        std::string timBernersLeeBuffer(base.begin(), base.end());
         // Is it PascalCase because it's a man's name or camelCase because it's local????
         
         // b) The reference's path component is appended to the buffer string
@@ -544,14 +739,20 @@ namespace search {
         //    is a complete path segment not equal to "..", that
         //    "<segment>/.." is removed.
         size_t segment;
-        while ((segment = path.find("/../")) != std::string::npos) {
+        size_t startIndex = 0;
+        while ((segment = path.find("/../", startIndex)) != std::string::npos) {
             std::string tmp = path.substr(0, segment);
             size_t slash = tmp.rfind('/');
-            if (slash == std::string::npos) {
-                continue;
+            if(segment == 0) {
+                startIndex = segment + 4;
             }
-            if (tmp.substr(0, slash) != "..") {
+            else if (slash == std::string::npos) {
+                path = path.substr(segment + 4);
+            }
+            else if (tmp.substr(0, slash) != "..") {
                 path = path.substr(0, slash + 1) + path.substr(segment + 4);
+            } else {
+                startIndex = segment + 4;
             }
         }
         // g) If the resulting buffer string still begins with one or more
@@ -610,6 +811,19 @@ namespace search {
         }
     }
 
+    HTTPClient::SecureSocket::SecureSocket() : ssl(nullptr) {}
+    HTTPClient::Socket::Socket() : sockfd(-1) {}
+
+    HTTPClient::SecureSocket::~SecureSocket() {
+        if (ssl) {
+            close();
+        }
+    }
+
+    HTTPClient::Socket::~Socket() {
+        ::close(sockfd);
+    }
+
     int HTTPClient::Socket::setFd(int fd_in) {
         if (fd_in < 3) {
             return -1;
@@ -626,14 +840,12 @@ namespace search {
         ssl = ::SSL_new(search::HTTPClient::sslContext);
         if (!ssl) {
             // log error
-            fprintf(stderr, "Error creating new SSL struct\n");
-            fflush(stderr);
+            D(fprintf(stderr, "Error creating new SSL struct\n");)
             return -1;
         }
         int rv = ::SSL_set_fd(ssl, sockfd);
         if (rv != 1) {
-            fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);
-            fflush(stderr);
+            D(fprintf(stderr, "Error in SSL_set_fd with fd: %d\n", sockfd);)
             return -1;
         }
         connect:
@@ -645,7 +857,7 @@ namespace search {
             case SSL_ERROR_WANT_CONNECT:
                 goto connect;
             case SSL_ERROR_SYSCALL:
-                // fprintf(stderr, "SSL syscall error %s\n", strerror(errno));
+                D(fprintf(stderr, "SSL syscall error %s\n", strerror(errno));)
                 return -1;
             case SSL_ERROR_ZERO_RETURN:
             case SSL_ERROR_WANT_READ:
@@ -656,7 +868,7 @@ namespace search {
             case SSL_ERROR_WANT_CLIENT_HELLO_CB:
             case SSL_ERROR_SSL:
             default:
-                // fprintf(stderr, "%s", "SSL connect other error\n");
+                D(fprintf(stderr, "%s", "SSL connect other error\n");)
                 return -1;
         }
         return rv;

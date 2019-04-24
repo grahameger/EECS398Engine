@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/bin/engine",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/wd",
+            "cwd": "/data/crawl",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

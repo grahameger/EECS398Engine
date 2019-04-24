@@ -1,5 +1,6 @@
 #include <cstring>
 #include "Parser.hpp"
+#include <cstring>
 
 //default constructor
 LinkFinder::LinkFinder( ) {}
@@ -85,6 +86,7 @@ void LinkFinder::parse_url( Vector<std::pair<std::string, int>> &v )
             {
                Document.num_slash_in_url++;
             }
+<<<<<<< HEAD
             i++;
          }
       }
@@ -93,6 +95,17 @@ void LinkFinder::parse_url( Vector<std::pair<std::string, int>> &v )
    {
       Document.url.push_back( word );
    }
+=======
+        }
+    }
+    if(is_valid_word(word, num_vowels)) {
+        Document.url.push_back(word);
+    }
+    // for(int i = 0; i < Document.url.size(); i++) {
+    //     std::cout << Document.url[i].CString() << std::endl;
+    // }
+    // std::cout << Document.domain_rank << std::endl;
+>>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
 }
 
 void LinkFinder::assign_domain_rank( const String &word, Vector<std::pair<std::string, int>> &v )
@@ -177,6 +190,7 @@ bool is_valid_word( String word, unsigned int vowels )
    return false;
 }
 
+<<<<<<< HEAD
 int LinkFinder::parse_html( )
 {
    Document.doc_url = url;
@@ -205,6 +219,37 @@ int LinkFinder::parse_html( )
                         {
                            is_link = true;
                            link += html_file[ index ];
+=======
+int LinkFinder::parse_html() {
+    Document.doc_url = url;
+    Document.is_https = is_https;
+    //url_parser(url, );
+    while(index < file_length) {//run until end of file
+        if(html_file[index] == '<') {
+            is_link = false;
+            (index)++;
+            switch(html_file[index]) {
+                case 'A'  :
+                case 'a'  : //Link
+                    if(html_file[index+1] == ' ') {
+                        char find_up[] = "HREF=";
+                        char find_low[] = "href=";
+                        unsigned long reset_value = index;
+                        if(find_link(html_file, find_low, find_up)) {
+                            String link;
+                            while(index < file_length && html_file[index] != ' ' && html_file[index] != '>') {
+                                if(html_file[index] != '"' && html_file[index] != '\'') {
+                                    is_link = true;
+                                    link += html_file[index];
+                                }
+                                index++;
+                            }
+                            if(is_link) {
+                                link_and_anchor object;
+                                object.link_url = link;
+                                Document.vector_of_link_anchor.push_back(object);
+                            }
+>>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
                         }
                         index++;
                      }
@@ -504,6 +549,7 @@ void LinkFinder::add_char_to_word( char* html_file, String &word, char type )
    }
 }
 
+<<<<<<< HEAD
 void LinkFinder::get_anchor_text( char *html_file, unsigned long stop_index )
 {
    char type = 'a';
@@ -516,6 +562,18 @@ void LinkFinder::get_anchor_text( char *html_file, unsigned long stop_index )
       {
          while ( index < file_length && html_file[ index ] != '>')
          {
+=======
+void LinkFinder::get_anchor_text(char *html_file, unsigned long stop_index) {
+    char type = 'a';
+    // bool is_there_anchor = false;
+    //Skip over all inner tags until we hit a's closing tag
+    while(index < file_length && index < stop_index) {
+        // is_there_anchor = true;
+        if(html_file[index] == '<') {
+            while(index < file_length && html_file[index] != '>') {
+                index++;
+            }
+>>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
             index++;
          }
          index++;
@@ -661,6 +719,7 @@ unsigned long LinkFinder::parent_tag_distance( char *html_file, char* tag ) {
    return index;
 }
 
+<<<<<<< HEAD
 bool LinkFinder::find_open_tag( char *html_file )
 {
    bool is_closing_tag = false;
@@ -701,6 +760,40 @@ bool LinkFinder::find_open_tag( char *html_file )
       index++;
    }
    return false;//never get here
+=======
+bool LinkFinder::find_open_tag(char *html_file) {
+    bool is_closing_tag = false;
+    bool tag_found = false;
+    int num_closing = 0;
+    int num_opening = 0;
+    while(index < file_length && index > 0) {
+        while(index > 0 && index < file_length && html_file[index] != '>') { //find a tag
+            if(html_file[index] == '>') {
+                tag_found = true;
+            }
+        index--;
+        }
+        if(!tag_found) { //no parent tag found
+            return false;
+        }
+        while(index < file_length && index > 0 && html_file[index] != '<') { //tag was found
+            if(html_file[index] == '/') {
+                num_closing++; //uneven tag
+                is_closing_tag = true; //is closing tag
+            }
+            index--;
+        }
+        if(!is_closing_tag) {
+            num_opening++; //Got here, then must be opening tag
+        }
+        is_closing_tag = false; //reset
+        if(num_opening >= num_closing) { //check if tags are even
+            return true;
+        }
+        index++;
+    }
+    return false;//never get here
+>>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
 }
 
 unsigned int binSearch( Vector<std::pair<std::string, int>> v, int left, int right, String val, unsigned int max )

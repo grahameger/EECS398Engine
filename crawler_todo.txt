@@ -1,0 +1,26 @@
+Crawler todo list:
+- [x] Check the response code after receiving the header
+- [ ] Remove subdomains from host for rate limiting
+- [x] SSL threads issue
+- [ ] Start using the FileSystemTM for robotsTxt, stop the regular file system
+- [x] Lots of slashes in URLs failing with too many redirects
+- [ ] Refactor SubmitURLSync
+- [ ] Add popRandom() to ThreadQueue
+- [ ] Occasionally write the readyQueue and the bad pages list to disk, once per 10 seconds? Per minute? Deduplicate the list when it’s written to disk?
+- [ ] Write our own, non persistent hash table
+- [x] Delete the event stuff :(
+- [ ] Make robotsTxt more thread safe, perhaps a reader/writer lock
+- [ ] Change Stream’s backing files to be 0-indexed
+- [ ] Write our own DNS resolver / cache and use IP netmasks to rate limit instead of using the host. 
+- [ ] A progress crawler thread that prints progress.
+- [ ] Issue with moving the robots stuff back to the readyQueue
+- [x] Resolve relative urls before adding them to the queue
+- [ ] Gzip
+- [x] URL encode / decode
+- [x] Graceful stopping
+- [x] Exception catching for writing to robots.txt.
+- [x] Bloom filter on startup 
+- [ ] Deadlock when adding the domainHitCleanup function
+- [ ] Resolve relative url is our biggest bottleneck, never returning from it for some odd reason?
+- [ ] Requesting wayyyy too many robots.txt files? Also are we trying to parse the robots.txt files for urls?
+- [ ] Web interface
