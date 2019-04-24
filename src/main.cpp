@@ -60,7 +60,7 @@ static const size_t NUM_PARSING_THREADS = 24;
 
 FILE * fileOut;
 
-static const unsigned MAXFILES = 10;
+static const unsigned MAXFILES = 20;
 
 int main(int argc, char *argv[]) {
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
    if ((dir = opendir("pages")) != NULL) {
       // TODO: Remove
       unsigned FilesAdded = 0;
-      while (++FilesAdded != MAXFILES && (ent = readdir(dir)) != NULL) {
+      while (FilesAdded++ != MAXFILES && (ent = readdir(dir)) != NULL) {
          files.push_back(ent->d_name);
       }
       fprintf(stdout, "%u files added\n", FilesAdded);

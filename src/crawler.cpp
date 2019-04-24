@@ -370,6 +370,7 @@ namespace search {
 	        auto filename = filenames.front();
 	        filenames.pop_front();
 	        filenamesLock.unlock();
+		printf( "PARSING: %s\n", filename.c_str( ) );
 	        parseFileOnDisk(filename, d, m, fullCv, emptyCv);
 	    } else {
 		filenamesLock.unlock( );

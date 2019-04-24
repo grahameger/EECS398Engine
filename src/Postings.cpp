@@ -381,8 +381,7 @@ SubBlock Postings::GetPostingListSubBlock
       else
          {
          subBlockIndexLock.unlock( );
-         notMatched = false;
-         toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
+         return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
          }
       } while( notMatched );
 
@@ -613,7 +612,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
          }
 
       // unmap what we had
-      if ( oldLastUsedInfo.blockIndex != 0 )
+      if ( oldLastUsedInfo.blockIndex != 0 && oldLastUsedInfo != subBlockHeld )
          MunmapSubBlock( toReturn );
       metaDataLock.unlock();
 
