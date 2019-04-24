@@ -95,17 +95,16 @@ class Ranker
                   unsigned spanLength;
                   unsigned numQueriesOutOfOrder;
                   unsigned totalWordFrequency;
-                  WordStatistics* getMostImportantWord(Vector<WordStatistics*>& wordStatistics);
+                  WordStatistics* getMostImportantWord(Vector<WordStatistics>& wordStatistics);
                   Location getLocationDist(Location location1, Location location2);
-                  Location moveToClosestPosition(WordStatistics* word, 
+                  Location getClosestPosition(WordStatistics* word, 
                         WordStatistics* anchorStats);
 
                   void computeFeatures(Vector<Isr*> wordIsrs);
                   void computeSpanFeatures(Vector<Location>& closestLocationOrdering, 
-                              Vector<WordStatistics*>& wordStatisitcs);
+                              Vector<WordStatistics>& wordStatisitcs);
                   void getClosestLocationOrdering(Vector<WordStatistics>& 
                         wordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering);
-                  Location moveToClosestPosition(WordStatistics* word, WordStatistics* anchorStats);
                   bool isPastEnd(Isr* isr);
                   unsigned getThresholdedFloatScore(Vector<RankerParams::CutoffFloat>& 
                         cutoffs, float featureValue);
