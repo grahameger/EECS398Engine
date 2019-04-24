@@ -36,23 +36,31 @@ thread_local const FixedLengthString* curWord;
 thread_local char Buffer[ 4096 ];
 thread_local unsigned bufferIndex = 0;
 
-// Add to debug buffer
-#define DEBUG( args... )                                                                \
-      bufferIndex += sprintf( Buffer + bufferIndex, "(%s)\t", curWord->Characters( ) ); \
-      bufferIndex += sprintf( Buffer + bufferIndex, args )
-
 // Reset the debug varialbes
 #define RESETDEBUG( newWord ) curWord = newWord; bufferIndex = 0;                       \
       printf( "Resetting debug info, word is now: %s, bufferIndex is %u\n",             \
       curWord->Characters( ), bufferIndex );
+
 // Print the current buffer
 #define PRINTDEBUG( ) printf( "%s\n", Buffer )
 
+// Add to debug buffer
+#define DEBUG( args... )                                                                \
+      {                                                                                 \
+      if ( bufferIndex > 4000 )                                                         \
+         {                                                                              \
+         PRINTDEBUG( );                                                                 \
+         RESETDEBUG( curWord );                                                                 \
+         }                                                                              \
+      bufferIndex += sprintf( Buffer + bufferIndex, "(%s)\t", curWord->Characters( ) ); \
+      bufferIndex += sprintf( Buffer + bufferIndex, args );                             \
+      }
+
 #else
 // Get rid of the debug lines
-#define DEBUG( args... )
 #define RESETDEBUG( newWord )
 #define PRINTDEBUG( )
+#define DEBUG( args... )
 
 #endif
 
