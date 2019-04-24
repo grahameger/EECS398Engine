@@ -23,7 +23,7 @@ void* writerWrapper( void* index )
 Index::Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock, 
       threading::ConditionVariable* fullCV, threading::ConditionVariable* emptyCV) 
       : emptyQueue( false ), currentDocId( 0 ), currentWriteDocId( 0 ), 
-      totalDocLength( 0 ), currentLocation( 0 ), documentQueue( docQueue ), 
+      totalDocLength( 0 ), currentLocation( 1 ), documentQueue( docQueue ), 
       urlMap( "urlTable" ), metaMap( "metaTable" ), dequeCV( fullCV ), 
       queueWriteCV( emptyCV ), documentQueueLock( queueLock )
    {
@@ -90,7 +90,7 @@ void Index::reader( )
       documentQueue->pop_front( );
 
       unsigned long long startLocation = currentLocation;
-      int docSize = doc.Words.size( );
+      int docSize = doc.Words.size( ) + doc.url.size( );
 
       //docSize += all the anchor text document lengths we're adding
       for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
@@ -120,7 +120,11 @@ void Index::reader( )
       //parse into word, vector<ull>location pairs
       for( unsigned i = 0; i < doc.url.size(); i++ )
          {
-         String urlDecorated = String( "$" ) + doc.url[ i ];
+         String urlRegular( doc.url[ i ] );
+         String urlDecorated = String( "$" ) + urlRegular;
+         // Add to word posting list
+         localMap[ urlRegular ]->push_back( startLocation );
+         // Add to decorated word posting list
          localMap[ urlDecorated ]->push_back( startLocation );
          startLocation++;
          }
@@ -129,13 +133,21 @@ void Index::reader( )
          //if statement for where in the doc this occured
          if( doc.Words[ i ].type == 't' )
             {
-            String titleDecorated = String( "#" ) + doc.Words[ i ].word;
+            String titleRegular( doc.Words[ i ].word );
+            String titleDecorated = String( "#" ) + titleRegular;
+            // Add to word posting list
+            localMap[ titleRegular ]->push_back( startLocation );
+            // Add to decorated word posting list
             localMap[ titleDecorated ]->push_back( startLocation );
             startLocation++;
             }
          else
             {
+            String bodyRegular( doc.Words[ i ].word );
             String bodyDecorated = String( "*" ) + doc.Words[ i ].word;
+            // Add to word posting list
+            localMap[ bodyRegular ]->push_back( startLocation );
+            // Add to decorated word posting list
             localMap[ bodyDecorated ]->push_back( startLocation );
             startLocation++;
             }
@@ -152,8 +164,11 @@ void Index::reader( )
          for( unsigned j = 0; j < doc.vector_of_link_anchor[ i ].anchor_words.size( ); j++)
             {
             //probably gonna need to use the same map here
-            String anchorDecorated = String( "@" ) + 
-                  doc.vector_of_link_anchor[ i ].anchor_words[ j ].word;
+            String anchorRegular( doc.vector_of_link_anchor[ i ].anchor_words[ j ].word );
+            String anchorDecorated = String( "@" ) + anchorRegular;
+            // Add to word posting list
+            localMap[ anchorRegular ]->push_back( startLocation );
+            // Add to decorated word posting list
             localMap[ anchorDecorated ]->push_back( startLocation );
             startLocation++;
             }
