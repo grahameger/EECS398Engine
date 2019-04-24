@@ -170,14 +170,16 @@ class Postings
 
       // Word to subBlock
       PersistentHashMap< FixedLengthString, SubBlockInfo > subBlockIndex;
+      threading::Mutex subBlockIndexLock;
       // subBlock to word
       PersistentHashMap< SubBlockInfo, FixedLengthString > wordIndex;
+      threading::Mutex wordIndexLock;
       // subBlock to rwLock
       std::unordered_map< SubBlockInfo, threading::ReadWriteLock* > lockMap;
       threading::Mutex lockMapLock;
+
       threading::Mutex metaDataLock;
-      threading::Mutex subBlockIndexLock;
-      threading::Mutex wordIndexLock;
+      threading::Mutex acquiringSubBlockLock;
 
    friend SubBlock;
    friend IsrWord;
