@@ -8,7 +8,6 @@
 #include "threading.h"
 #include "hash.h"
 
-class SubBlock;
 class PostingList;
 class IsrWord;
 
@@ -144,12 +143,14 @@ class Postings
       SubBlock GetPostingListSubBlock
             ( const FixedLengthString& word, bool endWanted = false );
 
+      // Necessary?
       SubBlock GetNewSubBlock( unsigned minSize );
-      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld );
-      void DeleteSubBlock( SubBlock subBlock );
 
       SubBlock GetOpenSubBlock( unsigned subBlockSize );
       SubBlock GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subBlockHeld );
+      SubBlock GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld );
+
+      void DeleteSubBlock( SubBlock subBlock );
 
       void IncrementOpenSubBlock( unsigned subBlockSize, bool metaDataHeld );
       void IncrementNumBlocks( bool metaDataHeld );

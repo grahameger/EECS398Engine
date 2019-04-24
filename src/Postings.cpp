@@ -30,6 +30,31 @@ void ErrExit( )
    }
 
 
+#ifdef TEST
+// Debug variables
+thread_local const FixedLengthString* curWord;
+thread_local char Buffer[ 4096 ];
+thread_local unsigned bufferIndex = 0;
+
+// Add to debug buffer
+#define DEBUG( args... )                                                                \
+      bufferIndex += sprintf( Buffer + bufferIndex, "(%s)\t", curWord->Characters( ) ); \
+      bufferIndex += sprintf( Buffer + bufferIndex, args )
+
+// Reset the debug varialbes
+#define RESETDEBUG( newWord ) curWord = newWord; bufferIndex = 0
+// Print the current buffer
+#define PRINTDEBUG( ) printf( "%s\n", Buffer )
+
+#else
+// Get rid of the debug lines
+#define DEBUG( args... )
+#define RESETDEBUG( newWord )
+#define PRINTDEBUG( )
+
+#endif
+
+
 // ######################
 // Postings Static Variables
 // ######################
@@ -48,12 +73,6 @@ const char* Postings::Filename = "testIndex";
 // The singleton variable
 Postings* Postings::CurPostings = nullptr;
 threading::Mutex Postings::constructorMutex;
-
-#ifdef TEST
-thread_local const FixedLengthString* curWord;
-thread_local char Buffer[4096];
-thread_local unsigned bufferIndex = 0;
-#endif
 
 
 // ######################
@@ -74,10 +93,7 @@ Postings* Postings::GetPostings( )
 void Postings::AddPostings( const FixedLengthString& word, 
       const Vector< unsigned long long >* postings )
    {
-   #ifdef TEST
-   curWord = &word;
-   bufferIndex = 0;
-   #endif
+   RESETDEBUG( &word );
 
    // Get a stringView for where the postingList of this word goes
    SubBlock plSubBlock = GetPostingListSubBlock( word, true );
@@ -91,14 +107,9 @@ void Postings::AddPostings( const FixedLengthString& word,
    for ( unsigned i = 0; i < postings->size( ); i ++ )
       postingList.AddPosting( postings->at( i ) );
 
-   #ifdef TEST
-   bufferIndex += sprintf( Buffer + bufferIndex, 
-         "(%s)\tAppended %lu postings to %sposting list\n", curWord->Characters( ),
-         postings->size( ), plSubBlock.subBlockInfo.blockIndex == 0 ? "new " : "" );
-   bufferIndex += sprintf( Buffer + bufferIndex,
-         "(%s)\tPosting list is now %u bytes.\n", curWord->Characters( ),
-         postingList.GetByteSize( ));
-   #endif
+   DEBUG( "Appended %lu postings to %sposting list\n", postings->size( ), 
+         plSubBlock.subBlockInfo.blockIndex ? "" : "new " );
+   DEBUG( "Posting list is now %u bytes.\n", postingList.GetByteSize( ) );
 
    // If this is going in a new block
    if ( plSubBlock.subBlockInfo.blockIndex == 0 && 
@@ -115,17 +126,15 @@ void Postings::AddPostings( const FixedLengthString& word,
       wordIndex.insert( { plSubBlock.subBlockInfo, word } );
       wordIndexLock.unlock( );
 
-      #ifdef TEST
-      bufferIndex += sprintf( Buffer + bufferIndex,
-            "(%s)\tPosting list added to NEW block at (%u, %u) of size %u\n",
-            curWord->Characters( ),
+      DEBUG( "Posting list added to NEW block at (%u, %u) of size %u\n",
             plSubBlock.subBlockInfo.blockIndex,
             plSubBlock.subBlockInfo.subBlockIndex,
             plSubBlock.subBlockInfo.subBlockSize );
-      printf( "%s\n", Buffer );
-      #endif
 
       MunmapSubBlock( plSubBlock );
+
+      PRINTDEBUG( );
+
       return;
       }
 
@@ -134,17 +143,15 @@ void Postings::AddPostings( const FixedLengthString& word,
       {
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
-      #ifdef TEST
-      bufferIndex += sprintf( Buffer + bufferIndex,
-            "(%s)\tPutting posting list back in subBlock (%u, %u) of size %u\n",
-            curWord->Characters( ),
+      DEBUG( "Putting posting list back in subBlock (%u, %u) of size %u\n",
             plSubBlock.subBlockInfo.blockIndex,
             plSubBlock.subBlockInfo.subBlockIndex,
             plSubBlock.subBlockInfo.subBlockSize );
-      printf( "%s\n", Buffer );
-      #endif
 
       MunmapSubBlock( plSubBlock );
+
+      PRINTDEBUG( );
+
       return;
       }
 
@@ -154,15 +161,13 @@ void Postings::AddPostings( const FixedLengthString& word,
    // Save the new split postingLists
    SaveSplitPostingList( plSubBlock, split, word );
 
-   #ifdef TEST
-   printf( "%s\n", Buffer );
-   #endif
+   PRINTDEBUG( );
    }
 
 
-// #######################
+// ##########################
 // Private Postings Functions
-// #######################
+// ##########################
 
 Postings::Postings( ) : indexFD( open( Filename, O_RDWR ) ),
       subBlockIndex( String( Filename ) + "_SBhash" ),
@@ -184,6 +189,7 @@ Postings::Postings( ) : indexFD( open( Filename, O_RDWR ) ),
    if ( blockSize != DefaultBlockSize )
       printf( "Warning: using existing blockSize of %u instead of suggested %u\n", 
             blockSize, DefaultBlockSize );
+
    assert( blockSize != 0 );
    // Set metaData to the mmapped first block
    metaData = { ( char* )mmapWrapper( indexFD, blockSize, 0 ), blockSize };
@@ -236,12 +242,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
    {
    unsigned blockIndexPtr = 0;
 
-   #ifdef TEST
-   bufferIndex += sprintf( Buffer + bufferIndex, 
-         "(%s)\tPutting posting list into %lu blocks:\n", 
-         curWord->Characters( ),
-         split.size( ) );
-   #endif
+   DEBUG( "Putting posting list into %lu blocks:\n", split.size( ) );
 
    SubBlock newSubBlock;
 
@@ -259,13 +260,10 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
          split[ 0 ]->UpdateInPlace( plSubBlock.ToStringView( ) );
          plSubBlock.SetNextPtr( blockIndexPtr );
 
-         #ifdef TEST
-         bufferIndex += sprintf( Buffer + bufferIndex, 
-               "\t\t(%u, %u) of size %u (The original block)",
+         DEBUG( "\t(%u, %u) of size %u (The original block)\n",
                plSubBlock.subBlockInfo.blockIndex,
                plSubBlock.subBlockInfo.subBlockIndex,
                plSubBlock.subBlockInfo.subBlockSize );
-         #endif
 
          MunmapSubBlock( plSubBlock );
          return;
@@ -276,12 +274,10 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
          newSubBlock.SetNextPtr( blockIndexPtr );
       blockIndexPtr = newSubBlock.subBlockInfo.blockIndex;
 
-      #ifdef TEST
-      bufferIndex += sprintf( Buffer + bufferIndex, "\t\t(%u, %u) of size %u\n",
-               plSubBlock.subBlockInfo.blockIndex,
-               plSubBlock.subBlockInfo.subBlockIndex,
-               plSubBlock.subBlockInfo.subBlockSize );
-      #endif
+      DEBUG( "\t(%u, %u) of size %u\n",
+            newSubBlock.subBlockInfo.blockIndex,
+            newSubBlock.subBlockInfo.subBlockIndex,
+            newSubBlock.subBlockInfo.subBlockSize );
 
       MunmapSubBlock( newSubBlock );
       }
@@ -406,22 +402,16 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    SubBlock lastUsed = GetLastUsedSubBlock(
          subBlock.subBlockInfo.subBlockSize, subBlock.subBlockInfo );
    
-   #ifdef TEST
-   bufferIndex += sprintf( Buffer + bufferIndex,
-         "(%s)\tDeleting (%u, %u), lastUsed of size %u is (%u, %u)\n",
-         curWord->Characters( ),
+   DEBUG( "Deleting (%u, %u), lastUsed of size %u is (%u, %u)\n",
          subBlock.subBlockInfo.blockIndex,
          subBlock.subBlockInfo.subBlockIndex,
          subBlock.subBlockInfo.subBlockSize,
          lastUsed.subBlockInfo.blockIndex,
          lastUsed.subBlockInfo.subBlockIndex );
-   #endif
-
+         
    if ( lastUsed.subBlockInfo.blockIndex == 0 )
       {
-      #ifdef TEST
-      bufferIndex += sprintf( Buffer + bufferIndex, "\tNo lastUsed, nothing to move.\n" );
-      #endif
+      DEBUG( "\tNo lastUsed, nothing to move. \n" );
 
       MunmapSubBlock( subBlock );
       return;
@@ -430,9 +420,7 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    // This was the last subBlock
    if ( lastUsed.subBlockInfo == subBlock.subBlockInfo )
       {
-      #ifdef TEST
-      bufferIndex += sprintf( Buffer + bufferIndex, "\tDeleting the lastUsed, nothing to move.\n" );
-      #endif
+      DEBUG( "\tDeleting the lastUsed, nothing to move.\n" );
 
       MunmapSubBlock( subBlock );
       return;
@@ -633,32 +621,21 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
          lockMapLock.lock();
          toReturn.rwlock = lockMap.at( subBlockInfo ); 
          lockMapLock.unlock();
-         #ifdef TEST
-         bufferIndex += sprintf( Buffer + bufferIndex,
-               "(%s)\tFound a lock for (%u, %u).\n",
-               curWord->Characters( ),
+
+         DEBUG( "Found a lock for (%u, %u).\n",
                subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
-         #endif
          }
       catch ( const std::out_of_range& )
          { 
          toReturn.rwlock = new threading::ReadWriteLock( );
          lockMap.insert( { subBlockInfo, toReturn.rwlock } );
          lockMapLock.unlock();
-         #ifdef TEST
-         bufferIndex += sprintf( Buffer + bufferIndex,
-               "(%s)\tNo lock found for block (%u, %u). Making a new one.\n", 
-               curWord->Characters( ),
+
+         DEBUG( "No lock found for block (%u, %u). Making a new one.\n",
                subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
-         #endif
          }
 
-      #ifdef TEST
-      bufferIndex += sprintf( Buffer + bufferIndex,
-            "(%s)\tGetting a %s lock on it.\n", 
-            curWord->Characters( ),
-            writing ? "write" : "read" );
-      #endif
+      DEBUG( "Getting a %s lock on it.\n", writing ? "write" : "read" );
 
       if ( writing )
          toReturn.rwlock->writeLock( );
@@ -666,12 +643,8 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
          toReturn.rwlock->readLock( );
       }
 
-   #ifdef TEST
-   bufferIndex += sprintf( Buffer + bufferIndex,
-         "(%s)\tLock acquired for (%u, %u).\n", 
-         curWord->Characters( ),
+   DEBUG( "Lock acquired for (%u, %u).\n",
          subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
-   #endif
 
    assert( blockSize != 0 );
    toReturn.mmappedArea = 
@@ -696,13 +669,9 @@ void Postings::MunmapSubBlock( SubBlock subBlock )
       exit( 1 );
       }
 
-   #ifdef TEST
-   bufferIndex += sprintf( Buffer + bufferIndex,
-         "(%s)\tUnlocking the %s lock on %d.\n", 
-         curWord->Characters( ),
+   DEBUG( "Unlocking the %s lock on (%u, %u).\n",
          subBlock.writingLock ? "write" : "read",
-         subBlock.subBlockInfo.blockIndex );
-   #endif
+         subBlock.subBlockInfo.blockIndex, subBlock.subBlockInfo.subBlockIndex );
 
    subBlock.rwlock->unlock( );
    }
@@ -772,6 +741,7 @@ FixedLengthURL::FixedLengthURL()
       characters[0] = 0;
       characters[MaxLength] = 0;
    }
+
 // SubBlock
 
 inline void SubBlock::SetNextPtr( unsigned blockIndex )
