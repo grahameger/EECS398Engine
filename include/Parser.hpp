@@ -59,7 +59,6 @@ struct Doc_object
 class LinkFinder
 {
 public:
-<<<<<<< HEAD
    //constructor
    LinkFinder( );
    
@@ -103,47 +102,6 @@ public:
    
    Doc_object Document;
    
-=======
-    //constructor
-    LinkFinder();
-    
-    LinkFinder(char *html_file_in, size_t filesize_in, String url_in, bool is_https_in) : is_https(is_https_in), url(url_in), html_file(html_file_in), file_length(filesize_in) {}
-    
-    
-    //destructor
-    ~LinkFinder();
-    bool is_english;
-    
-    //returns -1 if something failed, else returns 0
-    //parses html file into title, body, links, and anchor text
-    int parse_html();
-    
-    //parses url
-    void parse_url(Vector<std::pair<std::string, int>> &v);
-    
-    bool is_https;
-    String url;
-    char* html_file;
-    unsigned long file_length = 0;
-    unsigned long index = 0;
-    
-    void print_all() {
-        for(size_t i = 0; i < Document.vector_of_link_anchor.size(); i ++) {
-            std::cout << Document.vector_of_link_anchor[i].link_url.CString() << ":";
-            for(size_t j = 0; j < Document.vector_of_link_anchor[i].anchor_words.size(); j++) {
-                std::cout << Document.vector_of_link_anchor[i].anchor_words[j].word.CString() << ", ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-        for(size_t i = 0; i < Document.Words.size(); i++) {
-            std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
-        }
-    }
-    
-    Doc_object Document;
-    
->>>>>>> 8eb053e6b861c9e307548a6b19b1d1abf8d7496c
 private:
    //sets index pointer to 1 place after string
    //must know string can be found.
