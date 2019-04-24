@@ -29,6 +29,7 @@ void * mmapWrapper(int fd, size_t size, size_t offset) {
 }
 
 int munmapWrapper(void * addr, size_t size) {
+    assert( addr != nullptr && size != 0 );
     int rv = munmap(addr, size);
     if (rv == -1) {
         fprintf(stderr, "error destructing PersistentBitVector: munmap %s\n", strerror(errno));
