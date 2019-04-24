@@ -104,4 +104,6 @@ int main(int argc, char *argv[]) {
    fprintf(stdout, "done parsing\n");
 
    Index index(&documents, &documentsMutex, &documentsFullCv, &documentsEmptyCv);
+
+   // Do Nothing
 }

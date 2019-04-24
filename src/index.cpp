@@ -90,7 +90,7 @@ void Index::reader( )
       documentQueue->pop_front( );
 
       unsigned long long startLocation = currentLocation;
-      int docSize = doc.Words.size( );
+      int docSize = doc.Words.size( ) + doc.url.size( );
 
       //docSize += all the anchor text document lengths we're adding
       for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
