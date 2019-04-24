@@ -27,6 +27,11 @@ String::String( const char* toCopy, unsigned length ) : size( length )
    {
    if ( length == 0 )
       size = strlen( toCopy );
+   if ( size == 0 )
+      {
+      cstring = nullptr;
+      return;
+      }
    cstring = new char[ size + 1 ];
    cstring[ size ] = 0;
    memcpy( cstring, toCopy, size );
@@ -46,7 +51,7 @@ String::String( const String& toCopy )
    {
    size = toCopy.size;
 
-   if ( toCopy.cstring == nullptr )
+   if ( size == 0 || toCopy.cstring == nullptr )
       {
       cstring = nullptr;
 	   return;
@@ -68,9 +73,9 @@ String::String( String&& toMove )
 String::String( const std::string& toCopy ) 
 {
     size = toCopy.size();
-    if (size) {
+    if ( size ) {
         cstring = new char [ size + 1 ];
-        memcpy(cstring, toCopy.c_str(), size + 1);
+        memcpy( cstring, toCopy.c_str( ), size + 1 );
     } else {
         cstring = nullptr;
     }

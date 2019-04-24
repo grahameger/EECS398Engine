@@ -369,7 +369,7 @@ SubBlock Postings::GetPostingListSubBlock
       ( const FixedLengthString& word, bool writing )
    {
    SubBlockInfo oldExistingInfo = { 0, 0, 0 };
-   SubBlock toReturn;
+   SubBlock toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
    bool notMatched = true;
 
    do {
@@ -520,7 +520,7 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
 
    bool acquiredOpen = false;
    SubBlockInfo oldOpenInfo = { 0, 0, 0 };
-   SubBlock toReturn;
+   SubBlock toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
 
    do {
       bool incrementedPage = false;
@@ -593,7 +593,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
 
    bool acquiredLastUsed = false;
    SubBlockInfo oldLastUsedInfo = { 0, 0, 0 };
-   SubBlock toReturn;
+   SubBlock toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
 
    do {
       metaDataLock.lock();
