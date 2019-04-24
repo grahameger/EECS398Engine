@@ -364,7 +364,7 @@ SubBlock Postings::GetPostingListSubBlock
          else
             {
             // unmap what we had
-            if ( toReturn.subBlockInfo.blockIndex != 0 )
+            if ( oldExistingInfo.blockIndex != 0 )
                MunmapSubBlock( toReturn );
             // grab the new one
             toReturn = GetSubBlock( existingInfo, writing, false );
