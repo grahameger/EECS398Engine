@@ -95,7 +95,7 @@ class Ranker
                   unsigned spanLength;
                   unsigned numQueriesOutOfOrder;
                   unsigned totalWordFrequency;
-                  WordStatistics* getMostImportantWord(Vector<WordStatistics*> wordIsrs);
+                  WordStatistics* getMostImportantWord(Vector<WordStatistics*>& wordStatistics);
                   Location getLocationDist(Location location1, Location location2);
                   Location moveToClosestPosition(WordStatistics* word, 
                         WordStatistics* anchorStats);
@@ -104,15 +104,16 @@ class Ranker
                   void computeSpanFeatures(Vector<Location>& closestLocationOrdering, 
                               Vector<WordStatistics*>& wordStatisitcs);
                   void getClosestLocationOrdering(Vector<WordStatistics>& 
-                        WordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering)
-                  Location moveToClosestPosition(WordStatistics* word, 
+                        wordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering);
+                  Location moveToClosestPosition(WordStatistics* word, WordStatistics* anchorStats);
                   bool isPastEnd(Isr* isr);
-                  unsigned getThresholdedFloatScore(Vector<CutoffFloat>& 
-                              cutoffs, float featureValue);
-                  unsigned getThresholdedIntScore(Vector<CutoffInt>& cutoffs);
-                  float getWordFrequencyScore()
-                  float getSpanOrderednessScore()
-                  float getSpanLengthScore()
+                  unsigned getThresholdedFloatScore(Vector<RankerParams::CutoffFloat>& 
+                        cutoffs, float featureValue);
+                  unsigned getThresholdedIntScore(Vector<RankerParams::CutoffInt>& cutoffs,
+                        unsigned featureValue);
+                  float getWordFrequencyScore();
+                  float getSpanOrderednessScore();
+                  float getSpanLengthScore();
                };
 
             struct DecorationFeatures
