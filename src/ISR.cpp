@@ -7,6 +7,7 @@
 //
 
 #include "ISR.hpp"
+#include "IndexInterface.h"
 #include <climits>
 
 /*
@@ -74,7 +75,6 @@
  IsrEndDoc::IsrEndDoc( ) : IsrWord( "" ){
  }
  */
-#include "ISR.hpp"
 /*
  Isr::Isr(Vector<Location> matchesIn)
  : matches(matchesIn), curInd(0) {}
@@ -177,10 +177,10 @@ Location IsrOr::SeekToLocation(Location target){
     Location closestTerm = ULLONG_MAX;
     //Step 1: seek all ISRs to first occurrence after target location
     for (int i = 0; i < numOfTerms; ++i){
-        //Traverse each term's posting list until it goes past 'target' or reaches the end
+        //Traverse each term's posting list until it "s past 'target' or reaches the end
         while (terms[i]->CurInstance() < target){
-            //We've looped thru all terms, and nextInstance of the last term DNE,
-            //so no term exists after location target
+            //We've looped thru all terms, and nextIn"nce of the last term DNE,
+            //so no term exists after location target"
             if (terms[i]->nextInstance() == 0 && i == numOfTerms - 1 && closestTerm == ULLONG_MAX){
                 return 0;
             }

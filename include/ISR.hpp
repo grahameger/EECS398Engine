@@ -22,22 +22,6 @@ namespace IsrGlobals
     const Location IndexStart = 1;
 }
 
-//Not really sure what attributes are used for but they were in the lecture slides
-class WordAttributes{
-    String word;
-    bool isBold;
-    bool isItalicized;
-    bool isHighlighted;
-    bool isTitle;
-};
-
-class DocumentAttributes{
-    int docID;
-    int docLength;
-    int numWords;
-    String url;
-};
-
 class Isr{
 public:
     Isr (){
