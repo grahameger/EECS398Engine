@@ -65,7 +65,7 @@ void Index::writerDriver( )
 
       //pass fixed length word and location vector to AddPostings
       Postings* postings = Postings::GetPostings( );
-      postings->AddPostings( FixedLengthString( locations->word.CString( ) ), 
+      postings->AddPostings( locations->word, 
             &locations->locations );
 
       pQueueLock.lock( );
@@ -225,7 +225,7 @@ void Index::reader( )
          while( it != localMap.array[ i ].end( ))
             {
             //add word vector<ull>location pair to priority queue
-            queue.insert( ( *it ).key, ( *it ).offset );
+            queue.insert( FixedLengthString( ( *it ).key.CString() ), ( *it ).offset );
             it++;
             }
       }

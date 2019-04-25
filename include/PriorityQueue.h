@@ -2,7 +2,7 @@
 #include "vector.h"
 #include "String.h"
 #include "hash.h"
-
+#inlcude "Postings.h"
 // #include "Pair.h"
 // #include "threading.h"
 
@@ -10,7 +10,7 @@
 struct wordLocations
    {
    unsigned numWords;
-   String word;
+   FixedLengthString word;
    Vector < unsigned long long > locations;
    };
 
@@ -23,16 +23,16 @@ class PriorityQueue
       //this destructor exists in case the program breaks
       ~PriorityQueue( );
 
-      void insert( String word, Vector< unsigned long long >* locationsVector );
+      void insert( FixedLengthString word, Vector< unsigned long long >* locationsVector );
       void pop( );
       wordLocations* top( );
       size_t size( );
-			void allow(String word);
+			void allow(FixedLengthString word);
    private:
       //maps to heap node struct
-      std::unordered_map< String, size_t > map;
+      std::unordered_map< FixedLengthString, size_t > map;
 
-      std::unordered_map< String, Vector<unsigned long long> > unallowedWords;
+      std::unordered_map< FixedLengthString, Vector<unsigned long long> > unallowedWords;
       //holds dynamically allocated wordLocations
       Vector< wordLocations* > heap;
       size_t parentNode( size_t n );

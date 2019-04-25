@@ -127,21 +127,19 @@ void Postings::AddPostings( const FixedLengthString& word,
    PostingList postingList;
    if ( !plSubBlock.uninitialized )
       postingList = PostingList( plSubBlock.ToStringView( ) );
-
    // Add each posting
    for ( unsigned i = 0; i < postings->size( ); i ++ )
       postingList.AddPosting( postings->at( i ) );
+
 
    DEBUG( "Appended %lu postings to %sposting list\n", postings->size( ), 
          plSubBlock.subBlockInfo.blockIndex ? "" : "new " );
    DEBUG( "Posting list is now %u bytes.\n", postingList.GetByteSize( ) );
 
    // If this is going in a new block
-   if ( plSubBlock.subBlockInfo.blockIndex == 0 && 
-         postingList.GetByteSize( ) < blockSize - BlockDataOffset )
+   if ( plSubBlock.uninitialized && 
+         postingList.GetByteSize( ) < plSubBlock.subBlockInfo.subBlockSize )
       {
-      assert( plSubBlock.rwlock == nullptr );
-      plSubBlock = GetNewSubBlock( postingList.GetByteSize( ) );
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
       subBlockIndexLock.lock( );
@@ -413,8 +411,9 @@ SubBlock Postings::GetPostingListSubBlock
       // word has no currentSubBlock
       else
          {
+	 toReturn = GetNewSubBlock( SmallestSubBlockSize( ) );
          subBlockIndexLock.unlock( );
-         return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
+         return toReturn;
          }
       } while( notMatched );
 
@@ -436,14 +435,8 @@ SubBlock Postings::GetNewSubBlock( unsigned minSize )
 
 SubBlock Postings::GetSubBlock( SubBlockInfo subBlockInfo, bool endWanted, bool writeLockHeld )
    {
-   // If this subBlock isn't mapped to a word, return a dummy
-   wordIndexLock.lock( );
-   if ( !( wordIndex.find( subBlockInfo ) != wordIndex.end( ) ) )
-      {
-      wordIndexLock.unlock( );
+   if ( subBlockInfo.blockIndex == 0 )
       return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
-      }
-   wordIndexLock.unlock( );
 
    SubBlock subBlock = MmapSubBlock( subBlockInfo, endWanted, writeLockHeld );
 

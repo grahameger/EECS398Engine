@@ -13,20 +13,38 @@ PriorityQueue::~PriorityQueue( )
    }
 
 
-void PriorityQueue::insert( String word, Vector< unsigned long long >* locationsVector )
+void PriorityQueue::insert( FixedLengthString word, Vector< unsigned long long >* locationsVector )
    {
    size_t index;
    wordLocations* locations;
-   auto it = unallowedWords.find(word);
+   auto unIt = unallowedWords.find(word);
    //check if current word is unallowed
-   if(it != unallowedWords.end())
+   if(unIt != unallowedWords.end())
    {
       for(unsigned i = 0; i < locationsVector->size(); i++)
       {
-         it->second.push_back( locationsVector->operator[ ]( i ) );
+         unIt->second.push_back( locationsVector->operator[ ]( i ) );
       }
       return;
    }
+
+   auto mapIt = map.find( word );
+   if ( mapIt != map.end( ) )
+      {
+      index = mapIt->second;
+      locations = heap[ index ];
+      }
+   else
+      {
+      //map does not contain word
+      index = heap.size();
+      map[ word ] = index;
+      locations = new wordLocations( );
+      locations->word = std::move( word );
+      heap.push_back( locations );
+      }
+
+   /*
    try
       {
       index = map.at( word );
@@ -38,9 +56,10 @@ void PriorityQueue::insert( String word, Vector< unsigned long long >* locations
       index = heap.size();
       map[ word ] = index;
       locations = new wordLocations( );
-      locations->word = word;
+      locations->word = std::move( word );
       heap.push_back( locations );
       }
+   */
 
    //update *locations using the vector passed
    for( unsigned i = 0; i < locationsVector->size( ); i++ )
@@ -80,7 +99,7 @@ size_t PriorityQueue::size( )
    return heap.size( );
    }
 
-void PriorityQueue::allow(String word)
+void PriorityQueue::allow(FixedLengthString word)
    {
    auto it = unallowedWords.find(word);
    if(it != unallowedWords.end())
@@ -88,7 +107,8 @@ void PriorityQueue::allow(String word)
          //must delete unallowedWords[word] before inserting
          Vector<unsigned long long> locations = it->second;
          unallowedWords.erase(word);
-         insert(word, &locations);
+	 if ( locations.size( ) > 0 )
+	    insert(word, &locations);
       }
    }
 
