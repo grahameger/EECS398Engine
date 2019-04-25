@@ -2,7 +2,7 @@
 #include "vector.h"
 #include "String.h"
 #include "hash.h"
-#inlcude "Postings.h"
+#include "Postings.h"
 // #include "Pair.h"
 // #include "threading.h"
 
