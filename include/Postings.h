@@ -26,7 +26,7 @@ class FixedLengthString
       bool operator== ( const FixedLengthString& other ) const;
       FixedLengthString();
    private:
-      static const unsigned MaxLength = 19;
+      static const unsigned MaxLength = 29;
       char characters[ MaxLength + 1 ];
 
    };
