@@ -225,7 +225,7 @@ namespace search {
         double prevGiB = 0;
         time_t oldTime = time(0);
         while (keep_running) {
-            for (size_t i = 0; i < 60; i++) 
+            for (size_t i = 0; i < 30; i++) 
             {
                 // do this once every 10 seconds
                 print2(prevGiB, oldTime);
@@ -244,6 +244,11 @@ namespace search {
                 }
             }
             pthread_mutex_unlock(&domainMutex);
+            if ( (((double)numBytes / 1073741824.0 - (double)prevGiB) / (difftime(now, (oldTime))) * 8 * 1024) < 1.0) {
+                keep_running = 0;
+                sleep(10);
+                exit(1);
+            }
         }
         while (keep_running) {
             
