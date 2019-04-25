@@ -58,7 +58,6 @@ namespace search {
     HTTPRequest::HTTPRequest(std::string url) {
         url.erase(remove_if(url.begin(), url.end(), isspace), url.end());
         // decode the url before we do anything else
-        url = urlDecoder(url);
         // check mailto
         if (url.size() >= 6 && 
             url[0] == 'm' && url[1] == 'a' && url[2] == 'i' &&
@@ -70,11 +69,11 @@ namespace search {
         }
         std::smatch result;
         if (std::regex_match(url, result, parser->parser)) {
-            scheme = result[2];
-            host = result[4];
-            path = result[5];
-            query = result[7];
-            fragment = result[9];
+            scheme = urlDecoder(result[2]);
+            host = urlDecoder(result[4]);
+            path = urlDecoder(result[5]);
+            query = urlDecoder(result[7]);
+            fragment = urlDecoder(result[9]);
         }
     }
 
