@@ -1,6 +1,6 @@
 //
 //  constraint_solver.hpp
-//  
+//
 //
 //  Created by Bradley on 4/3/19.
 //
@@ -9,19 +9,18 @@
 #ifndef constraint_solver_hpp
 #define constraint_solver_hpp
 #include <stdio.h>
-#include "index.hpp"
-#include "expression.h"
-#include "String.h"
+#include "String.hpp"
+#include "Vector.hpp"
 
 typedef unsigned long long Location;
 typedef size_t FileOffset;
 
 namespace IsrGlobals
-   {
-   const Location IsrSentinel = 0;
-   //TODO: CHange to 1
-   const Location IndexStart = 1;
-   }
+{
+    const Location IsrSentinel = 0;
+    //TODO: CHange to 1
+    const Location IndexStart = 1;
+}
 
 //Not really sure what attributes are used for but they were in the lecture slides
 class WordAttributes{
@@ -74,15 +73,21 @@ public:
     Location nextInstance( );
     Location SeekToLocation( Location seekDestination = 0 );
     Location GetCurrentLocation( ) const;
+    void AddWord(String wordIn);
+    
+    void SetImportance(unsigned importanceIn);
+
     
     operator bool( ) const;
+    friend class IsrEndDoc;
     
 private:
     bool validIsr;
-    Location currentLocation;
-    
-    unsigned nextPtr;
     Vector<Location> matches;
+    Location currentLocation;
+    String word;
+    unsigned nextPtr;
+    unsigned importance;
     unsigned curInd;
     bool hasNextInstance();
 };
@@ -146,14 +151,14 @@ public:
     IsrAnd(Vector<Isr> phrasesToInsert);
     
     Location SeekToLocation(Location target);
-        //TODO:
-        // 1. Seek all the Isrs to the first occurrence beginning at
-        //    the target location.
-        // 2. Move the document end Isr to just past the furthest
-        //    word, then calculate the document begin location.
-        // 3. Seek all the other terms to past the document begin.
-        // 4. If any term is past the document end, return to step 2
-        // 5. If any Isr reaches the end, there is no match.
+    //TODO:
+    // 1. Seek all the Isrs to the first occurrence beginning at
+    //    the target location.
+    // 2. Move the document end Isr to just past the furthest
+    //    word, then calculate the document begin location.
+    // 3. Seek all the other terms to past the document begin.
+    // 4. If any term is past the document end, return to step 2
+    // 5. If any Isr reaches the end, there is no match.
     
     //Finds next instance of all terms in a page
     Location nextInstance(){
@@ -193,40 +198,40 @@ public:
     Location nextInstance(){
         return seek(nearestStartLocation + 1);
     }
-
+    
 private:
     unsigned nearestTerm, farthestTerm;
     Location nearestStartLocation, nearestEndLocation;
 };
 
 /*
-//ULONG_MAX for failure
-//Should have an enddoc Isr pointing to end of pages
-
-class IsrEndDoc : IsrWord{
-public:
-    IsrEndDoc( );
-};
-
-//Advanced feature, may implement later
-class IsrContainer : public Isr {
-public:
-    Isr** contained, excluded;
-    IsrEndDoc* docEnd;
-    unsigned countContained, countExcluded;
-    //Location Next();
-    Location seek(Location target);
-    Location next();
-private:
-    unsigned nearestTerm, farthestTerm;
-    Location nearestStartLocation, nearestEndLocation;
-};
-*/
+ //ULONG_MAX for failure
+ //Should have an enddoc Isr pointing to end of pages
+ 
+ class IsrEndDoc : IsrWord{
+ public:
+ IsrEndDoc( );
+ };
+ 
+ //Advanced feature, may implement later
+ class IsrContainer : public Isr {
+ public:
+ Isr** contained, excluded;
+ IsrEndDoc* docEnd;
+ unsigned countContained, countExcluded;
+ //Location Next();
+ Location seek(Location target);
+ Location next();
+ private:
+ unsigned nearestTerm, farthestTerm;
+ Location nearestStartLocation, nearestEndLocation;
+ };
+ */
 
 class IsrEndDoc : public IsrWord
-   {
-   public:
-      DocumentAttributes GetDocInfo();
-   }
+{
+public:
+    DocumentAttributes GetDocInfo();
+};
 
 #endif /* constraint_solver_hpp */
