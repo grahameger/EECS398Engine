@@ -84,7 +84,7 @@ class Ranker
                         unsigned Count;
                         Isr* isr;
                      private:
-                        Document* curDocument;
+                        Document* enclosingDocument;
                      };
 
                private:
@@ -92,27 +92,25 @@ class Ranker
                   unsigned numQueryWords;
                   TextType textType;
                   unsigned textTypeWeight;
-                  unsigned spanLength;
-                  unsigned numQueriesOutOfOrder;
+                  float spanScore;
                   unsigned totalWordFrequency;
                   WordStatistics* getMostImportantWord(Vector<WordStatistics>& wordStatistics);
                   Location getLocationDist(Location location1, Location location2);
                   Location getClosestPosition(WordStatistics* word, 
-                        WordStatistics* anchorStats);
+                        WordStatistics* anchorStats, Location prevClosestLocation);
 
                   void computeFeatures(Vector<Isr*> wordIsrs);
-                  void computeSpanFeatures(Vector<Location>& closestLocationOrdering, 
+                  void updateSpanFeatures(Vector<Location>& closestLocationOrdering, 
                               Vector<WordStatistics>& wordStatisitcs);
                   void getClosestLocationOrdering(Vector<WordStatistics>& 
                         wordStatistics, WordStatistics* anchor, Vector<Location>& closestLocationOrdering);
                   bool isPastEnd(Isr* isr);
-                  unsigned getThresholdedFloatScore(Vector<RankerParams::CutoffFloat>& 
+                  unsigned getThresholdedFloatScore(const Vector<RankerParams::CutoffFloat>& 
                         cutoffs, float featureValue);
-                  unsigned getThresholdedIntScore(Vector<RankerParams::CutoffInt>& cutoffs,
+                  unsigned getThresholdedIntScore(const Vector<RankerParams::CutoffInt>& cutoffs,
                         unsigned featureValue);
                   float getWordFrequencyScore();
-                  float getSpanOrderednessScore();
-                  float getSpanLengthScore();
+                  float getSpanScore();
                };
 
             struct DecorationFeatures
@@ -141,6 +139,7 @@ class Ranker
       void resetIsr(Isr *isr);
       Location getNextDocumentLocation(Isr* rootIsr, Location docEndLocation);
       Location getDocStart(unsigned docLength, IsrEndDoc* docIsr);
+      Location min(Location location1, Location location2);
       Location getLocationDist(Location location1, Location location2);
    };
 

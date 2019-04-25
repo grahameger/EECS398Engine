@@ -3,6 +3,9 @@
 #define RANKERPARAMS_H
 
 #include "vector.h"
+#include <climits>
+#include <cfloat>
+
 namespace RankerParams
    {
    struct CutoffFloat
@@ -20,9 +23,9 @@ namespace RankerParams
    extern const unsigned AnchorWeight;
    extern const unsigned UrlWeight;
    extern const unsigned BodyWeight;
-   const unsigned TitleWeight;
-   const unsigned SpanLengthWeight;
-   const unsigned SpanOrderednessWeight;
+   extern const unsigned TitleWeight;
+   extern const unsigned SpanLengthWeight;
+   extern const unsigned SpanOrderednessWeight;
 
    //feature weights and cutoffs
    extern const unsigned WordFrequencyWeight;
@@ -41,7 +44,7 @@ namespace RankerParams
    extern const CutoffInt CutoffSpanOrderedness1;
    extern const CutoffInt CutoffSpanOrderedness2;
    extern const CutoffInt CutoffSpanOrderednessFinal;
-   extern const Vector<CutoffInt> CutoffSpanOrderedness;
+   extern const Vector<CutoffInt> SpanOrderednessCutoff;
    extern const unsigned SpanOrderednessWeight;
 
    extern const CutoffInt CutoffTfidf1;
@@ -86,11 +89,11 @@ namespace RankerParams
    extern const Vector<CutoffInt> CutoffDomainType;
    extern const unsigned DomainTypeWeight;
 
-   extern const CutoffInt CutoffQueriesOutOfOrder1;
-   extern const CutoffInt CutoffQueriesOutOfOrder2;
-   extern const CutoffInt CutoffQueriesOutOfOrderFinal;
-   extern const Vector<CutoffInt> CutoffQueriesOutOfOrder;
-   extern const unsigned QueriesOutOfOrder;
+   extern const CutoffFloat CutoffSpan1;
+   extern const CutoffFloat CutoffSpan2;
+   extern const CutoffFloat CutoffSpanFinal;
+   extern const Vector<CutoffFloat> CutoffSpan;
+   extern const unsigned SpanWeight;
    }
 
 #endif
