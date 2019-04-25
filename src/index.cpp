@@ -94,8 +94,11 @@ void Index::reader( )
 
       //docSize += all the anchor text document lengths we're adding
       for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
+         {
          docSize += doc.vector_of_link_anchor[ i ].anchor_words.size( );
-
+         //empty anchor tags are not documents
+         if(doc.vector_of_link_anchor[i].anchor_words.empty()) docSize--;
+         }
       //every doc end is itarconv: No such file or directory own location, 1 for regular doc + 1 for each anchor text
       //docSize += # of endDocs
       docSize += doc.vector_of_link_anchor.size( ) + 1;
@@ -161,7 +164,9 @@ void Index::reader( )
       //parse anchor texts
       for( unsigned i = 0; i < doc.vector_of_link_anchor.size( ); i++ )
          {
-         for( unsigned j = 0; j < doc.vector_of_link_anchor[ i ].anchor_words.size( ); j++)
+         //don't push empty anchor tag to doc end map, don't give it a doc end location
+      	 if(doc.vector_of_link_anchor[i].anchor_words.empty()) continue;
+			   for( unsigned j = 0; j < doc.vector_of_link_anchor[ i ].anchor_words.size( ); j++)
             {
             //probably gonna need to use the same map here
             String anchorRegular( doc.vector_of_link_anchor[ i ].anchor_words[ j ].word );
