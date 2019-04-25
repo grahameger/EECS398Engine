@@ -27,11 +27,12 @@ class PriorityQueue
       void pop( );
       wordLocations* top( );
       size_t size( );
-
+			void allow(String word);
    private:
       //maps to heap node struct
       std::unordered_map< String, size_t > map;
 
+      std::unordered_map< String, size_t > unallowedWords;
       //holds dynamically allocated wordLocations
       Vector< wordLocations* > heap;
       size_t parentNode( size_t n );

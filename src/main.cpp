@@ -10,6 +10,7 @@
 //#include "index.h"
 #include "String.h"
 #include <signal.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <unordered_set>
 #include <stdio.h>
@@ -19,7 +20,7 @@
 #include "crawler.h"
 #include "PersistentHashMap.h"
 #include "httpRequest.h"
-#include "http.h"
+//#include "http.h"
 #include "Parser.hpp"
 #include "threading.h"
 

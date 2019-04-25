@@ -68,6 +68,9 @@ void Index::writerDriver( )
       postings->AddPostings( FixedLengthString( locations->word.CString( ) ), 
             &locations->locations );
 
+      pQueueLock.lock( );
+      queue.allow( locations->word);
+      pQueueLock.unlock( );
       delete locations;
       }
    }
