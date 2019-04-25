@@ -32,7 +32,7 @@ class PriorityQueue
       //maps to heap node struct
       std::unordered_map< String, size_t > map;
 
-      std::unordered_map< String, size_t > unallowedWords;
+      std::unordered_map< String, Vector<unsigned long long> > unallowedWords;
       //holds dynamically allocated wordLocations
       Vector< wordLocations* > heap;
       size_t parentNode( size_t n );

@@ -31,10 +31,10 @@ Index::Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock,
    ftruncate( fd, sizeof( unsigned long long ) );
 
    //read in
-   for( unsigned i = 0; i < 10; i++ )
+   for( unsigned i = 0; i < 5; i++ )
       pthread_create( &readThreads[ i ], NULL, &readerWrapper, this );
 
-   for( unsigned i = 0; i < 10; i++ )
+   for( unsigned i = 0; i < 20; i++ )
       pthread_create( &writeThreads[ i ], NULL, &writerWrapper, this );
 
    pthread_join( readThreads[ 0 ], nullptr );

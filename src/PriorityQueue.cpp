@@ -21,11 +21,11 @@ void PriorityQueue::insert( String word, Vector< unsigned long long >* locations
    //check if current word is unallowed
    if(it != unallowedWords.end())
    {
-      for(unsigned i = 0; i < locationsVector.size(); i++)
+      for(unsigned i = 0; i < locationsVector->size(); i++)
       {
-         it->second.push_back(( locationsVector->operator[ ]( i ) );
-         return;
+         it->second.push_back( locationsVector->operator[ ]( i ) );
       }
+      return;
    }
    try
       {
@@ -71,7 +71,7 @@ void PriorityQueue::pop( )
 wordLocations* PriorityQueue::top( )
    {
    //the top word becomes unallowed until allow(word) is called
-   unallowedWords[ heap[ 0 ] ];
+   unallowedWords[ heap[ 0 ]->word ];
    return heap[ 0 ];
    }
 
@@ -80,13 +80,13 @@ size_t PriorityQueue::size( )
    return heap.size( );
    }
 
-void PriorityQueue:allow(String word)
+void PriorityQueue::allow(String word)
    {
    auto it = unallowedWords.find(word);
    if(it != unallowedWords.end())
       {
          //must delete unallowedWords[word] before inserting
-         vector<unsigned long long> locations = it->second;
+         Vector<unsigned long long> locations = it->second;
          unallowedWords.erase(word);
          insert(word, &locations);
       }
