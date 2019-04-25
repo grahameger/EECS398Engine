@@ -65,7 +65,7 @@ void Index::writerDriver( )
 
       //pass fixed length word and location vector to AddPostings
       Postings* postings = Postings::GetPostings( );
-      postings->AddPostings( locations->word, 
+      postings->AddPostings( FixedLengthString( locations->word ), 
             &locations->locations );
 
       pQueueLock.lock( );

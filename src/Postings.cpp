@@ -142,10 +142,12 @@ void Postings::AddPostings( const FixedLengthString& word,
       {
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
+      /*
       subBlockIndexLock.lock( );
       assert( !( subBlockIndex.find( word ) != subBlockIndex.end( ) ) );
       subBlockIndex.insert( { word, plSubBlock.subBlockInfo } );
       subBlockIndexLock.unlock( );
+      */
 
       wordIndexLock.lock( );
       assert( !( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) ) );
@@ -169,11 +171,13 @@ void Postings::AddPostings( const FixedLengthString& word,
    if ( postingList.GetByteSize( ) <= plSubBlock.subBlockInfo.subBlockSize )
       {
 
+      /*
       wordIndexLock.lock( );
       // Subblock has a mapping, or is blockSize ( could be middle of nextPtr chain )
       assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) ||
             plSubBlock.subBlockInfo.subBlockSize == blockSize );
       wordIndexLock.unlock( );
+      */
 
       subBlockIndexLock.lock( );
       assert( subBlockIndex.find( word ) != subBlockIndex.end( ) );
@@ -395,6 +399,9 @@ SubBlock Postings::GetPostingListSubBlock
          SubBlockInfo existingInfo = ( *wordIt ).second;
          subBlockIndexLock.unlock( );
 
+	 if ( existingInfo.blockIndex == 0 )
+            continue;
+
          // we have the correct subBlock
          if ( toReturn.subBlockInfo == existingInfo )
             notMatched = false;
@@ -405,14 +412,22 @@ SubBlock Postings::GetPostingListSubBlock
             if ( toReturn.rwlock != nullptr )
                MunmapSubBlock( toReturn );
             // grab the new one
-            toReturn = GetSubBlock( existingInfo, writing, false );
-            }
-         }
+	    toReturn = GetSubBlock( existingInfo, writing, false );
+	    }
+	 }
       // word has no currentSubBlock
       else
          {
-	 toReturn = GetNewSubBlock( SmallestSubBlockSize( ) );
+         toReturn = GetNewSubBlock( SmallestSubBlockSize( ) );
+         subBlockIndex.insert( { word, { 0, 0, 0 } } );
          subBlockIndexLock.unlock( );
+
+         toReturn = GetNewSubBlock( SmallestSubBlockSize( ) );
+
+         subBlockIndexLock.lock( );
+         subBlockIndex.at( word ) = toReturn.subBlockInfo;
+         subBlockIndexLock.unlock( );
+
          return toReturn;
          }
       } while( notMatched );
