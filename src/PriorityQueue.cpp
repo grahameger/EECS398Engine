@@ -13,7 +13,7 @@ PriorityQueue::~PriorityQueue( )
    }
 
 
-void PriorityQueue::insert( String word, Vector< unsigned long long >* locationsVector )
+void PriorityQueue::insert( FixedLengthString word, Vector< unsigned long long >* locationsVector )
    {
    size_t index;
    wordLocations* locations;
@@ -99,7 +99,7 @@ size_t PriorityQueue::size( )
    return heap.size( );
    }
 
-void PriorityQueue::allow(String word)
+void PriorityQueue::allow(FixedLengthString word)
    {
    auto it = unallowedWords.find(word);
    if(it != unallowedWords.end())
