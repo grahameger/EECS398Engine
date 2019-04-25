@@ -60,7 +60,7 @@ static const size_t NUM_PARSING_THREADS = 24;
 
 FILE * fileOut;
 
-static const unsigned MAXFILES = 100;
+static const unsigned MAXFILES = 500;
 
 int main(int argc, char *argv[]) {
 

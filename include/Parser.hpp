@@ -48,8 +48,6 @@ struct Doc_object {
     
     Vector<link_and_anchor> vector_of_link_anchor;
     
-    Doc_object() { }
-    
 };
 
 class LinkFinder {

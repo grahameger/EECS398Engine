@@ -111,7 +111,8 @@ void Postings::AddPostings( const FixedLengthString& word,
       wordLock = ( *wordModifyIt ).second;
    else
       {
-      wordLock = new threading::Mutex;
+      wordLock = new threading::Mutex( );
+      assert( !( wordModifyMap.find( word ) != wordModifyMap.end( ) ) );
       wordModifyMap.insert( { word, wordLock } );
       }
    wordModifyLock.unlock( );
@@ -139,6 +140,7 @@ void Postings::AddPostings( const FixedLengthString& word,
    if ( plSubBlock.subBlockInfo.blockIndex == 0 && 
          postingList.GetByteSize( ) < blockSize - BlockDataOffset )
       {
+      assert( plSubBlock.rwlock == nullptr );
       plSubBlock = GetNewSubBlock( postingList.GetByteSize( ) );
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
@@ -170,7 +172,9 @@ void Postings::AddPostings( const FixedLengthString& word,
       {
 
       wordIndexLock.lock( );
-      assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) );
+      // Subblock has a mapping, or is blockSize ( could be middle of nextPtr chain )
+      assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) ||
+            plSubBlock.subBlockInfo.subBlockSize == blockSize );
       wordIndexLock.unlock( );
 
       subBlockIndexLock.lock( );
@@ -380,7 +384,6 @@ IsrInfo Postings::GetPostingList( unsigned blockIndex )
 SubBlock Postings::GetPostingListSubBlock
       ( const FixedLengthString& word, bool writing )
    {
-   SubBlockInfo oldExistingInfo = { 0, 0, 0 };
    SubBlock toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
    bool notMatched = true;
 
@@ -395,17 +398,16 @@ SubBlock Postings::GetPostingListSubBlock
          subBlockIndexLock.unlock( );
 
          // we have the correct subBlock
-         if ( oldExistingInfo == existingInfo )
+         if ( toReturn.subBlockInfo == existingInfo )
             notMatched = false;
          // we need a new subBlock
          else
             {
             // unmap what we had
-            if ( oldExistingInfo.blockIndex != 0 )
+            if ( toReturn.rwlock != nullptr )
                MunmapSubBlock( toReturn );
             // grab the new one
             toReturn = GetSubBlock( existingInfo, writing, false );
-            oldExistingInfo = existingInfo;
             }
          }
       // word has no currentSubBlock
@@ -519,8 +521,8 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    wordIndexLock.unlock( );
 
    subBlockIndexLock.lock( );
-   assert( subBlockIndex.at( word ) == subBlock.subBlockInfo );
-   subBlockIndex.at( word ) = lastUsed.subBlockInfo;
+   assert( subBlockIndex.at( word ) == lastUsed.subBlockInfo );
+   subBlockIndex.at( word ) = subBlock.subBlockInfo;
    subBlockIndexLock.unlock( );
 
    if ( lastUsed.rwlock != nullptr )
@@ -533,7 +535,6 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
    {
 
    bool acquiredOpen = false;
-   SubBlockInfo oldOpenInfo = { 0, 0, 0 };
    SubBlock toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
 
    do {
@@ -572,7 +573,7 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
          }
       
       // We have the right open subBlock
-      if ( openInfo == oldOpenInfo )
+      if ( openInfo == toReturn.subBlockInfo )
          {
          if ( openInfo.subBlockSize != blockSize )
             {
@@ -597,7 +598,6 @@ SubBlock Postings::GetOpenSubBlock( unsigned subBlockSize )
 
       // Get the open sub block and set it to the last used for this size
       toReturn = MmapSubBlock( openInfo, true, false );
-      oldOpenInfo = openInfo;
       } while ( !acquiredOpen );
 
    return toReturn;
@@ -610,7 +610,6 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
    assert( subBlockSize != blockSize );
 
    bool acquiredLastUsed = false;
-   SubBlockInfo oldLastUsedInfo = { 0, 0, 0 };
    SubBlock toReturn = { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
 
    do {
@@ -642,7 +641,7 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
          }
 
       // If we've acquired the correct subBlock
-      if ( oldLastUsedInfo == lastUsedInfo )
+      if ( toReturn.subBlockInfo == lastUsedInfo )
          {
          SetOpen( lastUsedInfo, true );
 
@@ -661,7 +660,6 @@ SubBlock Postings::GetLastUsedSubBlock( unsigned subBlockSize, SubBlockInfo subB
       metaDataLock.unlock();
 
       toReturn = MmapSubBlock( lastUsedInfo, true, lastUsedInfo == subBlockHeld );
-      oldLastUsedInfo = lastUsedInfo;
    } while ( !acquiredLastUsed );
 
    return toReturn;
