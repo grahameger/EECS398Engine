@@ -225,7 +225,7 @@ void Index::reader( )
          while( it != localMap.array[ i ].end( ))
             {
             //add word vector<ull>location pair to priority queue
-            queue.insert( ( *it ).key.CString( ), ( *it ).offset );
+            queue.insert( FixedLengthString( ( *it ).key.CString() ), ( *it ).offset );
             it++;
             }
       }
