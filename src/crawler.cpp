@@ -218,7 +218,7 @@ namespace search {
         double prevGiB = 0;
         time_t oldTime = time(0);
         while (keep_running) {
-            for (size_t i = 0; i < 60; i++) 
+            for (size_t i = 0; i < 30; i++) 
             {
                 // do this once every 10 seconds
                 print2(prevGiB, oldTime);
