@@ -196,9 +196,9 @@ void Vector<T>::resize() {
     for (size_t i = 0; i < numElements; i++) {
         tmp_array[i] = elements[i];
     }
-    std::swap(tmp_array, elements);
+    delete[ ] elements;
+    elements = tmp_array;
     numAllocated *= 2;
-    delete [] tmp_array;
 }
     
 
