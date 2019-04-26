@@ -430,10 +430,11 @@ SubBlock Postings::GetPostingListSubBlock
       // word has no currentSubBlock
       else
          {
-         // TODO: Option for if read
          subBlockIndex.insert( { word, { 0, 0, 0 } } );
          subBlockIndexLock.unlock( );
 
+	 if ( !writing )
+	    return { true, nullptr, 0, { 0, 0, 0 }, nullptr, true };
          toReturn = GetNewSubBlock( SmallestSubBlockSize( ) );
 
          subBlockIndexLock.lock( );

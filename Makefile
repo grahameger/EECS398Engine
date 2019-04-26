@@ -12,7 +12,7 @@ SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 CPPFLAGS := -g3 -Wall -std=c++17 -march=native 
 LIB := -pthread -lssl -lcrypto 
-INC := -I include  -D TEST
+INC := -I include # -D TEST
 
 $(TARGET): $(OBJECTS)
 	@echo " Linking..."
