@@ -18,6 +18,7 @@ class Index
    public:
       Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock, 
             threading::ConditionVariable* fullCV, threading::ConditionVariable* emptyCV );
+      ~Index();
       void reader( );
       void writerDriver( );
 
