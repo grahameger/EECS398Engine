@@ -1,7 +1,10 @@
+#ifndef PRIORITYQUEUE_H
+#define PRIORITYQUEU_H
+
 #include <unordered_map>
 #include "vector.h"
 #include "String.h"
-#include "hash.h"
+// #include "hash.h"
 #include "Postings.h"
 // #include "Pair.h"
 // #include "threading.h"
@@ -30,9 +33,9 @@ class PriorityQueue
 			void allow(FixedLengthString word);
    private:
       //maps to heap node struct
-      std::unordered_map< FixedLengthString, size_t > map;
+      std::unordered_map< FixedLengthString, size_t, hash::Hash< FixedLengthString > > map;
 
-      std::unordered_map< FixedLengthString, Vector<unsigned long long> > unallowedWords;
+      std::unordered_map< FixedLengthString, Vector<unsigned long long>, hash::Hash< FixedLengthString > > unallowedWords;
       //holds dynamically allocated wordLocations
       Vector< wordLocations* > heap;
       size_t parentNode( size_t n );
@@ -44,3 +47,5 @@ class PriorityQueue
       void up( size_t node );
 
    };
+
+#endif

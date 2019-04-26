@@ -25,8 +25,9 @@ class FixedLengthString
 
       bool operator== ( const FixedLengthString& other ) const;
       FixedLengthString();
-   private:
+
       static const unsigned MaxLength = 29;
+   private:
       char characters[ MaxLength + 1 ];
 
    };
@@ -40,8 +41,9 @@ class FixedLengthURL
 
       bool operator== ( const FixedLengthURL& other ) const;
       FixedLengthURL();
-   private:
+
       static const unsigned MaxLength = 255;
+   private:
       char characters[ MaxLength + 1 ];
 
    };
@@ -85,26 +87,39 @@ struct SubBlock
       { return subBlockInfo.subBlockSize - dataOffset; }
    };
 
-namespace std 
+namespace hash
    {
-   template <> 
-   struct hash< SubBlockInfo >
+   template <>
+   struct Hash< SubBlockInfo >
       {
-      std::size_t operator( )( const SubBlockInfo &sbi ) const
+      static size_t get( const SubBlockInfo &sbi )
          {
          return std::hash< unsigned >( )( sbi.blockIndex ) ^
                std::hash< unsigned >( )( sbi.subBlockSize ) ^
                std::hash< unsigned char >( )( sbi.subBlockIndex );
          }
+      size_t operator( )( SubBlockInfo const& sbi ) const
+	 {
+	 return hash::Hash< SubBlockInfo >{}.get( sbi );
+	 }
       };
 
    template <>
-   struct hash< FixedLengthString >
+   struct Hash< FixedLengthString >
       {
-      std::size_t operator( )( const FixedLengthString &fls ) const
+      static size_t get( const FixedLengthString &fls )
          {
-         return std::hash< const char* >( )( fls.Characters( ) );
+	 uint64_t hash = 17;
+	 const char* characters = fls.Characters( );
+	 unsigned max = strlen( fls.Characters( ) );
+	 for( unsigned i = 0; i < max; i++ )
+            hash ^= std::hash< unsigned char >( )( ( ( unsigned char* )characters )[ i ] );
+	 return hash;
          }
+      size_t operator( )( const FixedLengthString &fls ) const
+	 {
+         return hash::Hash< FixedLengthString >{}.get( fls );
+	 }
       };
    }
 
@@ -184,11 +199,14 @@ class Postings
       PersistentHashMap< SubBlockInfo, FixedLengthString > wordIndex;
       threading::Mutex wordIndexLock;
       // subBlock to rwLock
-      std::unordered_map< SubBlockInfo, threading::ReadWriteLock* > lockMap;
+      std::unordered_map< SubBlockInfo, threading::ReadWriteLock*, hash::Hash< SubBlockInfo > > lockMap;
       threading::Mutex lockMapLock;
       // word to lock
-      std::unordered_map< FixedLengthString, threading::Mutex* > wordModifyMap;
+      std::unordered_map< FixedLengthString, threading::Mutex*, hash::Hash< FixedLengthString > > wordModifyMap;
       threading::Mutex wordModifyLock;
+      // blockIndex to mmap and ref count
+      std::unordered_map< unsigned, Pair< char*, unsigned > > blockMap;
+      threading::Mutex blockMapLock;
 
       threading::Mutex metaDataLock;
 

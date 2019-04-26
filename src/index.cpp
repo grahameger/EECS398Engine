@@ -71,7 +71,7 @@ void Index::writerDriver( )
             &locations->locations );
 
       pQueueLock.lock( );
-      queue.allow( locations->word);
+      queue.allow( locations->word );
       pQueueLock.unlock( );
       delete locations;
       }

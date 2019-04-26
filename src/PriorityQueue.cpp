@@ -101,15 +101,11 @@ size_t PriorityQueue::size( )
 
 void PriorityQueue::allow(FixedLengthString word)
    {
-   auto it = unallowedWords.find(word);
-   if(it != unallowedWords.end())
-      {
-         //must delete unallowedWords[word] before inserting
-         Vector<unsigned long long> locations = it->second;
-         unallowedWords.erase(word);
-	 if ( locations.size( ) > 0 )
-	    insert(word, &locations);
-      }
+   Vector<unsigned long long> locations = unallowedWords.at( word );
+   //must delete unallowedWords[word] before inserting
+   unallowedWords.erase(word);
+   if ( locations.size( ) > 0 )
+     insert(word, &locations);
    }
 
 size_t PriorityQueue::parentNode( size_t n )

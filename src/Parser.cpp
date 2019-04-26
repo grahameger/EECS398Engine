@@ -3,9 +3,6 @@
 #include <cstring>
 
 
-//default constructor
-LinkFinder::LinkFinder() {}
-
 //destructor
 LinkFinder::~LinkFinder() {}
 
