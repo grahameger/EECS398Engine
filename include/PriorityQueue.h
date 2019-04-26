@@ -30,7 +30,7 @@ class PriorityQueue
       void pop( );
       wordLocations* top( );
       size_t size( );
-			void allow(FixedLengthString word);
+	   void allow(FixedLengthString word);
    private:
       //maps to heap node struct
       std::unordered_map< FixedLengthString, size_t, hash::Hash< FixedLengthString > > map;
