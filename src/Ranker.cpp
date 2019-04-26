@@ -88,7 +88,7 @@ Vector<ScoredDocument> Ranker::Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs,
    }
 
 Ranker::Document::Features::Features()
-   : totalWordFrequency(0) {}
+   : totalWordFrequency(0), spanScore(0), numQueryWords(0) {}
 
 Location Ranker::Document::GetDocEndLocation()
    {
@@ -145,11 +145,13 @@ Ranker::Document::Features::WordStatistics::WordStatistics(Isr* isrIn,
 
 float Ranker::Document::Features::getWordFrequencyScore()
    {
+   //TODO REMOVE
+   return 0;
    return RankerParams::WordFrequencyWeight * getThresholdedIntScore(
          RankerParams::WordFrequencyCutoff, totalWordFrequency) / (float) numQueryWords;
    }
 
-float Ranker::Document::Features::getSpanScore()
+unsigned Ranker::Document::Features::getSpanScore()
    {
    return RankerParams::SpanWeight * getThresholdedFloatScore(
          RankerParams::CutoffSpan, spanScore);
@@ -160,7 +162,7 @@ unsigned Ranker::Document::Features::ComputeScore(Vector<Isr*>& wordIsrs)
    numQueryWords = wordIsrs.size();
    computeFeatures(wordIsrs);
    float wordFrequencyScore = getWordFrequencyScore();
-   float spanScore = getSpanScore();
+   unsigned spanScore = getSpanScore();
 
    unsigned score = (unsigned) textTypeWeight * (wordFrequencyScore + spanScore);
    return score;
@@ -180,17 +182,15 @@ unsigned Ranker::Document::Features::getThresholdedIntScore(
       exit(1);
       }
 
-   unsigned score = cutoffs[0].score;
-   for(size_t i = 0; i < cutoffs.size(); ++i)
+   size_t cutoffInd = 0;
+   RankerParams::CutoffInt& cutoff = cutoffs[cutoffInd];
+   while(featureValue > cutoff.upperBound)
       {
-      RankerParams::CutoffInt& cutoff = cutoffs[i];
-      if(featureValue <= cutoff.upperBound)
-         score = cutoff.score;
-      else
-         break;
+      cutoffInd++;
+      cutoff = cutoffs[cutoffInd];
       }
    
-   return score;
+   return cutoff.score;
    }
 
 unsigned Ranker::Document::Features::getThresholdedFloatScore(
@@ -202,17 +202,15 @@ unsigned Ranker::Document::Features::getThresholdedFloatScore(
       exit(1);
       }
 
-   unsigned score = cutoffs[0].score;
-   for(size_t i = 0; i < cutoffs.size(); ++i)
+   size_t cutoffInd = 0;
+   RankerParams::CutoffFloat& cutoff = cutoffs[cutoffInd];
+   while(featureValue > cutoff.upperBound)
       {
-      RankerParams::CutoffFloat& cutoff = cutoffs[i];
-      if(featureValue <= cutoff.upperBound)
-         score = cutoff.score;
-      else
-         break;
+      cutoffInd++;
+      cutoff = cutoffs[cutoffInd];
       }
    
-   return score;
+   return cutoff.score;
    }
 
 Ranker::Document::Features::WordStatistics* 
@@ -335,10 +333,19 @@ void Ranker::Document::Features::updateSpanFeatures(Vector<Location>&
          }         
       }
 
+   if(rightMostLocation < leftMostLocation)
+      {
+      printf("Rightmost location < leftmost location!");
+      exit(1);
+      }
+
    unsigned spanLength = rightMostLocation - leftMostLocation + 1;
 
-   float spanLengthScore = getThresholdedIntScore(RankerParams::SpanLengthCutoff, spanLength) / (float) numQueryWords;
-   float orderednessScore = getThresholdedIntScore(RankerParams::SpanOrderednessCutoff, numQueriesOutOfOrder) / (float) numQueryWords;
+   printf("Num out of order: %u\n", numQueriesOutOfOrder);
+   printf("SpanLen: %u\n", spanLength);
+
+   unsigned spanLengthScore = getThresholdedFloatScore(RankerParams::SpanLengthCutoff, (spanLength / (float) numQueryWords));
+   unsigned orderednessScore = getThresholdedFloatScore(RankerParams::SpanOrderednessCutoff, (numQueriesOutOfOrder / (float) numQueryWords));
    
    //orderedness and length compound each other
    spanScore += spanLengthScore * orderednessScore;   
@@ -383,6 +390,7 @@ void Ranker::Document::Features::computeFeatures(Vector<Isr*> wordIsrs)
    while(!isPastEnd(anchorWord->isr))
       {
       getClosestLocationOrdering(wordsStatistics, anchorWord, closestLocationOrdering);
+      PrintVec(closestLocationOrdering);
       updateSpanFeatures(closestLocationOrdering, wordsStatistics);
       anchorWord->SeekNextInstance();
       }
@@ -471,4 +479,11 @@ bool Ranker::ScoredDocumentCompare::operator() (ScoredDocument doc1,
 void Ranker::Document::Features::SetCurrentDocument(Document* curDocumentIn)
    {
    curDocument = curDocumentIn; 
+   }
+
+void PrintVec(Vector<Location>& vec)
+   {
+   printf("printing vector!");
+   for(size_t i = 0; i < vec.size(); ++i)
+      printf("%u\n", vec[i]);
    }

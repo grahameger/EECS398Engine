@@ -9,22 +9,26 @@ namespace RankerParams
    //feature weights and cutoffs
    const unsigned WordFrequencyWeight = 1;
    const CutoffInt CutoffWordFreq1 = {1, 1};
-   const CutoffInt CutoffWordFreq2 = {3, 1};
-   const CutoffInt CutoffWordFreqFinal = {UINT_MAX, 1};
+   const CutoffInt CutoffWordFreq2 = {3, 3};
+   const CutoffInt CutoffWordFreq3 = {4, 4};
+   const CutoffInt CutoffWordFreqFinal = {UINT_MAX, 99};
    const Vector<CutoffInt> WordFrequencyCutoff = {CutoffWordFreq1, CutoffWordFreq2,
-            CutoffWordFreqFinal};
+            CutoffWordFreq3, CutoffWordFreqFinal};
    //1 for spanlength and queriesoutoforder is exact match
-   const CutoffInt CutoffSpanLen1 = {1, 1};
-   const CutoffInt CutoffSpanLen2 = {3, 1};
-   const CutoffInt CutoffSpanLenFinal = {UINT_MAX, 1};
-   const Vector<CutoffInt> SpanLengthCutoff = {CutoffSpanLen1, 
+   const CutoffFloat CutoffSpanLen1 = {1, 1};
+   const CutoffFloat CutoffSpanLen2 = {3, 1};
+   const CutoffFloat CutoffSpanLenFinal = {FLT_MAX, 1};
+   const Vector<CutoffFloat> SpanLengthCutoff = {CutoffSpanLen1, 
         CutoffSpanLen2, CutoffSpanLenFinal}; 
    const unsigned SpanLengthWeight = 1;
 
-   const CutoffInt CutoffSpanOrderedness1 = {1, 1};
-   const CutoffInt CutoffSpanOrderedness2 = {3, 1};
-   const CutoffInt CutoffSpanOrderednessFinal = {UINT_MAX, 1};
-   const Vector<CutoffInt> SpanOrderednessCutoff = {CutoffSpanOrderedness1, 
+   //score inversely propotional to span orderedness (it is num out of order)
+   //1 == all out of order
+   //0 == none out of order
+   const CutoffFloat CutoffSpanOrderedness1 = {0.2, 3};
+   const CutoffFloat CutoffSpanOrderedness2 = {0.5, 2};
+   const CutoffFloat CutoffSpanOrderednessFinal = {FLT_MAX, 1};
+   const Vector<CutoffFloat> SpanOrderednessCutoff = {CutoffSpanOrderedness1, 
         CutoffSpanOrderedness2, CutoffSpanOrderednessFinal}; 
    const unsigned SpanOrderednessWeight = 1;
 
@@ -80,8 +84,10 @@ namespace RankerParams
 
    const CutoffFloat CutoffSpan1 = {1, 1};
    const CutoffFloat CutoffSpan2 = {3, 1};
+   const CutoffFloat CutoffSpan3 = {5, 4};
+   const CutoffFloat CutoffSpan4 = {6, 1};
    const CutoffFloat CutoffSpanFinal = {FLT_MAX, 1};
    const Vector<CutoffFloat> CutoffSpan = {CutoffSpan1,
-          CutoffSpan2, CutoffSpanFinal};
+          CutoffSpan2, CutoffSpan3, CutoffSpan4, CutoffSpanFinal};
    const unsigned SpanWeight = 1;
    }

@@ -1,7 +1,13 @@
 #include "DummyISR.h"
 
 Isr::Isr(Vector<Location> matchesIn)
-    : matches(matchesIn), curInd(0) {}
+      : matches(matchesIn), curInd(0) 
+   {
+   if(matches.empty())
+      curLocation = IsrGlobals::IsrSentinel; 
+   else
+      curLocation = matches[0];
+   }
 
 IsrEndDoc::IsrEndDoc(Vector<Location> matchesIn)
     : Isr(matchesIn) {}

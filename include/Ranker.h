@@ -38,6 +38,7 @@ class Ranker
       Ranker();
       //RETURNS: Document IDs ranked from most relevant to least relevant
       Vector<ScoredDocument> Rank(Isr* rootIsr, DecoratedWordIsrs& wordIsrs, IsrEndDoc* docIsr);
+      void RunTests();
    
    private:
       //sorting with this ranking function will give you documents
@@ -59,6 +60,8 @@ class Ranker
             DocID GetDocID();
             DocumentAttributes GetDocInfo();
             Location GetDocEndLocation();
+
+            void RunTests();
             
          private:
             class Features
@@ -74,6 +77,8 @@ class Ranker
                   void SetFeatureType(TextType textTypeIn);
                   void SetCurrentDocument(Document* docIn);
                   unsigned ComputeScore(Vector<Isr*>& isr);
+                  void RunTests();
+
                   class WordStatistics
                      {
                      public:
@@ -83,6 +88,7 @@ class Ranker
                         bool IsPastEnd();
                         unsigned Count;
                         Isr* isr;
+
                      private:
                         Document* enclosingDocument;
                      };
@@ -92,7 +98,7 @@ class Ranker
                   unsigned numQueryWords;
                   TextType textType;
                   unsigned textTypeWeight;
-                  float spanScore;
+                  unsigned spanScore;
                   unsigned totalWordFrequency;
                   WordStatistics* getMostImportantWord(Vector<WordStatistics>& wordStatistics);
                   Location getLocationDist(Location location1, Location location2);
@@ -110,7 +116,11 @@ class Ranker
                   unsigned getThresholdedIntScore(const Vector<RankerParams::CutoffInt>& cutoffs,
                         unsigned featureValue);
                   float getWordFrequencyScore();
-                  float getSpanScore();
+                  unsigned getSpanScore();
+
+                  //tests
+                  void testThresholdedInt();
+                  void testComputeFeatures();
                };
 
             struct DecorationFeatures

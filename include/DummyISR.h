@@ -15,6 +15,8 @@ namespace IsrGlobals
    const Location IndexStart = 1;
    }
 
+void PrintVec(Vector<Location>& vec);
+
 class Isr
    {
    public:

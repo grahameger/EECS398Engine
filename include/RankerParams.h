@@ -31,20 +31,22 @@ namespace RankerParams
    extern const unsigned WordFrequencyWeight;
    extern const CutoffInt CutoffWordFreq1;
    extern const CutoffInt CutoffWordFreq2;
+   extern const CutoffInt CutoffWordFreq3;
    extern const CutoffInt CutoffWordFreqFinal;
    extern const Vector<CutoffInt> WordFrequencyCutoff;
 
-   //1 for spanlength and queriesoutoforder is exact match
-   extern const CutoffInt CutoffSpanLen1;
-   extern const CutoffInt CutoffSpanLen2;
-   extern const CutoffInt CutoffSpanLenFinal;
-   extern const Vector<CutoffInt> SpanLengthCutoff;
+   //TODO adjust for the fact that same order for many words
+   //is much better than same order for fewer!
+   extern const CutoffFloat CutoffSpanLen1;
+   extern const CutoffFloat CutoffSpanLen2;
+   extern const CutoffFloat CutoffSpanLenFinal;
+   extern const Vector<CutoffFloat> SpanLengthCutoff;
    extern const unsigned SpanLengthWeight;
 
-   extern const CutoffInt CutoffSpanOrderedness1;
-   extern const CutoffInt CutoffSpanOrderedness2;
-   extern const CutoffInt CutoffSpanOrderednessFinal;
-   extern const Vector<CutoffInt> SpanOrderednessCutoff;
+   extern const CutoffFloat CutoffSpanOrderedness1;
+   extern const CutoffFloat CutoffSpanOrderedness2;
+   extern const CutoffFloat CutoffSpanOrderednessFinal;
+   extern const Vector<CutoffFloat> SpanOrderednessCutoff;
    extern const unsigned SpanOrderednessWeight;
 
    extern const CutoffInt CutoffTfidf1;
@@ -91,6 +93,8 @@ namespace RankerParams
 
    extern const CutoffFloat CutoffSpan1;
    extern const CutoffFloat CutoffSpan2;
+   extern const CutoffFloat CutoffSpan3;
+   extern const CutoffFloat CutoffSpan4;
    extern const CutoffFloat CutoffSpanFinal;
    extern const Vector<CutoffFloat> CutoffSpan;
    extern const unsigned SpanWeight;
