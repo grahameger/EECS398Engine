@@ -62,7 +62,13 @@ Location IsrWord::SeekToLocation( Location seekDestination )
    }
 
 
-Location IsrWord::CurInstance( ) const
+Location IsrWord::ResetToStart( )
+   {
+   return SeekToLocation( 1 );
+   }
+
+
+Location IsrWord::GetCurrentLocation( ) const
    {
    return currentLocation;
    }

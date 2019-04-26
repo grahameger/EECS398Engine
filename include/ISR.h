@@ -11,15 +11,16 @@ class PostingList;
 using Location = unsigned long long;
 
 
-class IsrWord
+class IsrWord : public Isr
    {
    public:
       IsrWord( String word );
       ~IsrWord( );
 
-      Location NextInstance( );
-      Location SeekToLocation( Location seekDestination = 0 );
-      Location CurInstance( ) const;
+      Location NextInstance( ) override;
+      Location SeekToLocation( Location seekDestination ) override;
+      Location GetCurrentLocation( ) const override;
+      Location ResetToStart( ) override;
 
       operator bool( ) const;
 
