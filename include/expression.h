@@ -1,127 +1,152 @@
-/*
- * expression.h
- *
- * Class declarations for expressions
- *
- */
-#pragma once
-#ifndef EXPRESSION_H_
-#define EXPRESSION_H_
-#include <stdint.h>
-#include <vector>
-#include <cstddef>
-#include <string>
-using namespace std;
+//
+//  constraint_solver.hpp
+//
+//
+//  Created by Bradley on 4/3/19.
+//
+//
 
-/**
- * Just a plain old expression
- */
-class Expression
+#ifndef constraint_solver_hpp
+#define constraint_solver_hpp
+#include <stdio.h>
+#include "String.hpp"
+#include "vector.h"
+#include "IndexInterface.h"
+
+typedef unsigned long long Location;
+typedef size_t FileOffset;
+
+namespace IsrGlobals
 {
-public:
-    
-    virtual ~Expression( );
-    
-    //virtual int64_t Eval( ) const = 0;
-    virtual string stringEval( ) const = 0;
-};
-// class Expression
-class Phrase: public Expression
-{
-protected:
-    
-    string value;
-    
-public:
-    
-    Phrase( string val );
-    
-    string stringEval( ) const override;
+   const Location IsrSentinel = 0;
+   //TODO: CHange to 1
+   const Location IndexStart = 1;
+}
+
+struct DocumentLocation {
+    Location docStart;
+    Location docEnd;
 };
 
-class ANDExpression : public Expression
-{
-protected:
-    std::vector < Expression * > terms;
+class Isr{
 public:
-    void addTerm(Expression *);
-    
-    string stringEval( ) const override
-    {
-        string phrase = terms[ 0 ]->stringEval( );
-        for ( size_t i = 1;  i < terms.size( );  ++i ) {
-            phrase += "&" + terms[ i ]->stringEval( );
-        }
-        return phrase;
-    }
+   Isr();
+
+   ~Isr();
+   //Isr pointer to the end of the current doc
+   Isr* docEnd;
+   
+   //Find next instance of a term
+   virtual Location NextInstance() = 0;
+   
+   //Similar to nextDocument, finds the first occurrence of a term just at 'target' or later
+   virtual Location SeekToLocation(Location target);
+   
+   //First number in the posting list of a term
+   virtual Location GetCurrentLocation();
+
+   virtual Location ResetToStart() = 0;
+
+   virtual Location MoveAllTermsOffCurrentDocument();
+
+   virtual void addTerm(Isr*);
+   
+   //Returns whatever document you're looking at
+   Isr* getDocIsr();
+   
+   protected:
+   Vector<Isr*> terms;
+   Location currentLocation;
 };
 
-class AddExpression : public Expression
-{
-protected:
-    std::vector < Expression * > terms;
+class IsrWord : public Isr {
 public:
-    void addTerm(Expression *);
-    
-    string stringEval( ) const override
-    {
-        string phrase = terms[ 0 ]->stringEval( );
-        for ( size_t i = 1;  i < terms.size( );  ++i ) {
-            phrase += " " + terms[ i ]->stringEval( );
-        }
-        return phrase;
-    }
+    IsrWord() {}
+    IsrWord( String &word_in );
+   void SetLocations( Vector<Location>& matchesIn );
+   //    ~IsrWord( );
+   
+   Location NextInstance( )override;
+   Location SeekToLocation( Location seekDestination = 0 ) override;
+   Location GetCurrentLocation() override;
+   Location ResetToStart() override;
+   //Location CurInstance() const override;
+   void AddWord(String &wordIn);
+   DocumentAttributes GetDocInfo();
+
+   void SetImportance(unsigned importanceIn);
+   
+   
+   operator bool( ) const;
+   friend class IsrEndDoc;
+   
+private:
+   bool validIsr;
+   Vector<Location> matches;
+   Location currentLocation;
+   String word;
+   unsigned nextPtr;
+   unsigned importance;
+   unsigned curInd;
+   bool hasNextInstance();
 };
 
-class OrExpression : public Expression
-{
-protected:
-    std::vector < Expression * > terms;
+
+class IsrOr : public Isr {
 public:
-    void addTerm(Expression *);
-    
-    string stringEval( ) const override
-    {
-        string phrase = terms[ 0 ]->stringEval( );
-        for ( size_t i = 1;  i < terms.size( );  ++i ) {
-            phrase += "|" + terms[ i ]->stringEval( );
-        }
-        return phrase;
-    }
+   //Variable to keep track of how many terms are in 'terms' (because resize/reserve isn't implemented)
+//   unsigned numOfTerms = 0;
+   
+   //Constructor for IsrOr, MUST be in a vector<Isr> format, otherwise it wont compile
+   IsrOr(Vector<Isr*>& phrasesToInsert);
+   IsrOr() {}
+   virtual Location ResetToStart() override;
+   
+   //Find the next instance of ANY of the words in 'terms'
+   Location NextInstance() override;
 };
 
-class ParenthOrExpression : public Expression
-{
-protected:
-    std::vector < Expression * > terms;
+class IsrAnd : public Isr{
 public:
-    void addTerm(Expression *);
-    
-    string stringEval( ) const override
-    {
-        string phrase = terms[ 0 ]->stringEval( );
-        for ( size_t i = 1;  i < terms.size( );  ++i ) {
-            phrase += " " + terms[ i ]->stringEval( );
-        }
-        return phrase;
-    }
+   //Constructor for IsrAnd
+   IsrAnd(Vector<Isr*>& phrasesToInsert);
+   IsrAnd() {}
+   virtual Location ResetToStart() override;
+
+   //Destructor
+   ~IsrAnd(){};
+   
+   Location NextInstance() override;
+   
+private:
+   Location moveTermsToSameDocument(DocumentLocation& docLocation);
 };
 
-class SubExpression : public Expression
-{
-protected:
-    std::vector < Expression * > terms;
+class IsrPhrase : public Isr {
 public:
-    void addTerm(Expression *);
-    
-    string stringEval( ) const override
-    {
-        string phrase = "!" + terms[ 0 ]->stringEval( );
-        for ( size_t i = 1;  i < terms.size( );  ++i ) {
-            phrase += " " + terms[ i ]->stringEval( );
-        }
-        return phrase;
-    }
+    IsrPhrase(Vector<Isr*>& phrasesToInsert);
+    IsrPhrase() {}
+    virtual Location ResetToStart() override;
+
+    ~IsrPhrase(){};
+    Location NextInstance() override;
 };
 
-#endif /* EXPRESSION_H_ */
+class IsrEndDoc : public IsrWord
+{
+public:
+   IsrEndDoc(); 
+   ~IsrEndDoc();
+   DocumentAttributes* GetDocInfo();
+   void AddMatches(Vector<Location>& matchesIn);
+   Location GetDocLength();
+private:
+   DocumentAttributes* docInfo;
+   void saveDocInfo();
+   Location currentLocation;
+};
+
+bool IsOnDoc(DocumentLocation& docLocation, Isr* isr);
+void MoveDocEndToCurrentDocument(IsrEndDoc* docIsr, Isr* curIsr);
+
+#endif /* constraint_solver_hpp */
