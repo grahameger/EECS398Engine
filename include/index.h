@@ -11,20 +11,7 @@
 // #include "StringView.h"
 // #include "PostingList.h"
 // #include "hash_table.hpp"
-
-
-class Index
-   {
-   public:
-      Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock, 
-            threading::ConditionVariable* fullCV, threading::ConditionVariable* emptyCV );
-      ~Index();
-      void reader( );
-      void writerDriver( );
-
-   private:
-   // STRUCTS
-      struct urlMetadata
+struct urlMetadata
          {
          int length;
          int urlLength;
@@ -47,6 +34,19 @@ class Index
 
          urlMetadata( const urlMetadata& u ) = default;
          };
+
+class Index
+   {
+   public:
+      Index( std::deque< Doc_object >* docQueue, threading::Mutex* queueLock, 
+            threading::ConditionVariable* fullCV, threading::ConditionVariable* emptyCV );
+      ~Index();
+      void reader( );
+      void writerDriver( );
+
+   private:
+   // STRUCTS
+      
 
    //FUNCTIONS
 
