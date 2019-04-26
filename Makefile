@@ -10,9 +10,9 @@ TARGET := bin/engine
 SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-CPPFLAGS := -O2 -Wall -std=c++17 -march=native 
+CPPFLAGS := -g3 -Wall -std=c++17 -march=native 
 LIB := -pthread -lssl -lcrypto 
-INC := -I include
+INC := -I include # -D TEST
 
 $(TARGET): $(OBJECTS)
 	@echo " Linking..."
@@ -68,5 +68,9 @@ index: $(patsubst %,$(BUILDDIR)/%,$(INDEXOBJS))
 # Spikes
 ticket:
 	$(CC) $(CPPFLAGS) spikes/ticket.cpp $(INC) $(LIB) -o bin/ticket
+
+# install
+install:
+	sudo cp $(TARGET) /usr/local/bin/crawler
 
 .PHONY: clean

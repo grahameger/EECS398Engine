@@ -14,13 +14,9 @@ public:
   ~hash_table();
 	//returns a pointer to the string
 	T* operator[](String key);
-	//returns a pointer if key exists
-   T* at(String key);
   //returns number of entries
 	int size();
-	void erase(String key);
-
-   //saves table and index to disk
+	//saves table and index to disk
   void load(String indexFilename, String tableFilename);
 
   void saveIndex(String indexFilename, String tableFilename);
@@ -41,18 +37,8 @@ private:
    String index;
    bool pointers = true;
 };
-
-template <typename T>
-void hash_table<T>::erase(String key){
-		long hashed = hash(key);
-		hashed = hashed%numBuckets;
-		for(auto it = array[hashed].begin(); it!=array[hashed].end(); it++){
-			if((*it).key.Compare(key)){
-			   array[hashed].erase(it);
-         }
-		}
-
-}
+ 
+  
 
 	template <typename T>
 	hash_table<T>::hash_table(){}
@@ -89,20 +75,6 @@ void hash_table<T>::erase(String key){
 	}
 
 	template <typename T>
-	T* hash_table<T>::at(String key){
-		long hashed = hash(key);
-		hashed = hashed%numBuckets;
-		//std::cout<<key.CString()<<" "<<hashed<<std::endl;
-		for(auto it = array[hashed].begin(); it!=array[hashed].end(); it++){
-			if((*it).key.Compare(key)){
-				//key already exists
-				return (*it).offset;
-			}
-		}
-	   throw std::out_of_range("Key does not exist in hash map");
-   }
-
-   template <typename T>
 	int hash_table<T>::size(){
 		return entries;
 	}

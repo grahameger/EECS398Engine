@@ -15,6 +15,18 @@
 #include <deque>
 #include <vector>
 #include <random>
+#include <fstream>
+#include <algorithm>
+#include <sstream>
+#include <string>
+#include <unistd.h>
+#include <cstdio>
+#include <set>
+#include <cassert>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 namespace threading {
     struct Mutex  {
@@ -75,30 +87,39 @@ namespace threading {
     template <typename T>
     class ThreadQueue {
     public:
-        ThreadQueue() {}
-        ~ThreadQueue() {}
+        ThreadQueue();
+        ~ThreadQueue();
 
         void push(const T &d);
         void push(const std::vector<T> &d);
 
         template <typename Iterator>
         void push(Iterator start, Iterator end);
+        
         void push();
 
+        void write();
+
         T pop();
+        std::vector<T> popVec();
         T popRandom();
         void popAll(std::vector<T> &d);
 
         size_t size();
         bool empty();
+        static const size_t maxSize = 5000000;
     private:
         ThreadQueue(const ThreadQueue<T> &) = delete;
         ThreadQueue& operator=(const ThreadQueue<T>& ) = delete;
 
         std::deque<T> q;
 
+        void loadFromOverflow();
+
         Mutex m;
-        ConditionVariable cv;
+        ConditionVariable cvPop;
+        static constexpr const char overflowFilename[] = "overflow.urls";
+        int overflowFd;
     };
 
     class ReadWriteLock {
@@ -112,10 +133,62 @@ namespace threading {
         void unlock();
     };
 
+    template <typename T> ThreadQueue<T>::ThreadQueue() {
+        // check if the file exists already or not
+        int oFlags = O_RDWR | O_APPEND;
+        struct stat st = {};
+        if (stat(overflowFilename, &st) != 0) {
+            // file already exits
+            oFlags |= O_CREAT;
+        }
+        int rv = open(overflowFilename, oFlags, 0766);
+        if (rv < 0) {
+            fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
+            exit(1);
+        } else {
+            overflowFd = rv;
+        }
+        // read the overflow file in and reset the size to 0
+        FILE * overFlowFile = fdopen(overflowFd, "r+");
+        std::set<std::string> deDuplicator;
+        size_t lineLen;
+        char * line = nullptr;
+        if (overFlowFile) {
+            while ((rv = getline(&line, &lineLen, overFlowFile)) != -1) {
+                deDuplicator.insert(line);
+                free(line); line = nullptr;
+            }
+        }
+        // add the things from the deDuplicator to the queue
+        for (auto i : deDuplicator) {
+            i.erase(std::remove_if(i.begin(), i.end(), isspace), i.end());
+            q.push_back(i);
+        }
+    }
+
+    template <typename T> ThreadQueue<T>::~ThreadQueue() {
+        close(overflowFd);
+    }
+
     template <typename T> void ThreadQueue<T>::push(const T &d) {
         m.lock();
+        if (d == T()) {
+            cvPop.signal();
+            m.unlock();
+            return;
+        }
+        if (q.size() > maxSize) {
+            // write to the overflow file
+            std::stringstream ss;
+            ss << d;
+            auto s = ss.str();
+            dprintf(overflowFd, "%s\n", s.c_str());
+            cvPop.signal();
+            m.unlock();
+            return;
+        }
         q.push_back(d);
-        cv.signal();
+        cvPop.signal();
         m.unlock();
     }
 
@@ -124,14 +197,60 @@ namespace threading {
         for (auto &i : d) {
             q.push_back(i);
         }
-        cv.signal();
+        cvPop.signal();
         m.unlock();
     } 
+
+
+    template <typename T>
+    template <typename Iterator>
+    void ThreadQueue<T>::push(Iterator start, Iterator end) {
+        m.lock();
+        if (q.size() > maxSize) {
+            // write to the overflow file
+            std::stringstream ss;
+            for (auto it = start; it != end; it++) {
+                ss << *it << '\n';
+            }
+            auto s = ss.str();
+            dprintf(overflowFd, "%s", s.c_str()); 
+            cvPop.signal();
+            m.unlock();
+            return;
+        }
+        for (auto it = start; it != end; it++) {
+            q.push_back(*it);
+        }
+        cvPop.signal();
+        m.unlock();
+    }
+
+    // if somehow our queue goes to 0, this should introduce some randomness
+    // DO NOT LOCK IN THIS FUNCTION
+    template <typename T>
+    void ThreadQueue<T>::loadFromOverflow() {  
+        char * line = NULL;
+        size_t len = 0;
+        ssize_t rv = 0;
+        FILE * queue = fdopen(overflowFd, "r");
+        if (!queue) {
+            fprintf(stderr, "error opening overflow file - %s\n", strerror(errno));
+        }
+        while ((rv = getline(&line, &len, queue)) != -1) {
+            // push the line to the 
+            q.push_back(line); // line is statically allocated?
+            free(line);
+        }
+    }
+
 
     template <typename T> T ThreadQueue<T>::pop() {
         m.lock();
         while (q.empty()) {
-            cv.wait(m);
+            loadFromOverflow();
+            while (q.empty()) {
+                cvPop.wait(m);
+            }
         }
         T temp = q.front();
         q.pop_front();
@@ -139,10 +258,34 @@ namespace threading {
         return temp;
     }
 
+    template <typename T> std::vector<T> ThreadQueue<T>::popVec() {
+        m.lock();
+        while (q.empty()) {
+            loadFromOverflow();
+            while (q.empty()) {
+                cvPop.wait(m);
+            }
+        }
+        std::vector<T> rv;
+        if (q.size() >= 50) {
+            rv = std::vector<T>(q.begin(), q.begin() + 50);
+        } else {
+            rv = std::vector<T>(q.begin(), q.end());
+        }
+        for (size_t i = 0; i < rv.size(); i++) {
+            q.pop_front();
+        }
+        m.unlock();
+        return rv;
+    }
+
     template <typename T> void ThreadQueue<T>::popAll(std::vector<T> &d) {
         m.lock();
         while (q.empty()) {
-            cv.wait(m);
+            loadFromOverflow();
+            while (q.empty()) {
+                cvPop.wait(m);
+            }
         }
         // we own the lock
         d = std::vector<T>(q.begin(), q.end());
@@ -164,15 +307,26 @@ namespace threading {
         return rv;
     }
 
-    template <typename T>
-    template <typename Iterator>
-    void ThreadQueue<T>::push(Iterator start, Iterator end) {
+    template <typename T> void ThreadQueue<T>::write() {
+        static const std::string fileName = "queue.urls";
+        static const std::string fileNameNew = "queue.urls.swap";
+        static const std::string fileNameOld = "queue.urls.old";
+        std::ofstream newFile(fileNameNew);
         m.lock();
-        for (auto it = start; it != end; it++) {
-            q.push_back(*it);
-        }
-        cv.signal();
+        // make a copy of the deque
+        std::deque<T> temp = q;
         m.unlock();
+        // write it out while not holding the lock
+        for (auto i : temp) {
+            newFile << i << '\n';
+        }
+        std::rename(fileName.c_str(), fileNameOld.c_str());
+        std::rename(fileNameNew.c_str(), fileName.c_str());
+        // atomic write done 
+
+
+
+        // std::ofstream
     }
 }
 

@@ -22,9 +22,12 @@
 #include "String.h"
 #include "PersistentBitVector.h"
 
+
 #ifndef O_NOATIME
 #define O_NOATIME 0
 #endif
+
+struct SubBlockInfo;
 
 // Linear Probing thread-safe file backed hash map
 template <typename Key, typename Mapped>
@@ -94,13 +97,13 @@ private:
         size_t numElements;
         size_t capacity;
         double loadFactor;
-        threading::ReadWriteLock rwLock;
     };
     int fd; 
     HeaderType * header;
     ValueType * buckets;
     PersistentBitVector isGhost;
     PersistentBitVector isFilled;
+    threading::ReadWriteLock rwLock;
 
 };
 
@@ -159,7 +162,7 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
     if (!fileExists) {
         openFlags |= O_CREAT;
     }
-    fd = open(filename.CString(), openFlags, 0755);
+    fd = open(filename.CString(), openFlags, 0766);
     if (fd < 0) {
         fprintf(stderr, "open() returned -1 - error: %s\n", strerror(errno));
         exit(1);
@@ -167,21 +170,13 @@ template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::Persist
 
     // mmap and setup the header portion
     header = (HeaderType*)mmapWrapper(fd, sizeof(HeaderType), 0);
-    // memory mapped files should be initialized to 0
-    // jokes on me they're not in practice
-    if (header->capacity == 0) {
-        header->rwLock = threading::ReadWriteLock();
-    }
-    // TODO: this feels deadlocky, putting this comment here just in case
-    header->rwLock.writeLock();
+    rwLock = threading::ReadWriteLock();
     if (!fileExists) {
         header->capacity = INITIAL_CAPACITY;
     }
     header->loadFactor = loadFactorIn;
     // mmap the data portion
     this->buckets = (ValueType*)mmapWrapper(fd, header->capacity * sizeof(ValueType), sizeof(HeaderType));
-    // we shouldn't memset we should default construct the objects?
-    this->header->rwLock.unlock();
 }
 
 template <typename Key, typename Mapped> PersistentHashMap<Key, Mapped>::~PersistentHashMap() {
@@ -270,16 +265,16 @@ size_t PersistentHashMap<Key, Mapped>::probeForExistingKey(const Key& key) {
     // size_t i = std::hash<KeyType>{}(key) % this->header->capacity;
     size_t i = hash::Hash<KeyType>{}.get(key) % this->header->capacity;
     size_t start = i;
-    for (; (isGhost.at(i) || isFilled.at(i)) && i < this->header->capacity; ++i ) {
-        if (buckets[i].first == key) {
+    for (; i < this->header->capacity && (isGhost.at(i) || isFilled.at(i)); ++i ) {
+        if (!isGhost.at(i) && buckets[i].first == key) {
             return i;
         }
     }
-    if (!isGhost.at(i) && isFilled.at(i)) {
+    if (i < this->header->capacity && !isGhost.at(i) && isFilled.at(i)) {
         return this->header->capacity;
     } else {
-        for (i = 0; (isGhost.at(i) || isFilled.at(i)) && i < start; ++i) {
-            if (buckets[i].first == key) {
+        for (i = 0; i < start && (isGhost.at(i) || isFilled.at(i)); ++i) {
+	    if (!isGhost.at(i) && buckets[i].first == key) {
                 return i;
             }
         }
@@ -413,7 +408,7 @@ bool PersistentHashMap<Key, Mapped>::erase(const Key& key) {
         return false;
     }
     // delete the element from bucket and decrement numElements
-    this->isGhost.set(indexForElement, false);
+    this->isGhost.set(indexForElement, true);
     this->isFilled.set(indexForElement, false);
     --this->header->numElements;
     this->unlock();
@@ -448,17 +443,17 @@ bool PersistentHashMap<Key, Mapped>::empty() {
 // Do we really need these?
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::readLock() {
-    header->rwLock.readLock();
+    rwLock.readLock();
 }
 
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::writeLock() {
-    header->rwLock.writeLock();
+    rwLock.writeLock();
 }
 
 template<typename Key, typename Mapped>
 void PersistentHashMap<Key, Mapped>::unlock() {
-    header->rwLock.unlock();
+    rwLock.unlock();
 }
 
 template<typename Key, typename Mapped>

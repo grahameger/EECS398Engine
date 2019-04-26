@@ -75,7 +75,7 @@ InputByteStream& operator>> ( InputByteStream& byteStream, PairUtf8Uint& number 
    number.Reset( );
 
    // The data in the same byte as the end of the preamble
-   unsigned long long curValue;
+   unsigned long long curValue = 0;
    // Num bytes left in the first number
    int numBytesLeft;
 

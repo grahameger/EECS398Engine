@@ -94,9 +94,13 @@ void ISRCommand( )
    cout << "What word do you want an ISR for? ";
    cin >> word;
 
-   IsrWord wordISR( word.c_str( ) );
+   IsrWord* wordISR;
+   if ( word == "__ENDDOC__" )
+      wordISR = new IsrEndDoc( );
+   else
+      wordISR = new IsrWord( word.c_str( ) );
 
-   if ( !wordISR )
+   if ( !( *wordISR ) )
       {
       cout << "Could not find a posting list for that word...\n" << endl;
       return;
@@ -110,16 +114,18 @@ void ISRCommand( )
       cin >> command;
 
       if ( command == "next" )
-         ISRNextCommand( wordISR );
+         ISRNextCommand( *wordISR );
       else if ( command == "seek" )
-         ISRSeekCommand( wordISR );
+         ISRSeekCommand( *wordISR );
       else if ( command == "current" )
-         ISRCurrentCommand( wordISR );
+         ISRCurrentCommand( *wordISR );
       else if ( command == "quit" )
          usingISR = false;
       else
          UnknownCommand( );
       }
+
+   delete wordISR;
    }
 
 

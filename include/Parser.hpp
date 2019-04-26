@@ -48,8 +48,6 @@ struct Doc_object {
     
     Vector<link_and_anchor> vector_of_link_anchor;
     
-    Doc_object() { }
-    
 };
 
 class LinkFinder {
@@ -57,7 +55,7 @@ public:
     //constructor
     LinkFinder();
     
-    LinkFinder(char *html_file_in, size_t filesize_in, String url_in, bool is_https_in) : html_file(html_file_in), file_length(filesize_in), url(url_in), is_https(is_https_in) {}
+    LinkFinder(char *html_file_in, size_t filesize_in, String url_in, bool is_https_in) : is_https(is_https_in), url(url_in), html_file(html_file_in), file_length(filesize_in) {}
     
     
     //destructor
@@ -78,15 +76,15 @@ public:
     unsigned long index = 0;
     
     void print_all() {
-        for(int i = 0; i < Document.vector_of_link_anchor.size(); i ++) {
+        for(size_t i = 0; i < Document.vector_of_link_anchor.size(); i ++) {
             std::cout << Document.vector_of_link_anchor[i].link_url.CString() << ":";
-            for(int j = 0; j < Document.vector_of_link_anchor[i].anchor_words.size(); j++) {
+            for(size_t j = 0; j < Document.vector_of_link_anchor[i].anchor_words.size(); j++) {
                 std::cout << Document.vector_of_link_anchor[i].anchor_words[j].word.CString() << ", ";
             }
             std::cout << std::endl;
         }
         std::cout << std::endl;
-        for(int i = 0; i < Document.Words.size(); i++) {
+        for(size_t i = 0; i < Document.Words.size(); i++) {
             std::cout << Document.Words[i].word.CString() << ":" << Document.Words[i].type << ":" << Document.Words[i].position << std::endl;
         }
     }

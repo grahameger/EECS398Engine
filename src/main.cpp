@@ -5,17 +5,31 @@
 #include <string>
 #include <cassert>
 #include <thread>
+#include <algorithm>
 #include <mutex>
 //#include "index.h"
 #include "String.h"
 #include <signal.h>
 #include <stdlib.h>
+#include <unordered_set>
 #include <stdio.h>
+#include <getopt.h>
+#include <thread>
+
+#include "crawler.h"
+#include "PersistentHashMap.h"
+#include "httpRequest.h"
+#include "http.h"
+#include "Parser.hpp"
+#include "threading.h"
+
 #include <deque>
 #include "PersistentHashMap.h"
 #include "Parser.hpp"
 #include "threading.h"
 #include "index.h"
+
+
 // used to gracefully shut down and run all of our destructors
 volatile sig_atomic_t keep_running = 1;
 
@@ -25,52 +39,71 @@ static void sig_handler(int _)
     keep_running = 0;
 }
 
-static const char startFile[] = "/data/crawl/seedlist.url";
+/*
+static struct option longopts[] = {
+   {"indexFilePrefix", required_argument, nullptr, 'i'},
+   {"seedList", required_argument, nullptr, 's'},
+   {"domainList", required_argument, nullptr, 'd'},
+   {0, 0, 0, 0} //default
+};
+*/
+static const char startFile[] = "/home/eger/wiki/urls.txt";
+// static const char startFile[] = "/data/crawl/dmoz/dmoz.base.urls";
+
+// static const std::vector<std::string> startFiles = {
+//    "/data/crawl/dmoz/dmoz.base.urls",
+//    "/data/crawl/reddit/reddit.dedupe.urls",
+//    "/data/crawl/hn/HNDump/deduped.hn.urls"
+// };
+
+static const size_t NUM_PARSING_THREADS = 24;
+
+FILE * fileOut;
+
+static const unsigned MAXFILES = 500;
 
 int main(int argc, char *argv[]) {
-/*
-   std::deque<Doc_object> docList;
-   threading::Mutex queueLock;
-   threading::ConditionVariable cv;
-   Index index(&docList, &queueLock, &cv);
-   Doc_object d;
-   Vector<Index_object> anchor;
-   d.doc_url = String("github.com");
-   d.num_slash_in_url = 1;
-   d.Links.push_back(String("abc.com"));
-   Index_object i;
-   i.word = String("a");
-   i.type = String("t");
-   i.position = 0;
-   d.Words.push_back(i);
-   i.word = String("b");
-   i.type = String("b");
-   i.position = 1;
-   d.Words.push_back(i);
-   i.word = String("c");
-   i.type = String("b");
-   i.position = 2;
-   d.Words.push_back(i);
-   i.word = String("co");
-   i.type = String("b");
-   i.position = 3;
-   d.Words.push_back(i);
-   i.word = String("iabc");
-   i.type = String("a");
-   i.position = 4;
-   anchor.push_back(i);
-   d.Words.push_back(i);
-   i.word = String("pows");
-   i.type = String("a");
-   i.position = 5;
-   d.Words.push_back(i);
-   anchor.push_back(i);
-   d.anchor_words.push_back(anchor);
-   d.url.push_back(String("github"));
-   d.url.push_back(String("398"));
-   queueLock.lock();
-   docList.push_back(d);
-   queueLock.unlock();
-   while(true){}
-*/
+
+   // register our signal handler
+   struct sigaction sa;
+   memset( &sa, 0, sizeof(sa) );
+   sa.sa_handler = sig_handler;
+   sigfillset(&sa.sa_mask);
+   sigaction(SIGINT,&sa,NULL);
+
+   std::string indexFilePrefix;
+   std::string seedList;
+   std::string domainList;
+   
+   // open every file in the pages directory
+   std::deque<std::string> files;
+   std::deque<Doc_object> documents;
+   threading::Mutex documentsMutex;
+   threading::ConditionVariable documentsFullCv;
+   threading::ConditionVariable documentsEmptyCv;
+   DIR * dir;
+   struct dirent * ent; 
+   if ((dir = opendir("pages")) != NULL) {
+      // TODO: Remove
+      unsigned FilesAdded = 0;
+      while (FilesAdded++ != MAXFILES && (ent = readdir(dir)) != NULL) {
+         files.push_back(ent->d_name);
+      }
+      fprintf(stdout, "%u files added\n", FilesAdded);
+   }
+
+   fprintf(stdout, "starting to parse\n");
+
+   std::thread threads[NUM_PARSING_THREADS];
+   for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+      threads[i] = std::thread(search::parseFiles, std::ref(files), std::ref(documents), std::ref(documentsMutex), std::ref(documentsFullCv), std::ref(documentsEmptyCv));
+   }
+   for (size_t i = 0; i < NUM_PARSING_THREADS; ++i) {
+      threads[i].join();
+   }
+   fprintf(stdout, "done parsing\n");
+
+   Index index(&documents, &documentsMutex, &documentsFullCv, &documentsEmptyCv);
+
+   // Do Nothing
 }

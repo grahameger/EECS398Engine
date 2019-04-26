@@ -1,5 +1,6 @@
 #include <cstring>
 #include "Parser.hpp"
+#include <cstring>
 
 
 //default constructor
@@ -76,10 +77,10 @@ void LinkFinder::parse_url(Vector<std::pair<std::string, int>> &v) {
     if(is_valid_word(word, num_vowels)) {
         Document.url.push_back(word);
     }
-    for(int i = 0; i < Document.url.size(); i++) {
-        std::cout << Document.url[i].CString() << std::endl;
-    }
-    std::cout << Document.domain_rank << std::endl;
+    // for(int i = 0; i < Document.url.size(); i++) {
+    //     std::cout << Document.url[i].CString() << std::endl;
+    // }
+    // std::cout << Document.domain_rank << std::endl;
 }
 
 void LinkFinder::assign_domain_rank(const String &word, Vector<std::pair<std::string, int>> &v) {
@@ -179,16 +180,18 @@ int LinkFinder::parse_html() {
                         unsigned long reset_value = index;
                         if(find_link(html_file, find_low, find_up)) {
                             String link;
-                            while(html_file[index] != ' ' && html_file[index] != '>') {
+                            while(index < file_length && html_file[index] != ' ' && html_file[index] != '>') {
                                 if(html_file[index] != '"' && html_file[index] != '\'') {
                                     is_link = true;
                                     link += html_file[index];
                                 }
                                 index++;
                             }
-                            link_and_anchor object;
-                            object.link_url = link;
-                            Document.vector_of_link_anchor.push_back(object);
+                            if(is_link) {
+                                link_and_anchor object;
+                                object.link_url = link;
+                                Document.vector_of_link_anchor.push_back(object);
+                            }
                         }
                         
                         //reset index in case link not found
@@ -427,10 +430,10 @@ void LinkFinder::add_char_to_word(char* html_file, String &word, char type) {
 
 void LinkFinder::get_anchor_text(char *html_file, unsigned long stop_index) {
     char type = 'a';
-    bool is_there_anchor = false;
+    // bool is_there_anchor = false;
     //Skip over all inner tags until we hit a's closing tag
     while(index < file_length && index < stop_index) {
-        is_there_anchor = true;
+        // is_there_anchor = true;
         if(html_file[index] == '<') {
             while(index < file_length && html_file[index] != '>') {
                 index++;
@@ -563,7 +566,7 @@ bool LinkFinder::find_open_tag(char *html_file) {
     bool tag_found = false;
     int num_closing = 0;
     int num_opening = 0;
-    while(index > 0) {
+    while(index < file_length && index > 0) {
         while(index > 0 && index < file_length && html_file[index] != '>') { //find a tag
             if(html_file[index] == '>') {
                 tag_found = true;
@@ -573,7 +576,7 @@ bool LinkFinder::find_open_tag(char *html_file) {
         if(!tag_found) { //no parent tag found
             return false;
         }
-        while(index > 0 && html_file[index] != '<') { //tag was found
+        while(index < file_length && index > 0 && html_file[index] != '<') { //tag was found
             if(html_file[index] == '/') {
                 num_closing++; //uneven tag
                 is_closing_tag = true; //is closing tag
