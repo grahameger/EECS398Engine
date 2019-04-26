@@ -5,6 +5,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -65,7 +66,8 @@ Stream::Stream() {
             }
         }
         // if all files are full
-        if (backingFiles.rbegin()->second->fileSize == BACKING_FILE_SIZE) {
+        if (backingFiles.rbegin() != backingFiles.rend() &&
+            backingFiles.rbegin()->second->fileSize == BACKING_FILE_SIZE) {
             allocateNewFile();
         }
 
@@ -84,12 +86,16 @@ Stream::Stream() {
         mapping->fileSize = sizeof(BackingFile);
         totalSize += sizeof(BackingFile);
     }
+    fprintf(stdout, "Stream opened with total size of %zu bytes\n", totalSize);
 }
 
 Stream::~Stream() {
     // unmap all of the files
     for (size_t i = 0; i < backingFiles.size(); ++i) {
-        munmapWrapper(backingFiles[i], BACKING_FILE_SIZE);
+        auto it = backingFiles.find(i);
+        if (it != backingFiles.end() && it->second) {
+            munmapWrapper(it->second, BACKING_FILE_SIZE);
+        }
     }
     // that's it!!!
 }
@@ -108,6 +114,10 @@ ssize_t Stream::write(char * src, size_t len) {
     size_t rv = lastFile->fileSize + (i->first - 1) * BACKING_FILE_SIZE;
     lastFile->fileSize += len;
     totalSize += len;
+    // schedule a write back for the file so
+    // we don't always have to call munmap, it's a 
+    // "just in case" thing.
+    msync(nextAvailableSpot, len, MS_ASYNC);
     return rv;
 }
 

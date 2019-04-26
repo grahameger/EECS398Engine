@@ -12,6 +12,8 @@
 #include <dirent.h>
 #include <ctime>
 
+extern volatile sig_atomic_t keep_running;
+
 namespace search {
 
     Crawler::Crawler(const std::vector<std::string> &seedUrls) : killFilter(1000000000) {
@@ -75,7 +77,7 @@ namespace search {
     }
 
     void * Crawler::stub() {
-        while (true) {
+        while (keep_running) {
             std::string p = readyQueue.pop();
             auto req = HTTPRequest(p);
 
@@ -145,25 +147,45 @@ namespace search {
                 continue;
             }
         }
+        return nullptr;
+    }
+
+    void Crawler::print2(double &prevGiB) {
+        time_t now = time(0);
+        // size and number of files
+        auto sizeAndNumberOfFiles = File::totalSizeAndNumFiles();
+        size_t& number = sizeAndNumberOfFiles.second;
+        const char * time = ctime(&now);
+        double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
+        double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
+        size_t queueSize = readyQueue.size();
+        fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Files: %zu\nItems on Queue: %zu\n\n", time, GiB, rate, number, queueSize);
+        prevGiB = GiB;
     }
 
     // runs every whatever seconds and prints out the progress of the crawler so far
     void * Crawler::print() {
         double prevGiB = 0;
-        while (true) {
+        while (keep_running) {
             sleep(10);
-            // get all the data
-            time_t now = time(0);
-            // size and number of files
-            auto sizeAndNumberOfFiles = File::totalSizeAndNumFiles();
-            size_t& number = sizeAndNumberOfFiles.second;
-            const char * time = ctime(&now);
-            double GiB = (double)sizeAndNumberOfFiles.first / 1073741824.0;
-            double rate = (GiB - (double)prevGiB) / 10.0 * 8 * 1024;
-            size_t queueSize = readyQueue.size();
-            fprintf(stdout, "Time: %s\nGiB downloaded: %f\nRate: %f MBit/s\nTotal Files: %zu\nItems on Queue: %zu\n\n", time, GiB, rate, number, queueSize);
-            prevGiB = GiB;
+            print2(prevGiB);
         }
+        print2(prevGiB);
+        // need to do this so that any threads that are waiting on the
+        // thread queue can pop then quit
+        // should make a vector of NUM_CRAWLER_THREADS empty strings and push
+        // them all to the queue.
+        // Every worker thread will then pop, see that they're empty strings,
+        // continue their loop check and see they should exit the loop, and exit
+        // then finally all of the destructors will run, and .join will return
+        // for every thread.
+        // It will take some time because of the blocking IO functions and
+        // the potential for many redirects taking time.
+        std::vector<std::string> s;
+        s.resize(NUM_CRAWLER_THREADS);
+        readyQueue.push(s);
+        fprintf(stdout, "%s", "Stop signal received, shutting down gracefully\n");
+        return nullptr;
     }
 
     void * Crawler::stubHelper(void * context) {
@@ -179,6 +201,7 @@ namespace search {
         for (size_t i = 0; i < NUM_CRAWLER_THREADS; i++)
         {
             pthread_join(threads[i], NULL);
+            fprintf(stderr, "Thread %zu of %zu returned\n", i + 1, NUM_CRAWLER_THREADS);
         }
     }
 

@@ -18,6 +18,8 @@ static uint64_t load64LittleEndian(char const* p)
 // disk will have already been initialized at this point
 FileSystem::FileSystem() {
     // iterate through each backing file
+    fprintf(stdout, "Initializing filesystem with %zu backing files\n", disk.backingFiles.size());
+    fprintf(stdout, "Each backing file is of size %f GiB\n", (double)Stream::BACKING_FILE_SIZE / 1073741824.0);
     std::map<size_t, Stream::BackingFile*>::iterator i;
     for ( i = disk.backingFiles.begin(); i != disk.backingFiles.end(); i++) {
         char * basePtr = ((char*)i->second + sizeof(Stream::BackingFile));
@@ -35,6 +37,7 @@ FileSystem::FileSystem() {
         }
     }
     m = PTHREAD_MUTEX_INITIALIZER;
+    fprintf(stdout, "Page File System initialized with %zu files, %f GiB\n", mapping.size(), (double)disk.totalSize / 1073741824.0);
 }
 
 // File stuff

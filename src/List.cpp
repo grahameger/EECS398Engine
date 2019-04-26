@@ -153,7 +153,7 @@ typename List<T>::Iterator List< T >::End()
 
 
 template < typename T >
-T&& List< T >::RemoveFront( )
+T List< T >::RemoveFront( )
    {
    T returnVal = std::move( front->data );
 
@@ -169,12 +169,12 @@ T&& List< T >::RemoveFront( )
       front->prev = nullptr;
       }
 
-   return std::move( returnVal );
+   return returnVal ;
    }
 
 
 template < typename T >
-T&& List< T >::RemoveBack( )
+T List< T >::RemoveBack( )
    {
    T returnVal = std::move( back->data );
 
@@ -190,7 +190,7 @@ T&& List< T >::RemoveBack( )
       back->next = nullptr;
       }
 
-   return std::move( returnVal );
+   return returnVal;
    }
 
 template class List< char* >;

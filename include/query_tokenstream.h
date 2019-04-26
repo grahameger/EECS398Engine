@@ -13,7 +13,7 @@
 #include <cstring>
 
 
-/**
+/*
  * Check if a character is relevant to a math expression
  *
  * Relevant characters are defined as
@@ -40,9 +40,9 @@ bool CharIsIrrelevant( char c );
  * deemed "irrelevant" by the CharIsIrrelevant function above
  */
 
-bool is_char(const char c);
+bool is_char( const char c );
 
-void help_message();
+void help_message( );
 
 
 class TokenStream
@@ -68,6 +68,8 @@ public:
      * Returns true if the char was matched and consumed, false otherwise
      */
     bool Match( char c );
+    bool match_and = false;
+    bool last_char( );
     
     
     /**

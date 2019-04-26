@@ -21,7 +21,6 @@
 #include <vector>
 #include <array>
 #include <fstream>
-#include <algorithm>
 #include <string_view>
 #include <charconv>
 #include <locale>
@@ -39,10 +38,8 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#ifdef __linux__
-#include <sys/epoll.h>
-#endif
 #include <sys/mman.h>
+#include <signal.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -105,6 +102,7 @@ namespace search {
 
         RobotsTxt * robots;
         Crawler * crawler;
+        int logFd;
 
         struct Socket {
         public:
@@ -135,6 +133,7 @@ namespace search {
             virtual ssize_t close();
         private:
             SSL * ssl;
+            inline static threading::Mutex m;
         };
     };
 }

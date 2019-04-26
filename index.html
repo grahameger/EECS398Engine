@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<!--Header-->
+<head>
+	<!--Adjusts view to be mobile friendly-->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+	<title>The Ceatles Search Engine</title>
+	<!--Bootstrap -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	<!--Main css-->
+	<link rel="stylesheet" href="misc/style.css">	
+	<!--Font Awesome Icon-->
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+	<!--Roboto Font-->
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+</head>
+
+<!-- Navbar -->
+<nav id="mainNav" class="navbar navbar-default navbar-fixed-top">
+	<div class="container-fluid">
+		<!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span> Menu <i class="fa fa-bars"></i>
+                </button>
+                <i class="fa fa-search" aria-hidden="true"></i> 
+                <a class="navbar-brand page-scroll" href="/">C - Search</a>
+            </div>
+            <!--navbar header-->
+    </div>
+    <!-- container-fluid-->
+</nav>
+<!--end navbar-->
+
+<body>
+	<img alt="cealtes img" src="misc/TheCtles.png" id="team_pic">
+    <form class="query" action="/search" method="get" enctype="application/x-www-form-urlencoded">
+        <input type="text" name="search" placeholder="Search Across the Universe..."><br>
+        <br>
+        <input type="submit" value="C-Search">
+    </form>
+</body>
+
+
+</html>
+

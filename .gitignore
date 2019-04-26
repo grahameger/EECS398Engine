@@ -75,5 +75,10 @@ DerivedData/
 bin/engine
 test/parsed.urls
 
-# Scripts
-startCodeServer.sh
+# VIM
+.vimrc
+*.swp
+
+testIndex*
+dummy
+output

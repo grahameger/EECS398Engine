@@ -30,6 +30,12 @@ namespace search {
         crawler = crawlerIn;
         robots = &threading::Singleton<RobotsTxt>::getInstance();
 
+        logFd = open("fileWrites.log", O_WRONLY | O_APPEND | O_CREAT, 0755);
+        if (logFd < 0) {
+            fprintf(stderr, "error opening log file");
+            exit(1);
+        }
+
         // this will become a bug if there is ever more than
         // one instance of HTTP client.
         SSL_library_init();
@@ -40,6 +46,10 @@ namespace search {
         static const SSL_METHOD * meth = TLS_client_method();
         #else
         static const SSL_METHOD * meth = SSLv23_client_method();
+        #endif
+
+        #ifdef OPENSSL_VERSION_TEXT
+        fprintf(stdout, "%s\n", OPENSSL_VERSION_TEXT);
         #endif
 
         search::HTTPClient::sslContext = SSL_CTX_new(meth);
@@ -108,7 +118,14 @@ namespace search {
                 freeaddrinfo(servinfo);
                 return -1;
             }
-
+            if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (timeval*)&tm, sizeof(tm)) == -1) {
+                fprintf(stderr, "setsockopt failed for host '%s', strerror: %s\n", host.c_str(), strerror(errno));
+                close(sockfd);
+                freeaddrinfo(servinfo);
+                return -1;
+            }
+            // on linux kernels > 4.13 this is effectively a non-blocking
+            // connect call with the timeout specified above.
             if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 close(sockfd);
                 continue;
@@ -126,6 +143,8 @@ namespace search {
     }
 
     HTTPClient::~HTTPClient() {
+        // close our log file descriptors
+        close(logFd);
         // SSL Stuff, shouldn't run until all the threads return!
         destroySSL();
     }
@@ -256,13 +275,14 @@ namespace search {
         }
         ssize_t rv = sock->setFd(sockfd);
         if (rv < 0) {
-            fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
+            // this error message was getting really annoying.
+            // fprintf(stderr, "error setting file descriptor for host '%s' : %s\n", url.c_str(), strerror(errno));
             crawler->killFilter.add(request.uri());
             return;
         }
 
         rv = 0;
-        int bytesReceived = 0;
+        size_t bytesReceived = 0;
         size_t totalSize = 0;
         size_t headerPos = 0;
         size_t headerSize = 0;
@@ -337,7 +357,6 @@ namespace search {
                     } else {
                         // recv until EOF
                         rv = 0;
-                        size_t currentBufferSize = constants::BUFFER_SIZE;
                         do {
                             bytesReceived += rv;
                             if (bytesReceived == currentBufferSize) {
@@ -390,7 +409,7 @@ namespace search {
             outfile.write(fullResponse + headerSize, bytesReceived - headerSize);
             outfile.close();
             free(fullResponse);
-            fprintf(stdout, "wrote: %s to disk.\n", filename.c_str());
+            dprintf(logFd, "wrote: %s to disk.\n", filename.c_str());
             // TODO: make the data structure itself thread safe in a
             // more optimized way than doing this...
             robots->lock();
@@ -409,7 +428,7 @@ namespace search {
             crawler->readyQueue.push(readyToCrawl.begin(), readyToCrawl.end());
         } else {
             // let's try out the file abstraction
-            fprintf(stdout, "wrote file %s\n", filename.c_str());
+            dprintf(logFd, "wrote file %s\n", filename.c_str());
             File(filename.c_str(), fullResponse + headerSize, bytesReceived - headerSize);
         }
     }
@@ -617,11 +636,28 @@ namespace search {
             fflush(stderr);
             return -1;
         }
+        connect:
         rv = ::SSL_connect(ssl);
-        if (rv <= 0) {
-            fprintf(stderr, "Error creating SSL connection\n");
-            fflush(stderr);
-            return -1;
+        int errnoSSL = SSL_get_error(ssl, rv);
+        switch (errnoSSL) {
+            case SSL_ERROR_NONE:
+                return 0;
+            case SSL_ERROR_WANT_CONNECT:
+                goto connect;
+            case SSL_ERROR_SYSCALL:
+                // fprintf(stderr, "SSL syscall error %s\n", strerror(errno));
+                return -1;
+            case SSL_ERROR_ZERO_RETURN:
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+            case SSL_ERROR_WANT_ASYNC:
+            case SSL_ERROR_WANT_ASYNC_JOB:
+            case SSL_ERROR_WANT_CLIENT_HELLO_CB:
+            case SSL_ERROR_SSL:
+            default:
+                // fprintf(stderr, "%s", "SSL connect other error\n");
+                return -1;
         }
         return rv;
     }
@@ -706,9 +742,11 @@ namespace search {
     ssize_t HTTPClient::SecureSocket::close() {
         // TODO error handling
         if (ssl) {
+            m.lock();
             // ::SSL_shutdown(ssl); this was causing issues
             ::SSL_free(ssl);
             ssl = nullptr;
+            m.unlock();
         }
         if (sockfd > 2) {
             int rv = ::close(sockfd);

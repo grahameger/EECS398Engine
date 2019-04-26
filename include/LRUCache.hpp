@@ -43,10 +43,14 @@ void LRUCache<Key, Value>::EvictLRU()
 {
 	Key *lruKey = &LRUQueue.front();
 
-	if(ValueIsDynamicallyAllocated)
+	if (ValueIsDynamicallyAllocated)
 	{
-		Value valToDelete = Cache[*lruKey];
-		delete valToDelete;
+		if (lruKey) {
+			Value valToDelete = Cache[*lruKey];
+			if (valToDelete) {
+				delete valToDelete;
+			}
+		}
 	}
 
 	LRUQueue.pop_front();
