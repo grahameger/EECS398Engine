@@ -112,7 +112,7 @@ void Postings::AddPostings( const FixedLengthString& word,
    else
       {
       wordLock = new threading::Mutex( );
-      assert( !( wordModifyMap.find( word ) != wordModifyMap.end( ) ) );
+      // assert( !( wordModifyMap.find( word ) != wordModifyMap.end( ) ) );
       wordModifyMap.insert( { word, wordLock } );
       }
    wordModifyLock.unlock( );
@@ -147,12 +147,12 @@ void Postings::AddPostings( const FixedLengthString& word,
       assert( !( subBlockIndex.find( word ) != subBlockIndex.end( ) ) );
       subBlockIndex.insert( { word, plSubBlock.subBlockInfo } );
       subBlockIndexLock.unlock( );
-      */
 
       wordIndexLock.lock( );
-      assert( !( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) ) );
-      wordIndex.insert( { plSubBlock.subBlockInfo, word } );
+      assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) );
+      // wordIndex.insert( { plSubBlock.subBlockInfo, word } );
       wordIndexLock.unlock( );
+      */
 
       DEBUG( "Posting list added to NEW block at (%u, %u) of size %u\n",
             plSubBlock.subBlockInfo.blockIndex,
@@ -177,11 +177,11 @@ void Postings::AddPostings( const FixedLengthString& word,
       assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) ||
             plSubBlock.subBlockInfo.subBlockSize == blockSize );
       wordIndexLock.unlock( );
-      */
 
       subBlockIndexLock.lock( );
       assert( subBlockIndex.find( word ) != subBlockIndex.end( ) );
       subBlockIndexLock.unlock( );
+      */
 
       postingList.UpdateInPlace( plSubBlock.ToStringView( ) );
 
@@ -294,7 +294,7 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
       {
       // This is a completely new block for the overflow data
       if ( i > 1 || ( split.size( ) > 1 && plSubBlock.subBlockInfo.subBlockSize != blockSize ) )
-         newSubBlock = GetNewSubBlock( blockSize - BlockDataOffset );
+         newSubBlock = GetNewSubBlock( blockSize );
       // The old block is not a full block and needs to be re-allocated
       else if ( plSubBlock.subBlockInfo.subBlockSize != blockSize ) 
          newSubBlock = GetNewSubBlock( split[ i - 1 ]->GetByteSize( ) );
@@ -303,6 +303,12 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
          {
          split[ 0 ]->UpdateInPlace( plSubBlock.ToStringView( ) );
          plSubBlock.SetNextPtr( blockIndexPtr );
+
+	 /*
+	 wordIndexLock.lock( );
+	 assert( wordIndex.find( plSubBlock.subBlockInfo ) != wordIndex.end( ) );
+	 wordIndexLock.unlock( );
+	 */
 
          DEBUG( "\t(%u, %u) of size %u (The original block)\n",
                plSubBlock.subBlockInfo.blockIndex,
@@ -326,16 +332,21 @@ void Postings::SaveSplitPostingList( SubBlock plSubBlock,
       // If this was a blockSize update, re-map the word->subBlockInfo
       if ( i == 1 )
          {
+	 
+         DEBUG( "Reached the questionable statement\n" );
          wordIndexLock.lock( );
-         assert( !( wordIndex.find( newSubBlock.subBlockInfo ) != wordIndex.end( ) ) );
+         // assert( !( wordIndex.find( newSubBlock.subBlockInfo ) != wordIndex.end( ) ) );
          wordIndex.insert( { newSubBlock.subBlockInfo, word } );
+         // assert( wordIndex.at( newSubBlock.subBlockInfo ) == word );
          wordIndexLock.unlock( );
 
          subBlockIndexLock.lock( );
          // Create if not there ( new postings list > blockSize )
          // Or it is already there ( outgrew subBlock )
-         subBlockIndex[ word ] = newSubBlock.subBlockInfo;
+         subBlockIndex.at( word ) = newSubBlock.subBlockInfo;
          subBlockIndexLock.unlock( );
+
+	 DEBUG( "Maps updated\n" );
          }
 
       MunmapSubBlock( newSubBlock );
@@ -403,7 +414,8 @@ SubBlock Postings::GetPostingListSubBlock
             continue;
 
          // we have the correct subBlock
-         if ( toReturn.subBlockInfo == existingInfo )
+         if ( toReturn.subBlockInfo == existingInfo || 
+	       toReturn.subBlockInfo.subBlockSize == blockSize )
             notMatched = false;
          // we need a new subBlock
          else
@@ -418,7 +430,7 @@ SubBlock Postings::GetPostingListSubBlock
       // word has no currentSubBlock
       else
          {
-         toReturn = GetNewSubBlock( SmallestSubBlockSize( ) );
+         // TODO: Option for if read
          subBlockIndex.insert( { word, { 0, 0, 0 } } );
          subBlockIndexLock.unlock( );
 
@@ -427,6 +439,11 @@ SubBlock Postings::GetPostingListSubBlock
          subBlockIndexLock.lock( );
          subBlockIndex.at( word ) = toReturn.subBlockInfo;
          subBlockIndexLock.unlock( );
+
+	 wordIndexLock.lock( );
+	 // assert( !( wordIndex.find( toReturn.subBlockInfo ) != wordIndex.end( ) ) );
+	 wordIndex.insert( { toReturn.subBlockInfo, word } );
+	 wordIndexLock.unlock( );
 
          return toReturn;
          }
@@ -524,12 +541,12 @@ void Postings::DeleteSubBlock( SubBlock subBlock )
    wordIndexLock.lock( );
    FixedLengthString word = wordIndex.at( lastUsed.subBlockInfo );
    wordIndex.erase( lastUsed.subBlockInfo );
-   assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
+   // assert( !( wordIndex.find( subBlock.subBlockInfo ) != wordIndex.end( ) ) );
    wordIndex.insert( { subBlock.subBlockInfo, word } );
    wordIndexLock.unlock( );
 
    subBlockIndexLock.lock( );
-   assert( subBlockIndex.at( word ) == lastUsed.subBlockInfo );
+   // assert( subBlockIndex.at( word ) == lastUsed.subBlockInfo );
    subBlockIndex.at( word ) = subBlock.subBlockInfo;
    subBlockIndexLock.unlock( );
 
@@ -746,24 +763,24 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
 
    if ( !writeLockHeld )
       {
-      try
-         { 
-         lockMapLock.lock();
+      lockMapLock.lock();
+      if ( lockMap.find( subBlockInfo ) != lockMap.end( ) )
+	 {
          toReturn.rwlock = lockMap.at( subBlockInfo ); 
          lockMapLock.unlock();
 
          DEBUG( "Found a lock for (%u, %u).\n",
                subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
-         }
-      catch ( const std::out_of_range& )
-         { 
-         toReturn.rwlock = new threading::ReadWriteLock( );
-         lockMap.insert( { subBlockInfo, toReturn.rwlock } );
-         lockMapLock.unlock();
+	 }
+      else
+	{
+        toReturn.rwlock = new threading::ReadWriteLock( );
+        lockMap.insert( { subBlockInfo, toReturn.rwlock } );
+        lockMapLock.unlock();
 
-         DEBUG( "No lock found for block (%u, %u). Making a new one.\n",
+        DEBUG( "No lock found for block (%u, %u). Making a new one.\n",
                subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
-         }
+	}
 
       DEBUG( "Getting a %s lock on it.\n", writing ? "write" : "read" );
 
@@ -777,9 +794,22 @@ SubBlock Postings::MmapSubBlock( SubBlockInfo subBlockInfo, bool writing, bool w
          subBlockInfo.blockIndex, subBlockInfo.subBlockIndex );
 
    assert( blockSize != 0 );
-   toReturn.mmappedArea = 
-         ( char* )mmapWrapper( indexFD, blockSize, blockOffset );
-   toReturn.mmappedArea += subBlockOffset;
+
+   blockMapLock.lock( );
+   if ( blockMap.find( subBlockInfo.blockIndex ) != blockMap.end( ) )
+      {
+      auto pair = blockMap.at( subBlockInfo.blockIndex );
+      toReturn.mmappedArea = pair.first + subBlockOffset;
+      pair.second++;
+      }
+   else
+      {
+      char* mmappedArea = 
+            ( char* )mmapWrapper( indexFD, blockSize, blockOffset );
+      toReturn.mmappedArea = mmappedArea + subBlockOffset;
+      blockMap.insert( { subBlockInfo.blockIndex, { mmappedArea, 1 } } );
+      }
+   blockMapLock.unlock( );
 
    return toReturn;
    }
@@ -791,7 +821,12 @@ void Postings::MunmapSubBlock( SubBlock subBlock )
    char* mmappedArea = subBlock.mmappedArea -
          subBlock.subBlockInfo.subBlockIndex * subBlock.subBlockInfo.subBlockSize;
 
-   munmapWrapper( mmappedArea, blockSize );
+   blockMapLock.lock( );
+   auto pair = blockMap.at( subBlock.subBlockInfo.blockIndex );
+   if ( --pair.second == 0 )
+      msyncWrapper( mmappedArea, blockSize );
+   blockMapLock.unlock( );
+
    subBlock.mmappedArea = nullptr;
 
    if ( subBlock.rwlock == nullptr )

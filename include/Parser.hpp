@@ -34,6 +34,8 @@ public:
 struct link_and_anchor {
     String link_url;
     Vector<Index_object> anchor_words;
+
+    link_and_anchor( ) : link_url( ), anchor_words( ) { };
 };
 
 struct Doc_object {
@@ -48,14 +50,15 @@ struct Doc_object {
     
     Vector<link_and_anchor> vector_of_link_anchor;
     
+    Doc_object( ) : doc_url( ), Words( ), url( ), vector_of_link_anchor( ) { }
 };
 
 class LinkFinder {
 public:
     //constructor
-    LinkFinder();
+    LinkFinder() : url( ), Document( ) { };
     
-    LinkFinder(char *html_file_in, size_t filesize_in, String url_in, bool is_https_in) : is_https(is_https_in), url(url_in), html_file(html_file_in), file_length(filesize_in) {}
+    LinkFinder(char *html_file_in, size_t filesize_in, String url_in, bool is_https_in) : is_https(is_https_in), url(url_in), html_file(html_file_in), file_length(filesize_in), Document( ) {}
     
     
     //destructor
